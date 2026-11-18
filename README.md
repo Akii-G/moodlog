@@ -59,6 +59,31 @@ Moodlog's CSV stays the source of truth. The link only runs while Moodlog is
 open and can be switched off at the bottom of the Log tab. Gridgets itself is
 not modified.
 
+### iPhone shortcut
+
+A ready-made shortcut is available here:
+**[Get "Moodlog Sync" for Shortcuts](https://www.icloud.com/shortcuts/db962227cb6547b4b480a1060afb0b9f)**
+
+It sends the last 7 days of steps, resting heart rate and sleep to Moodlog.
+
+1. In Moodlog, open **Phone sync** and switch the receiver on. Keep that window
+   open for the address and token.
+2. Open the link above on your iPhone and tap **Get Shortcut**. Shortcuts asks two
+   questions:
+   - **Address**: the address shown in Phone sync, for example
+     `http://your-pc.local:8765/health`.
+   - **Header**: tap **Add new header**, enter `Authorization` as the key and
+     `Bearer ` followed by your token as the value.
+3. Run the shortcut once and allow access to Health. If iOS says the shortcut is
+   not allowed to share that many Health items, turn on **Allow Sharing Large
+   Amounts of Data** in Settings → Apps → Shortcuts → Advanced, then run it again.
+4. To sync every day: Shortcuts → **Automation** → **+** → **Time of Day**, pick a
+   time when you usually use your phone (Health data can't be read while the
+   iPhone is locked), choose **Run Immediately** and select the shortcut.
+
+The iPhone and the PC must be on the same Wi-Fi, and the PC must be on when the
+shortcut runs. Days that were missed are filled in on the next run.
+
 ## Your data
 
 Everything is in one plain CSV file, `~/.local/share/moodlog/moods.csv`
