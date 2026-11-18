@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Moodlog
+GenericName=Mood Tracker
+Comment=Log your mood each day, add notes and see charts
+Exec=moodlog
+Icon=app.moodlog.Moodlog
+Terminal=false
+Categories=Utility;GTK;
+Keywords=mood;journal;diary;tracker;
+StartupNotify=true

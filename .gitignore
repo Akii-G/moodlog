@@ -1,0 +1,6 @@
+build/
+*.deb
+__pycache__/
+patch/
+test/*/
+test/shot.sh

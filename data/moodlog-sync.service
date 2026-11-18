@@ -1,0 +1,11 @@
+[Unit]
+Description=Moodlog phone sync receiver
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/moodlog --sync-server
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

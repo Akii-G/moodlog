@@ -1,0 +1,3261 @@
+#!/usr/bin/python3
+# Moodlog - a small, local mood tracker.
+# Entries have a mood (1-5), an optional time of day and an optional note.
+# Everything is stored in plain CSV files in ~/.local/share/moodlog/
+#   moods.csv   date,time,mood,note   (several entries a day are allowed)
+#   events.csv  date,kind,title,note   (important events, e.g. a medication change)
+#   health.csv  date,metric,value   (optional, sent by your phone: see Phone sync)
+#
+# SPDX-License-Identifier: MIT
+
+import calendar
+import csv
+import datetime as dt
+import hmac
+import json
+import math
+import os
+import re
+import secrets
+import socket
+import subprocess
+import sys
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
+
+APP_ID = "app.moodlog.Moodlog"
+VERSION = "1.7.0"
+
+MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
+WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+WEEKDAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December"]
+
+# Mood colours: red (low) <-> blue (high) with a neutral grey middle.
+# Red/blue stays readable for people with red-green colour blindness,
+# and every coloured mark also carries a face or a label.
+MOOD_COLORS_LIGHT = {1: "#cf3f3f", 2: "#eb9a94", 3: "#bdbbb3", 4: "#8fbcf0", 5: "#2a78d6"}
+MOOD_COLORS_DARK = {1: "#e05252", 2: "#eb9a94", 3: "#cfcdc5", 4: "#8fbcf0", 5: "#3987e5"}
+FACE_INK = {1: "#ffffff", 2: "#1b1b1b", 3: "#1b1b1b", 4: "#1b1b1b", 5: "#ffffff"}
+
+
+# ----------------------------------------------------------------- storage
+
+def data_dir():
+    base = os.environ.get("MOODLOG_DATA_DIR") or os.path.join(
+        GLib.get_user_data_dir(), "moodlog")
+    os.makedirs(base, exist_ok=True)
+    return base
+
+
+TIME_RE = re.compile(r"([01]\d|2[0-3]):[0-5]\d$")
+
+
+def to_level(avg):
+    """Average mood -> nearest whole level 1..5 (halves round up)."""
+    return max(1, min(5, int(avg + 0.5)))
+
+
+class Store:
+    """All entries, kept in memory and mirrored to a CSV file.
+
+    A day can hold several entries. Each entry is a list [time, mood, note]:
+    time is "HH:MM" or "" (unknown), mood is 1-5 or 0 (note only).
+    """
+
+    def __init__(self):
+        self.path = os.path.join(data_dir(), "moods.csv")
+        self.days = {}  # date -> [[time, mood, note], ...] sorted by time
+        self.load()
+
+    def load(self):
+        if not os.path.exists(self.path):
+            return
+        with open(self.path, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                try:
+                    day = dt.date.fromisoformat((row.get("date") or "").strip())
+                    mood = int((row.get("mood") or "0").strip() or 0)
+                except ValueError:
+                    continue
+                if not 1 <= mood <= 5:
+                    mood = 0
+                time = (row.get("time") or "").strip()
+                if not TIME_RE.match(time):
+                    time = ""
+                note = row.get("note") or ""
+                if mood or note.strip():
+                    self.days.setdefault(day, []).append([time, mood, note])
+        for items in self.days.values():
+            items.sort(key=lambda e: e[0])
+
+    def save(self):
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["date", "time", "mood", "note"])
+            for day in sorted(self.days):
+                for time, mood, note in self.days[day]:
+                    w.writerow([day.isoformat(), time, mood or "", note])
+        os.replace(tmp, self.path)
+
+    def entries(self, day):
+        return self.days.get(day, [])
+
+    def add(self, day, time, mood, note):
+        entry = [time if TIME_RE.match(time or "") else "", mood, note]
+        items = self.days.setdefault(day, [])
+        items.append(entry)
+        items.sort(key=lambda e: e[0])
+        return entry
+
+    def resort(self, day):
+        self.entries(day).sort(key=lambda e: e[0])
+
+    def remove(self, day, entry):
+        items = [e for e in self.entries(day) if e is not entry]
+        if items:
+            self.days[day] = items
+        else:
+            self.days.pop(day, None)
+
+    def day_avg(self, day):
+        vals = [e[1] for e in self.entries(day) if e[1]]
+        return sum(vals) / len(vals) if vals else 0.0
+
+    def day_level(self, day):
+        """The day's mood as one level: the average of its entries, 0 if none."""
+        avg = self.day_avg(day)
+        return to_level(avg) if avg else 0
+
+    def latest_mood(self, day):
+        for entry in reversed(self.entries(day)):
+            if entry[1]:
+                return entry[1]
+        return 0
+
+    def has_note(self, day):
+        return any(e[2].strip() for e in self.entries(day))
+
+    def describe_day(self, day, title):
+        """Tooltip text: the day's overall mood, then each entry on its own line."""
+        items = self.entries(day)
+        moods = [e[1] for e in items if e[1]]
+        if not moods:
+            head = "%s — no mood logged" % title
+        elif len(moods) == 1:
+            head = "%s — %s" % (title, MOOD_NAMES[moods[0]])
+        else:
+            avg = sum(moods) / len(moods)
+            head = "%s — %s (average %.1f of %d entries)" % (
+                title, MOOD_NAMES[to_level(avg)], avg, len(moods))
+        lines = [head]
+        for time, mood, note in items:
+            if len(items) == 1 and not note.strip():
+                break
+            parts = [p for p in (time, MOOD_NAMES.get(mood, ""), note.strip()) if p]
+            lines.append(" · ".join(parts))
+        return "\n".join(lines)
+
+    def moods(self, start=None, end=None):
+        """Sorted (date, level) pairs, one per day that has a mood, within [start, end]."""
+        out = []
+        for day in sorted(self.days):
+            if (start and day < start) or (end and day > end):
+                continue
+            level = self.day_level(day)
+            if level:
+                out.append((day, level))
+        return out
+
+    def timed(self, start=None, end=None):
+        """Every entry with a mood as (date, time, mood), within [start, end]."""
+        out = []
+        for day in sorted(self.days):
+            if (start and day < start) or (end and day > end):
+                continue
+            out.extend((day, e[0], e[1]) for e in self.days[day] if e[1])
+        return out
+
+
+# ----------------------------------------------------------------- events
+
+EVENT_KINDS = [("medication", "Medication change"), ("health", "Health"),
+               ("life", "Life event"), ("other", "Other")]
+EVENT_LABELS = dict(EVENT_KINDS)
+AROUND_DAYS = 14
+
+
+class EventStore:
+    """Important events (a medication change, a move...): events.csv (date,kind,title,note)."""
+
+    def __init__(self):
+        self.path = os.path.join(data_dir(), "events.csv")
+        self.items = []  # [date, kind, title, note]
+        self.load()
+
+    def load(self):
+        self.items = []
+        if not os.path.exists(self.path):
+            return
+        with open(self.path, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                try:
+                    day = dt.date.fromisoformat((row.get("date") or "").strip())
+                except ValueError:
+                    continue
+                title = (row.get("title") or "").strip()
+                if not title:
+                    continue
+                kind = (row.get("kind") or "").strip()
+                if kind not in EVENT_LABELS:
+                    kind = "other"
+                self.items.append([day, kind, title, row.get("note") or ""])
+        self.sort()
+
+    def save(self):
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["date", "kind", "title", "note"])
+            for day, kind, title, note in self.items:
+                w.writerow([day.isoformat(), kind, title, note])
+        os.replace(tmp, self.path)
+
+    def sort(self):
+        self.items.sort(key=lambda e: e[0])
+
+    def add(self, day, kind, title, note):
+        event = [day, kind, title, note]
+        self.items.append(event)
+        self.sort()
+        return event
+
+    def remove(self, event):
+        self.items = [e for e in self.items if e is not event]
+
+    def on(self, day):
+        return [e for e in self.items if e[0] == day]
+
+    def between(self, start=None, end=None):
+        return [e for e in self.items
+                if (not start or e[0] >= start) and (not end or e[0] <= end)]
+
+
+def event_line(event):
+    return "%s — %s: %s" % (event[0].strftime("%a %-d %b"), EVENT_LABELS[event[1]], event[2])
+
+
+def mood_around(store, day, span=AROUND_DAYS):
+    """Average mood in the `span` days before an event and from the event day on."""
+    def window(a, b):
+        vals = [store.day_avg(d) for d in store.days if a <= d <= b]
+        vals = [v for v in vals if v]
+        return (sum(vals) / len(vals), len(vals)) if vals else (0.0, 0)
+    before = window(day - dt.timedelta(days=span), day - dt.timedelta(days=1))
+    after = window(day, day + dt.timedelta(days=span - 1))
+    complete = day + dt.timedelta(days=span - 1) <= dt.date.today()
+    return before, after, complete
+
+
+def event_summary(store, event):
+    day = event[0]
+    if day > dt.date.today():
+        return "Planned. Your mood before and after will be compared once it has happened."
+    (b_avg, b_n), (a_avg, a_n), complete = mood_around(store, day)
+    weeks = "%d weeks" % (AROUND_DAYS // 7)
+
+    def part(avg, n):
+        if n < 3:
+            return "not enough days logged (%d)" % n
+        return "%.1f (%d day%s logged)" % (avg, n, "" if n == 1 else "s")
+
+    text_ = "Mood in the %s before: %s · after: %s" % (weeks, part(b_avg, b_n), part(a_avg, a_n))
+    if not complete:
+        text_ += ", so far"
+    return text_
+
+
+def draw_flag(cr, px, top, h, color, alpha=1.0):
+    """A small flag: a pole at px from top to top + h, with the cloth to the right."""
+    src(cr, color, alpha)
+    cr.set_line_width(max(1.2, h * 0.12))
+    cr.set_line_cap(1)
+    cr.move_to(px, top + h)
+    cr.line_to(px, top)
+    cr.stroke()
+    cr.move_to(px, top)
+    cr.line_to(px + h * 0.72, top + h * 0.27)
+    cr.line_to(px, top + h * 0.55)
+    cr.close_path()
+    cr.fill()
+
+
+def draw_event_badge(cr, cx, cy, r, th):
+    """Round badge with a flag, readable on any mood colour."""
+    src(cr, th["surface"])
+    cr.arc(cx, cy, r, 0, 2 * math.pi)
+    cr.fill()
+    src(cr, th["ink"], 0.3)
+    cr.set_line_width(1)
+    cr.arc(cx, cy, r - 0.5, 0, 2 * math.pi)
+    cr.stroke()
+    h = r * 1.15
+    draw_flag(cr, cx - h * 0.3, cy - h / 2, h, th["ink"])
+
+
+def draw_event_lines(widget, cr, w, top, bottom, th, n, slot):
+    """Dashed line and flag at each event in the period on a time chart."""
+    win = widget.win
+    start, end = win.period()
+    groups = {}
+    for event in win.events.between(start, end):
+        i = slot(event[0])
+        if i is not None:
+            groups.setdefault(i, []).append(event)
+    for i, events in sorted(groups.items()):
+        x = round(slot_x(i, n, w)) + 0.5
+        src(cr, th["ink2"], 0.6)
+        cr.set_line_width(1)
+        cr.set_dash([3, 3])
+        cr.move_to(x, top)
+        cr.line_to(x, bottom)
+        cr.stroke()
+        cr.set_dash([])
+        draw_flag(cr, x, top - 11, 10, th["ink2"])
+        widget.hits.append((x - 7, top - 13, 14, bottom - top + 13,
+                            "\n".join(event_line(e) for e in events)))
+
+
+# ----------------------------------------------------------------- export
+
+def _clean(text_):
+    """One line of text for a spreadsheet cell."""
+    return " / ".join(part.strip() for part in str(text_).splitlines() if part.strip())
+
+
+def export_csv(path, store, events, health):
+    """Write everything to one CSV file, one row per day, oldest first.
+
+    Made to read well in a spreadsheet: plain-language headers with units, mood names
+    next to the numbers, times in front of each mood and note, empty cells instead of
+    zeros. Saved as UTF-8 with a BOM so accents show correctly when it is opened.
+    Returns the number of days written.
+    """
+    days = set(store.days)
+    days.update(e[0] for e in events.items)
+    metrics = health.metrics()
+    for metric in metrics:
+        days.update(health.values.get(metric, {}))
+
+    header = ["Date", "Weekday", "Mood", "Mood score (1–5)", "Moods during the day",
+              "Notes", "Events"]
+    for metric in metrics:
+        title, unit, _dec, _how = metric_info(metric)
+        unit = {"h": "hours"}.get(unit, unit)
+        header.append("%s (%s)" % (title, unit) if unit else title)
+
+    rows = []
+    for day in sorted(days):
+        items = store.entries(day)
+        avg = store.day_avg(day)
+        moods = []
+        for time, mood, _note in items:
+            if mood:
+                moods.append("%s %s" % (time, MOOD_NAMES[mood]) if time else MOOD_NAMES[mood])
+        notes = []
+        for time, _mood, note in items:
+            if note.strip():
+                notes.append("%s: %s" % (time, _clean(note)) if time else _clean(note))
+        evs = []
+        for _d, kind, title, note in events.on(day):
+            line = "%s: %s" % (EVENT_LABELS[kind], title)
+            if note.strip():
+                line += " (%s)" % _clean(note)
+            evs.append(line)
+        row = [day.isoformat(), WEEKDAYS_LONG[day.weekday()],
+               MOOD_NAMES[to_level(avg)] if avg else "",
+               ("%.1f" % avg).replace(".0", "") if avg else "",
+               ", ".join(moods), " | ".join(notes), " | ".join(evs)]
+        for metric in metrics:
+            value = health.values.get(metric, {}).get(day)
+            row.append("" if value is None else format_value(metric, value, with_unit=False)
+                       .replace(",", ""))
+        rows.append(row)
+
+    tmp = path + ".tmp"
+    with open(tmp, "w", newline="", encoding="utf-8-sig") as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        w.writerows(rows)
+    os.replace(tmp, path)
+    return len(rows)
+
+
+class ExportError(Exception):
+    pass
+
+
+def export_xlsx(path, store, events, health):
+    """Write everything to a formatted spreadsheet (.xlsx) with a summary and charts.
+
+    Sheets: Summary (key figures, mood counts and monthly averages with charts),
+    Days (one row per day, like the CSV), Entries (every single mood), Events.
+    Returns the number of days written.
+    """
+    try:
+        from openpyxl import Workbook
+        from openpyxl.chart import BarChart, LineChart, Reference
+        from openpyxl.chart.marker import DataPoint
+        from openpyxl.styles import Alignment, Border, PatternFill, Side
+        from openpyxl.styles import Font as _Font
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        raise ExportError("The spreadsheet export needs the python3-openpyxl package "
+                          "(sudo apt install python3-openpyxl).")
+
+    def Font(**kw):
+        kw.setdefault("name", "Calibri")
+        kw.setdefault("size", 11)
+        return _Font(**kw)
+
+    ink, muted, line = "1B1B1B", "77756F", "E1E0D9"
+    head_fill = PatternFill("solid", fgColor="2F2F2D")
+    head_font = Font(bold=True, color="FFFFFF")
+    band_fill = PatternFill("solid", fgColor="F6F5F1")
+    rule = Border(bottom=Side(style="thin", color=line))
+    wrap = Alignment(wrap_text=True, vertical="top")
+    top = Alignment(vertical="top")
+    centre = Alignment(horizontal="center", vertical="top")
+
+    def mood_style(cell, level):
+        hex_ = MOOD_COLORS_LIGHT[level].lstrip("#").upper()
+        cell.fill = PatternFill("solid", fgColor=hex_)
+        cell.font = Font(bold=True, color=FACE_INK[level].lstrip("#").upper())
+
+    def table(ws, headers, widths, first_row=1):
+        for c, (name, width) in enumerate(zip(headers, widths), start=1):
+            cell = ws.cell(row=first_row, column=c, value=name)
+            cell.fill, cell.font = head_fill, head_font
+            cell.alignment = Alignment(vertical="center", wrap_text=True)
+            ws.column_dimensions[get_column_letter(c)].width = width
+        ws.row_dimensions[first_row].height = 30
+
+    def finish(ws, ncols, nrows, freeze="B2"):
+        for r in range(2, nrows + 2):
+            for c in range(1, ncols + 1):
+                cell = ws.cell(row=r, column=c)
+                cell.border = rule
+                if cell.alignment is None or not cell.alignment.wrap_text:
+                    if cell.alignment.horizontal != "center":
+                        cell.alignment = top
+        if nrows:
+            ws.auto_filter.ref = "A1:%s%d" % (get_column_letter(ncols), nrows + 1)
+        ws.freeze_panes = freeze
+
+    wb = Workbook()
+    try:
+        wb._fonts[0] = Font()  # base font for cells without their own style
+    except (AttributeError, IndexError):
+        pass
+    metrics = health.metrics()
+    all_days = set(store.days)
+    all_days.update(e[0] for e in events.items)
+    for metric in metrics:
+        all_days.update(health.values.get(metric, {}))
+    all_days = sorted(all_days)
+
+    # ---- Days
+    days_ws = wb.active
+    days_ws.title = "Days"
+    headers = ["Date", "Weekday", "Mood", "Score (1–5)", "Moods during the day", "Notes",
+               "Events"]
+    widths = [13, 12, 10, 9, 30, 50, 36]
+    formats = {}
+    for metric in metrics:
+        title, unit, decimals, _how = metric_info(metric)
+        unit = {"h": "hours"}.get(unit, unit)
+        headers.append("%s (%s)" % (title, unit) if unit else title)
+        widths.append(14)
+        formats[len(headers)] = "#,##0" if decimals == 0 else "0." + "0" * decimals
+    table(days_ws, headers, widths)
+    for r, day in enumerate(all_days, start=2):
+        items = store.entries(day)
+        avg = store.day_avg(day)
+        moods = ["%s %s" % (t, MOOD_NAMES[m]) if t else MOOD_NAMES[m] for t, m, _n in items if m]
+        notes = ["%s  %s" % (t, n.strip()) if t else n.strip() for t, _m, n in items if n.strip()]
+        evs = []
+        for _d, kind, title, note in events.on(day):
+            evs.append("%s: %s%s" % (EVENT_LABELS[kind], title,
+                                     (" — " + _clean(note)) if note.strip() else ""))
+        values = [day, WEEKDAYS_LONG[day.weekday()], MOOD_NAMES[to_level(avg)] if avg else None,
+                  round(avg, 1) if avg else None, "\n".join(moods) or None,
+                  "\n".join(notes) or None, "\n".join(evs) or None]
+        for metric in metrics:
+            values.append(health.values.get(metric, {}).get(day))
+        for c, value in enumerate(values, start=1):
+            cell = days_ws.cell(row=r, column=c, value=value)
+            if c == 1:
+                cell.number_format = "d mmm yyyy"
+            elif c in (5, 6, 7):
+                cell.alignment = wrap
+            elif c in formats:
+                cell.number_format = formats[c]
+            elif c == 4:
+                cell.number_format = "0.0"
+                cell.alignment = centre
+        if avg:
+            mood_style(days_ws.cell(row=r, column=3), to_level(avg))
+            mood_style(days_ws.cell(row=r, column=4), to_level(avg))
+            days_ws.cell(row=r, column=4).alignment = centre
+        if evs:
+            days_ws.cell(row=r, column=7).font = Font(bold=True)
+        if day.weekday() >= 5:
+            for c in (1, 2):
+                days_ws.cell(row=r, column=c).fill = band_fill
+    finish(days_ws, len(headers), len(all_days), freeze="C2")
+
+    # ---- Entries
+    ent_ws = wb.create_sheet("Entries")
+    table(ent_ws, ["Date", "Time", "Mood", "Score", "Note"], [13, 8, 10, 7, 70])
+    r = 1
+    for day in sorted(store.days):
+        for time, mood, note in store.entries(day):
+            r += 1
+            ent_ws.cell(row=r, column=1, value=day).number_format = "d mmm yyyy"
+            ent_ws.cell(row=r, column=2, value=time or None).alignment = centre
+            ent_ws.cell(row=r, column=3, value=MOOD_NAMES[mood] if mood else None)
+            ent_ws.cell(row=r, column=4, value=mood or None).alignment = centre
+            ent_ws.cell(row=r, column=5, value=note.strip() or None).alignment = wrap
+            if mood:
+                mood_style(ent_ws.cell(row=r, column=3), mood)
+                mood_style(ent_ws.cell(row=r, column=4), mood)
+                ent_ws.cell(row=r, column=4).alignment = centre
+    finish(ent_ws, 5, r - 1)
+
+    # ---- Events
+    ev_ws = wb.create_sheet("Events")
+    weeks = AROUND_DAYS // 7
+    table(ev_ws, ["Date", "Type", "Title", "Details",
+                  "Mood %d weeks before" % weeks, "Mood %d weeks after" % weeks],
+          [13, 18, 32, 46, 13, 13])
+    r = 1
+    today = dt.date.today()
+    for day, kind, title, note in events.items:
+        r += 1
+        ev_ws.cell(row=r, column=1, value=day).number_format = "d mmm yyyy"
+        ev_ws.cell(row=r, column=2, value=EVENT_LABELS[kind])
+        ev_ws.cell(row=r, column=3, value=title).font = Font(bold=True)
+        ev_ws.cell(row=r, column=4, value=note.strip() or None).alignment = wrap
+        if day <= today:
+            (b, nb), (a, na), _complete = mood_around(store, day)
+            for c, (avg, n) in ((5, (b, nb)), (6, (a, na))):
+                if n >= 3:
+                    cell = ev_ws.cell(row=r, column=c, value=round(avg, 1))
+                    cell.number_format = "0.0"
+                    mood_style(cell, to_level(avg))
+                    cell.alignment = centre
+    finish(ev_ws, 6, r - 1)
+
+    # ---- Summary (first sheet)
+    sm = wb.create_sheet("Summary", 0)
+    sm.sheet_view.showGridLines = False
+    sm.column_dimensions["A"].width = 26
+    for col in "BCD":
+        sm.column_dimensions[col].width = 14
+    sm["A1"] = "Moodlog export"
+    sm["A1"].font = Font(size=20, bold=True, color=ink)
+    mood_days = store.moods()
+    entries = [m for _d, _t, m in store.timed()]
+    span = ""
+    if all_days:
+        span = " · data from %s to %s" % (all_days[0].strftime("%-d %B %Y"),
+                                               all_days[-1].strftime("%-d %B %Y"))
+    sm["A2"] = "Exported %s%s" % (today.strftime("%-d %B %Y"), span)
+    sm["A2"].font = Font(color=muted)
+
+    def figure(row, label, value, level=None, fmt=None):
+        sm.cell(row=row, column=1, value=label).font = Font(color=muted)
+        cell = sm.cell(row=row, column=2, value=value)
+        cell.font = Font(bold=True, size=13)
+        cell.alignment = Alignment(horizontal="left")
+        if fmt:
+            cell.number_format = fmt
+        if level:
+            mood_style(cell, level)
+            cell.font = Font(bold=True, size=13, color=FACE_INK[level].lstrip("#").upper())
+
+    avg_all = sum(m for _d, m in mood_days) / len(mood_days) if mood_days else 0
+    day_avgs = [store.day_avg(d) for d, _m in mood_days]
+    avg_all = sum(day_avgs) / len(day_avgs) if day_avgs else 0
+    figure(4, "Days with a mood", len(mood_days))
+    figure(5, "Moods logged", len(entries))
+    figure(6, "Average mood (1–5)", round(avg_all, 1) if avg_all else "–",
+           to_level(avg_all) if avg_all else None, "0.0")
+    if entries:
+        common = max(range(1, 6), key=lambda m: (entries.count(m), m))
+        figure(7, "Most common mood", MOOD_NAMES[common], common)
+    else:
+        figure(7, "Most common mood", "–")
+    figure(8, "Events logged", len(events.items))
+
+    def section(row, title):
+        cell = sm.cell(row=row, column=1, value=title)
+        cell.font = Font(bold=True, size=13, color=ink)
+
+    # mood counts + bar chart
+    section(10, "How often you logged each mood")
+    for c, name in enumerate(["Mood", "Times", "Share"], start=1):
+        cell = sm.cell(row=11, column=c, value=name)
+        cell.fill, cell.font = head_fill, head_font
+    total = len(entries) or 1
+    for i, level in enumerate(range(5, 0, -1)):
+        row = 12 + i
+        n = entries.count(level)
+        mood_style(sm.cell(row=row, column=1, value=MOOD_NAMES[level]), level)
+        sm.cell(row=row, column=2, value=n)
+        share = sm.cell(row=row, column=3, value=n / total if entries else 0)
+        share.number_format = "0%"
+        for c in (1, 2, 3):
+            sm.cell(row=row, column=c).border = rule
+    if entries:
+        chart = BarChart()
+        chart.type = "bar"
+        chart.title = "How often you logged each mood"
+        chart.legend = None
+        chart.add_data(Reference(sm, min_col=2, min_row=11, max_row=16), titles_from_data=True)
+        chart.set_categories(Reference(sm, min_col=1, min_row=12, max_row=16))
+        series = chart.series[0]
+        for i, level in enumerate(range(5, 0, -1)):
+            point = DataPoint(idx=i)
+            point.graphicalProperties.solidFill = MOOD_COLORS_LIGHT[level].lstrip("#").upper()
+            point.graphicalProperties.line.noFill = True
+            series.dPt.append(point)
+        chart.y_axis.majorGridlines = None
+        chart.y_axis.scaling.min = 0
+        chart.x_axis.scaling.orientation = "maxMin"  # Great at the top
+        chart.y_axis.delete = False
+        chart.x_axis.delete = False
+        chart.height, chart.width = 7, 14
+        sm.add_chart(chart, "F4")
+
+    # monthly averages + line chart
+    section(19, "Average mood by month")
+    for c, name in enumerate(["Month", "Days logged", "Average (1–5)"], start=1):
+        cell = sm.cell(row=20, column=c, value=name)
+        cell.fill, cell.font = head_fill, head_font
+    months = {}
+    for day, _level in mood_days:
+        months.setdefault((day.year, day.month), []).append(store.day_avg(day))
+    row = 20
+    for (year, month), vals in sorted(months.items()):
+        row += 1
+        avg = sum(vals) / len(vals)
+        sm.cell(row=row, column=1, value="%s %d" % (MONTHS[month - 1], year))
+        sm.cell(row=row, column=2, value=len(vals))
+        cell = sm.cell(row=row, column=3, value=round(avg, 2))
+        cell.number_format = "0.0"
+        mood_style(cell, to_level(avg))
+        for c in (1, 2, 3):
+            sm.cell(row=row, column=c).border = rule
+    if len(months) >= 2:
+        chart = LineChart()
+        chart.title = "Average mood by month"
+        chart.legend = None
+        chart.add_data(Reference(sm, min_col=3, min_row=20, max_row=row), titles_from_data=True)
+        chart.set_categories(Reference(sm, min_col=1, min_row=21, max_row=row))
+        series = chart.series[0]
+        series.graphicalProperties.line.solidFill = "52514E"
+        series.graphicalProperties.line.width = 28000
+        series.marker.symbol = "circle"
+        series.marker.size = 7
+        series.marker.graphicalProperties.solidFill = "2A78D6"
+        series.marker.graphicalProperties.line.solidFill = "2A78D6"
+        series.smooth = False
+        chart.y_axis.scaling.min, chart.y_axis.scaling.max = 1, 5
+        chart.y_axis.majorUnit = 1
+        chart.y_axis.delete = False
+        chart.x_axis.delete = False
+        chart.height, chart.width = 7, 14
+        sm.add_chart(chart, "F19")
+
+    # print each sheet to the page width; the wide day table in landscape
+    for ws in wb.worksheets:
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.page_setup.orientation = "portrait" if ws is sm else "landscape"
+        ws.print_options.horizontalCentered = True
+        if ws is not sm:
+            ws.print_title_rows = "1:1"
+    for ws in (days_ws, ent_ws, ev_ws):
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                if cell.font is not None and cell.font.name != "Calibri":
+                    f = cell.font
+                    cell.font = Font(bold=f.bold, color=f.color)
+    tmp = path + ".tmp.xlsx"
+    wb.save(tmp)
+    os.replace(tmp, path)
+    return len(all_days)
+
+
+# ----------------------------------------------------------------- health data
+
+# key: (title, unit, decimals, how a new value replaces an old one)
+#   "max"  = daily totals that only grow (a partial day never beats a full one)
+#   "last" = daily averages, newest value wins
+METRICS = {
+    "sleep_hours": ("Sleep", "h", 1, "max"),
+    "steps": ("Steps", "", 0, "max"),
+    "resting_hr": ("Resting heart rate", "bpm", 0, "last"),
+    "heart_rate": ("Average heart rate", "bpm", 0, "last"),
+    "hrv": ("Heart rate variability", "ms", 0, "last"),
+    "active_energy": ("Active energy", "kcal", 0, "max"),
+}
+ALIASES = {
+    "step": "steps", "steps": "steps", "step_count": "steps", "passi": "steps",
+    "sleep": "sleep", "sleep_analysis": "sleep", "sonno": "sleep",
+    "sleep_hours": "sleep_hours",
+    "resting_hr": "resting_hr", "resting_heart_rate": "resting_hr", "rhr": "resting_hr",
+    "heart_rate": "heart_rate", "hr": "heart_rate", "heart": "heart_rate",
+    "hrv": "hrv", "heart_rate_variability": "hrv",
+    "active_energy": "active_energy", "active_energy_burned": "active_energy",
+    "active_calories": "active_energy",
+}
+NOT_ASLEEP = ("in bed", "inbed", "a letto", "awake", "svegli")
+SYNC_PORT = 8765
+
+
+def metric_info(key):
+    return METRICS.get(key, (key.replace("_", " ").capitalize(), "", 1, "last"))
+
+
+def format_value(key, value, with_unit=True):
+    _title, unit, decimals, _how = metric_info(key)
+    s = "{:,.{}f}".format(value, decimals)
+    return "%s %s" % (s, unit) if (unit and with_unit) else s
+
+
+class HealthStore:
+    """Daily health numbers received from the phone: health.csv (date,metric,value)."""
+
+    def __init__(self):
+        self.path = os.path.join(data_dir(), "health.csv")
+        self.values = {}  # metric -> {date: value}
+        self.mtime = 0
+        self.load()
+
+    def load(self):
+        self.values = {}
+        try:
+            self.mtime = os.path.getmtime(self.path)
+            with open(self.path, newline="", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    try:
+                        day = dt.date.fromisoformat(row["date"])
+                        value = float(row["value"])
+                    except (KeyError, TypeError, ValueError):
+                        continue
+                    self.values.setdefault(row.get("metric") or "?", {})[day] = value
+        except OSError:
+            self.mtime = 0
+
+    def changed_on_disk(self):
+        try:
+            return os.path.getmtime(self.path) != self.mtime
+        except OSError:
+            return False
+
+    def save(self):
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["date", "metric", "value"])
+            rows = [(d, m, v) for m, days in self.values.items() for d, v in days.items()]
+            for d, m, v in sorted(rows):
+                w.writerow([d.isoformat(), m, ("%.2f" % v).rstrip("0").rstrip(".")])
+        os.replace(tmp, self.path)
+        self.mtime = os.path.getmtime(self.path)
+
+    def merge(self, incoming):
+        """Merge {metric: {date: value}}; returns {metric: days stored}."""
+        stored = {}
+        for metric, days in incoming.items():
+            if not days:
+                continue
+            how = metric_info(metric)[3]
+            mine = self.values.setdefault(metric, {})
+            oldest = min(days)
+            for day, value in days.items():
+                old = mine.get(day)
+                if old is not None and how == "max":
+                    value = max(old, value)
+                elif old is not None and day == oldest and len(days) > 1:
+                    value = old  # oldest day of a window is often cut short
+                mine[day] = value
+            stored[metric] = len(days)
+        return stored
+
+    def metrics(self):
+        known = [m for m in METRICS if self.values.get(m)]
+        return known + sorted(m for m in self.values if m not in METRICS and self.values[m])
+
+    def series(self, metric, start=None, end=None):
+        days = self.values.get(metric, {})
+        return [(d, days[d]) for d in sorted(days)
+                if (not start or d >= start) and (not end or d <= end)]
+
+
+_NUM = re.compile(r"-?\d[\d.,  ' ]*")
+
+
+def parse_number(raw, whole=False):
+    """Read a number written the English or the Italian way ('8,234' / '8.234' / '7,5')."""
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    m = _NUM.search(str(raw))
+    if not m:
+        return None
+    t = re.sub(r"[  ' ]", "", m.group(0)).rstrip(".,")
+    grouped = re.fullmatch(r"-?\d{1,3}([.,]\d{3})+", t)
+    if "," in t and "." in t:
+        dec = "," if t.rfind(",") > t.rfind(".") else "."
+        t = t.replace("." if dec == "," else ",", "").replace(dec, ".")
+    elif grouped and whole:
+        t = t.replace(",", "").replace(".", "")
+    else:
+        t = t.replace(",", ".")
+    try:
+        return float(t)
+    except ValueError:
+        return None
+
+
+_STAMP = re.compile(r"(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?\s*(Z|[+-]\d{2}:?\d{2})?)?")
+
+
+def parse_when(raw):
+    """ISO-style date or date-time -> local datetime (None if unreadable)."""
+    m = _STAMP.search(str(raw))
+    if not m:
+        return None
+    try:
+        day = dt.date.fromisoformat(m.group(1))
+        if not m.group(2):
+            return dt.datetime.combine(day, dt.time())
+        clock = m.group(2) if len(m.group(2)) > 5 else m.group(2) + ":00"
+        when = dt.datetime.combine(day, dt.time.fromisoformat(clock))
+        zone = m.group(3)
+        if zone:
+            if zone == "Z":
+                off = dt.timedelta(0)
+            else:
+                digits = zone[1:].replace(":", "")
+                off = dt.timedelta(hours=int(digits[:2]), minutes=int(digits[2:]))
+                if zone[0] == "-":
+                    off = -off
+            when = when.replace(tzinfo=dt.timezone(off)).astimezone().replace(tzinfo=None)
+        return when
+    except ValueError:
+        return None
+
+
+def _sleep_hours(segments):
+    """Asleep segments -> {wake-up date: hours}, overlapping sources merged."""
+    nights = {}
+    for start, end in segments:
+        if end > start:
+            nights.setdefault((end + dt.timedelta(hours=9)).date(), []).append((start, end))
+    out = {}
+    for day, spans in nights.items():
+        total, cur_s, cur_e = 0.0, None, None
+        for s, e in sorted(spans):
+            if cur_e is None or s > cur_e:
+                if cur_e is not None:
+                    total += (cur_e - cur_s).total_seconds()
+                cur_s, cur_e = s, e
+            else:
+                cur_e = max(cur_e, e)
+        total += (cur_e - cur_s).total_seconds()
+        if 0 < total <= 24 * 3600:
+            out[day] = round(total / 3600, 2)
+    return out
+
+
+def parse_payload(body):
+    """Turn whatever the phone sent into ({metric: {date: value}}, [problems]).
+
+    Understands:
+      * text lines   metric;date;value        e.g.  steps;2026-11-12T00:00:00+01:00;8234
+                     sleep;start;end;stage    e.g.  sleep;2026-11-12T23:40...;2026-11-13T00:55...;Core
+      * JSON         {"data": "<those lines>"}
+                     {"date": "2026-11-12", "steps": 8234, "sleep_hours": 7.2, ...} (or a list)
+                     Health Auto Export:  {"data": {"metrics": [{"name": ..., "data": [...]}]}}
+    """
+    buckets, segments, problems = {}, [], []
+
+    def add(metric, day, value):
+        if value is None or day is None:
+            return
+        buckets.setdefault(metric, {}).setdefault(day, []).append(value)
+
+    def take_lines(text_block):
+        for line in str(text_block).replace("\r", "\n").split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            parts = [p.strip() for p in re.split(r"[;|\t]", line)]
+            name = re.sub(r"[\s\-]+", "_", parts[0].lower()).strip("_")
+            metric = ALIASES.get(name, name)
+            if len(parts) < 3 or not re.fullmatch(r"[a-z0-9_]{1,40}", metric):
+                problems.append("could not read this line: %s" % line[:80])
+                continue
+            when = parse_when(parts[1])
+            if when is None:
+                problems.append("could not read the date in: %s (set Date Format to ISO 8601)" % line[:80])
+                continue
+            if metric == "sleep":
+                end = parse_when(parts[2]) if len(parts) >= 4 else None
+                if end is not None:
+                    stage = parts[3].lower()
+                    if not any(word in stage for word in NOT_ASLEEP):
+                        segments.append((when, end))
+                    continue
+                metric = "sleep_hours"
+            value = parse_number(parts[2], whole=(metric == "steps"))
+            if value is None:
+                problems.append("could not read the number in: %s" % line[:80])
+                continue
+            add(metric, when.date(), value)
+
+    def take_record(rec):
+        when = parse_when(rec.get("date", ""))
+        if when is None:
+            problems.append("a record has no readable date")
+            return
+        for key, raw in rec.items():
+            name = re.sub(r"[\s\-]+", "_", str(key).lower())
+            if name == "date":
+                continue
+            metric = ALIASES.get(name, name)
+            if metric == "sleep":
+                metric = "sleep_hours"
+            if re.fullmatch(r"[a-z0-9_]{1,40}", metric):
+                add(metric, when.date(), parse_number(raw, whole=(metric == "steps")))
+
+    def take_auto_export(metrics):
+        for item in metrics:
+            if not isinstance(item, dict):
+                continue
+            name = re.sub(r"[\s\-]+", "_", str(item.get("name", "")).lower())
+            metric = ALIASES.get(name, name)
+            if metric == "sleep":
+                metric = "sleep_hours"
+            if not re.fullmatch(r"[a-z0-9_]{1,40}", metric):
+                continue
+            for point in item.get("data") or []:
+                if not isinstance(point, dict):
+                    continue
+                when = parse_when(point.get("date", ""))
+                raw = None
+                for key in ("qty", "totalSleep", "asleep", "Avg", "avg"):
+                    if point.get(key) is not None:
+                        raw = point[key]
+                        break
+                if when is not None and raw is not None:
+                    add(metric, when.date(), parse_number(raw, whole=(metric == "steps")))
+
+    text_body = body.decode("utf-8", "replace") if isinstance(body, (bytes, bytearray)) else str(body)
+    try:
+        doc = json.loads(text_body)
+    except ValueError:
+        doc = None
+    if isinstance(doc, dict):
+        data = doc.get("data")
+        if isinstance(data, dict) and isinstance(data.get("metrics"), list):
+            take_auto_export(data["metrics"])
+        elif isinstance(doc.get("metrics"), list):
+            take_auto_export(doc["metrics"])
+        elif "date" in doc:
+            take_record(doc)
+        else:
+            blocks = [v for v in doc.values() if isinstance(v, str)]
+            blocks += ["\n".join(str(x) for x in v) for v in doc.values() if isinstance(v, list)]
+            if blocks:
+                for block in blocks:
+                    take_lines(block)
+            else:
+                problems.append("the JSON had nothing I recognise in it")
+    elif isinstance(doc, list):
+        for rec in doc:
+            if isinstance(rec, dict):
+                take_record(rec)
+            else:
+                take_lines(rec)
+    else:
+        take_lines(text_body)
+
+    incoming = {}
+    for metric, days in buckets.items():
+        total = metric in ("steps", "active_energy")
+        incoming[metric] = {d: (sum(v) if total else sum(v) / len(v)) for d, v in days.items()}
+    nights = _sleep_hours(segments)
+    if nights:
+        incoming.setdefault("sleep_hours", {}).update(nights)
+    return incoming, problems
+
+
+def sync_config():
+    """Token and port for the phone sync receiver (created on first use)."""
+    path = os.path.join(data_dir(), "sync.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            cfg = json.load(f)
+        if isinstance(cfg.get("token"), str) and len(cfg["token"]) >= 16:
+            cfg.setdefault("port", SYNC_PORT)
+            return cfg
+    except (OSError, ValueError, AttributeError):
+        pass
+    cfg = {"token": secrets.token_urlsafe(18), "port": SYNC_PORT}
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(cfg, f)
+    return cfg
+
+
+def sync_status_path():
+    return os.path.join(data_dir(), "sync-last.txt")
+
+
+def lan_address():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 9))  # no packet is sent; just picks the LAN interface
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except OSError:
+        return None
+
+
+def run_sync_server():
+    """`moodlog --sync-server`: receive health data from the phone over the local network.
+
+    It only accepts data (POST with the secret token). It never sends any data back.
+    """
+    import http.server
+
+    cfg = sync_config()
+    token = cfg["token"]
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        server_version = "Moodlog/" + VERSION
+
+        def reply(self, code, message):
+            body = (message + "\n").encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_GET(self):
+            self.reply(200, "Moodlog sync is running. Send health data with POST /health.")
+
+        def authorised(self):
+            given = self.headers.get("Authorization", "")
+            given = given[7:] if given.lower().startswith("bearer ") else given
+            given = given or self.headers.get("X-Token", "")
+            if not given and "?" in self.path:
+                import urllib.parse
+                given = (urllib.parse.parse_qs(self.path.split("?", 1)[1]).get("token") or [""])[0]
+            return hmac.compare_digest(given.strip().encode(), token.encode())
+
+        def do_POST(self):
+            if not self.authorised():
+                self.reply(401, "Wrong or missing token. Copy it again from Moodlog > Phone sync.")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            if not 0 < length <= 5 * 1024 * 1024:
+                self.reply(400, "Empty request (or larger than 5 MB).")
+                return
+            body = self.rfile.read(length)
+            incoming, problems = parse_payload(body)
+            store = HealthStore()
+            stored = store.merge(incoming)
+            if stored:
+                store.save()
+            parts = ["%s for %d day%s" % (metric_info(m)[0].lower(), n, "" if n == 1 else "s")
+                     for m, n in stored.items()]
+            message = ("OK. Stored " + ", ".join(parts) + ".") if parts else \
+                "Nothing stored: no health values found in what was sent."
+            if problems:
+                message += "\n%d line(s) skipped. First: %s" % (len(problems), problems[0])
+            stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+            try:
+                with open(sync_status_path(), "w", encoding="utf-8") as f:
+                    f.write("%s\n%s\n" % (stamp, message))
+            except OSError:
+                pass
+            self.reply(200 if parts else 422, message)
+
+        def log_message(self, fmt, *args):
+            sys.stderr.write("moodlog-sync: %s\n" % (fmt % args))
+
+    server = http.server.ThreadingHTTPServer(("0.0.0.0", int(cfg["port"])), Handler)
+    print("Moodlog sync listening on port %d" % cfg["port"], flush=True)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+# ----------------------------------------------------------------- Gridgets link
+
+def gridgets_base():
+    return os.environ.get("MOODLOG_GRIDGETS_DIR") or os.path.join(
+        GLib.get_user_data_dir(), "gridgets")
+
+
+class GridgetsLink:
+    """Keeps Moodlog and the mood widget of the Gridgets GNOME extension in step.
+
+    Gridgets stores one file per month, ~/.local/share/gridgets/mood/<year>/<month>.json,
+    holding {"YYYY-MM-DD": level} with the same 1-5 scale as Moodlog.
+
+    Moodlog's own CSV stays the source of truth. The widget holds one level per day: Moodlog
+    gives it the day's latest entry. Two facts about the widget shape the rules:
+      * it can only log *today*, so a change it makes is always for the day it wrote the file
+        (and the file's time is when it was picked, which becomes the entry's time);
+      * it rewrites the whole month from a copy it read at login/unlock, so the other days
+        in a file it has just written may be out of date and must not overwrite Moodlog.
+    """
+
+    DATE = re.compile(r"\d{4}-\d{2}-\d{2}$")
+
+    def __init__(self, store):
+        self.store = store
+        self.state_path = os.path.join(data_dir(), "gridgets-link.json")
+        self.enabled = True
+        self.written = {}     # "YYYY-MM" -> {date: level} as Moodlog last left the file
+        self.cleared = set()  # dates emptied in Moodlog; never refilled from a stale file
+        self.mtimes = {}
+        try:
+            with open(self.state_path, encoding="utf-8") as f:
+                state = json.load(f)
+            self.enabled = bool(state.get("enabled", True))
+            self.written = {k: dict(v) for k, v in (state.get("written") or {}).items()}
+            self.cleared = set(state.get("cleared") or [])
+        except (OSError, ValueError, AttributeError, TypeError):
+            pass
+
+    def save_state(self):
+        try:
+            tmp = self.state_path + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump({"enabled": self.enabled, "written": self.written,
+                           "cleared": sorted(self.cleared)}, f)
+            os.replace(tmp, self.state_path)
+        except OSError:
+            pass
+
+    def available(self):
+        return os.path.isdir(gridgets_base())
+
+    def active(self):
+        return self.enabled and self.available()
+
+    def month_path(self, key):
+        year, month = key.split("-")
+        return os.path.join(gridgets_base(), "mood", year, month + ".json")
+
+    def read_month(self, key):
+        """({date: level}, mtime) for a month file; (None, mtime) if it cannot be read."""
+        path = self.month_path(key)
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            return {}, None
+        try:
+            with open(path, encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, ValueError):
+            return None, mtime
+        if not isinstance(raw, dict):
+            return None, mtime
+        levels = {}
+        for day, level in raw.items():
+            if (isinstance(day, str) and self.DATE.match(day) and day.startswith(key)
+                    and isinstance(level, int) and not isinstance(level, bool)
+                    and 1 <= level <= 5):
+                levels[day] = level
+        return levels, mtime
+
+    def months(self):
+        keys = {d.strftime("%Y-%m") for d, _m in self.store.moods()}
+        keys.update(self.written)
+        keys.add(dt.date.today().strftime("%Y-%m"))
+        root = os.path.join(gridgets_base(), "mood")
+        try:
+            for year in os.listdir(root):
+                if not re.fullmatch(r"\d{4}", year):
+                    continue
+                for name in os.listdir(os.path.join(root, year)):
+                    if re.fullmatch(r"\d{2}\.json", name):
+                        keys.add("%s-%s" % (year, name[:2]))
+        except OSError:
+            pass
+        return sorted(keys)
+
+    def changed_on_disk(self):
+        for key in self.months():
+            try:
+                mtime = os.path.getmtime(self.month_path(key))
+            except OSError:
+                mtime = None
+            if mtime != self.mtimes.get(key):
+                return True
+        return False
+
+    def reconcile(self, key):
+        """Sync one month both ways. Returns True if Moodlog's own entries changed."""
+        theirs, mtime = self.read_month(key)
+        self.mtimes[key] = mtime
+        if theirs is None:
+            return False  # unreadable file: leave it alone rather than overwrite it
+        year, month = (int(part) for part in key.split("-"))
+        first = dt.date(year, month, 1)
+        last_day = first.replace(day=calendar.monthrange(year, month)[1])
+        mine = {}
+        for day, _level in self.store.moods(first, last_day):
+            mine[day.isoformat()] = self.store.latest_mood(day)
+        before = self.written.get(key)
+        if before is not None:
+            for day in before:
+                if day not in mine:
+                    self.cleared.add(day)  # was linked, now empty: cleared in Moodlog
+        self.cleared.difference_update(mine)
+
+        changed = False
+        if theirs != before:
+            today = dt.date.today()
+            clicked = dt.date.fromtimestamp(mtime).isoformat() if mtime else None
+            for day, level in theirs.items():
+                date = dt.date.fromisoformat(day)
+                if date > today:
+                    continue
+                is_click = day == clicked and (before is None or before.get(day) != level)
+                is_new = day not in mine and day not in self.cleared
+                if (is_click or is_new) and mine.get(day) != level:
+                    stamp = dt.datetime.fromtimestamp(mtime).strftime("%H:%M") if day == clicked else ""
+                    self.store.add(date, stamp, level, "")
+                    mine[day] = level
+                    self.cleared.discard(day)
+                    changed = True
+
+        if mine != theirs:
+            path = self.month_path(key)
+            try:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                tmp = path + ".moodlog-tmp"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump({d: mine[d] for d in sorted(mine)}, f, indent=2)
+                os.replace(tmp, path)
+                self.mtimes[key] = os.path.getmtime(path)
+            except OSError:
+                return changed
+        self.written[key] = dict(mine)
+        return changed
+
+    def reconcile_all(self):
+        if not self.active():
+            return False
+        changed = False
+        for key in self.months():
+            changed = self.reconcile(key) or changed
+        self.save_state()
+        return changed
+
+
+# ----------------------------------------------------------------- drawing
+
+def is_dark():
+    return Adw.StyleManager.get_default().get_dark()
+
+
+def theme():
+    if is_dark():
+        return {"ink": "#f0efec", "ink2": "#c3c2b7", "muted": "#9a9892",
+                "grid": "#4a4a48", "axis": "#5c5c59", "surface": "#363636",
+                "moods": MOOD_COLORS_DARK, "health": "#199e70"}
+    return {"ink": "#0b0b0b", "ink2": "#52514e", "muted": "#77756f",
+            "grid": "#e1e0d9", "axis": "#c3c2b7", "surface": "#ffffff",
+            "moods": MOOD_COLORS_LIGHT, "health": "#1baf7a"}
+
+
+def src(cr, hex_color, alpha=1.0):
+    h = hex_color.lstrip("#")
+    cr.set_source_rgba(int(h[0:2], 16) / 255, int(h[2:4], 16) / 255,
+                       int(h[4:6], 16) / 255, alpha)
+
+
+def rounded_rect(cr, x, y, w, h, r):
+    r = max(0, min(r, w / 2, h / 2))
+    cr.new_sub_path()
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+    cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+    cr.close_path()
+
+
+def bar_right(cr, x, y, w, h, r=4):
+    """Horizontal bar: square at the baseline (left), rounded data end."""
+    r = max(0, min(r, w, h / 2))
+    cr.new_sub_path()
+    cr.move_to(x, y)
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    cr.line_to(x, y + h)
+    cr.close_path()
+
+
+def bar_up(cr, x, y, w, h, r=4):
+    """Column: square at the baseline (bottom), rounded top."""
+    r = max(0, min(r, w / 2, h))
+    cr.new_sub_path()
+    cr.move_to(x, y + h)
+    cr.line_to(x, y + r)
+    cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.line_to(x + w, y + h)
+    cr.close_path()
+
+
+def text(cr, widget, s, x, y, size=10, color="#000000", bold=False,
+         ax=0.0, ay=0.0, alpha=1.0):
+    """Draw text; (ax, ay) is the anchor: 0 = left/top, 0.5 = centre, 1 = right/bottom."""
+    layout = widget.create_pango_layout(s)
+    desc = Pango.FontDescription()
+    desc.set_size(int(size * Pango.SCALE))
+    if bold:
+        desc.set_weight(Pango.Weight.BOLD)
+    layout.set_font_description(desc)
+    w, h = layout.get_pixel_size()
+    src(cr, color, alpha)
+    cr.move_to(x - w * ax, y - h * ay)
+    PangoCairo.show_layout(cr, layout)
+    return w, h
+
+
+def draw_face(cr, cx, cy, r, mood, ink, outline=True, alpha=1.0):
+    """A simple line-drawn face for moods 1 (awful) to 5 (great)."""
+    lw = max(1.4, r * 0.13)
+    cr.set_line_width(lw)
+    cr.set_line_cap(1)  # round
+    src(cr, ink, alpha)
+    if outline:
+        cr.arc(cx, cy, r, 0, 2 * math.pi)
+        cr.stroke()
+    ex, ey, er = r * 0.36, r * 0.20, max(1.0, r * 0.11)
+    for sx in (-1, 1):
+        cr.arc(cx + sx * ex, cy - ey, er, 0, 2 * math.pi)
+        cr.fill()
+    w, y = r * 0.46, cy + r * 0.30
+    if mood == 1:
+        for sx in (-1, 1):  # worried brows
+            cr.move_to(cx + sx * (ex + r * 0.18), cy - ey - r * 0.22)
+            cr.line_to(cx + sx * (ex - r * 0.14), cy - ey - r * 0.36)
+            cr.stroke()
+        cr.move_to(cx - w, y + r * 0.22)
+        cr.curve_to(cx - w * 0.5, y - r * 0.26, cx + w * 0.5, y - r * 0.26,
+                    cx + w, y + r * 0.22)
+        cr.stroke()
+    elif mood == 2:
+        cr.move_to(cx - w, y + r * 0.12)
+        cr.curve_to(cx - w * 0.5, y - r * 0.12, cx + w * 0.5, y - r * 0.12,
+                    cx + w, y + r * 0.12)
+        cr.stroke()
+    elif mood == 3:
+        cr.move_to(cx - w, y + r * 0.04)
+        cr.line_to(cx + w, y + r * 0.04)
+        cr.stroke()
+    elif mood == 4:
+        cr.move_to(cx - w, y - r * 0.08)
+        cr.curve_to(cx - w * 0.5, y + r * 0.24, cx + w * 0.5, y + r * 0.24,
+                    cx + w, y - r * 0.08)
+        cr.stroke()
+    elif mood == 5:
+        cr.move_to(cx - w * 1.1, y - r * 0.14)
+        cr.line_to(cx + w * 1.1, y - r * 0.14)
+        cr.curve_to(cx + w * 0.8, y + r * 0.44, cx - w * 0.8, y + r * 0.44,
+                    cx - w * 1.1, y - r * 0.14)
+        cr.close_path()
+        cr.fill_preserve()
+        cr.set_line_join(1)
+        cr.stroke()
+
+
+def draw_mood_badge(cr, cx, cy, r, mood, th):
+    """Filled circle in the mood colour with the face on top."""
+    src(cr, th["moods"][mood])
+    cr.arc(cx, cy, r, 0, 2 * math.pi)
+    cr.fill()
+    draw_face(cr, cx, cy, r * 0.82, mood, FACE_INK[mood], outline=False)
+
+
+class Canvas(Gtk.DrawingArea):
+    """Drawing area with per-mark hover tooltips."""
+
+    def __init__(self, width=-1, height=-1):
+        super().__init__()
+        self.set_content_width(max(width, 0))
+        self.set_content_height(max(height, 0))
+        self.hits = []  # (x, y, w, h, tooltip text)
+        self.set_has_tooltip(True)
+        self.connect("query-tooltip", self._on_tooltip)
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _area, cr, w, h):
+        self.hits = []
+        self.draw(cr, w, h, theme())
+
+    def draw(self, cr, w, h, th):
+        pass
+
+    def hit(self, x, y):
+        for hx, hy, hw, hh, tip in reversed(self.hits):
+            if hx <= x <= hx + hw and hy <= y <= hy + hh:
+                return hx, hy, hw, hh, tip
+        return None
+
+    def _on_tooltip(self, _w, x, y, _keyboard, tooltip):
+        found = self.hit(x, y)
+        if not found or not found[4]:
+            return False
+        rect = Gdk.Rectangle()
+        rect.x, rect.y = int(found[0]), int(found[1])
+        rect.width, rect.height = max(1, int(found[2])), max(1, int(found[3]))
+        tooltip.set_tip_area(rect)
+        tooltip.set_text(found[4])
+        return True
+
+
+# ----------------------------------------------------------------- calendar
+
+class CalendarView(Canvas):
+    HEAD = 26
+    GAP = 6
+
+    def __init__(self, win):
+        super().__init__(380, 380)
+        self.win = win
+        self.set_hexpand(True)
+        self.set_vexpand(True)
+        self.cells = []
+        click = Gtk.GestureClick.new()
+        click.connect("pressed", self._on_click)
+        self.add_controller(click)
+
+    def _on_click(self, _gesture, _n, x, y):
+        for cx, cy, cw, ch, day in self.cells:
+            if cx <= x <= cx + cw and cy <= y <= cy + ch:
+                if day <= dt.date.today():
+                    self.win.select_day(day)
+                return
+
+    def draw(self, cr, w, h, th):
+        self.cells = []
+        win = self.win
+        year, month = win.cursor.year, win.cursor.month
+        weeks = calendar.Calendar(firstweekday=0).monthdatescalendar(year, month)
+        gap = self.GAP
+        size = min((w - 6 * gap) / 7, (h - self.HEAD - (len(weeks) - 1) * gap) / len(weeks), 72)
+        size = max(size, 20)
+        x0 = (w - (7 * size + 6 * gap)) / 2
+        for i, name in enumerate(WEEKDAYS):
+            text(cr, self, name, x0 + i * (size + gap) + size / 2, 4, 9, th["muted"], ax=0.5)
+        today = dt.date.today()
+        for r, week in enumerate(weeks):
+            for c, day in enumerate(week):
+                if day.month != month:
+                    continue
+                x = x0 + c * (size + gap)
+                y = self.HEAD + r * (size + gap)
+                mood = win.store.day_level(day)
+                moods = [e[1] for e in win.store.entries(day) if e[1]]
+                future = day > today
+                self.cells.append((x, y, size, size, day))
+                if len(moods) > 1:
+                    self.draw_grid(cr, x, y, size, day, moods, th)
+                    self.draw_marks(cr, x, y, size, day, today, th)
+                    continue
+                rounded_rect(cr, x, y, size, size, 10)
+                if mood:
+                    src(cr, th["moods"][mood])
+                    cr.fill()
+                    ink = FACE_INK[mood]
+                    draw_face(cr, x + size / 2, y + size * 0.57, size * 0.24, mood, ink,
+                              outline=False)
+                else:
+                    src(cr, th["ink"], 0.05 if not future else 0.02)
+                    cr.fill()
+                    ink = th["ink"]
+                text(cr, self, str(day.day), x + 7, y + 4, 8.5, ink, bold=(day == today),
+                     alpha=0.35 if future else (0.9 if mood else 0.6))
+                if win.store.has_note(day):  # small corner dot = this day has a note
+                    src(cr, ink, 0.85)
+                    cr.arc(x + size - 9, y + 10, 2.6, 0, 2 * math.pi)
+                    cr.fill()
+                self.draw_marks(cr, x, y, size, day, today, th)
+
+    MAX_TILES = 9
+    HEADER = 15
+
+    def draw_grid(self, cr, x, y, size, day, moods, th):
+        """A day with several entries: a strip with the date, then one tile per entry."""
+        cr.save()
+        rounded_rect(cr, x, y, size, size, 10)
+        cr.clip()
+        src(cr, th["ink"], 0.05)
+        cr.rectangle(x, y, size, size)
+        cr.fill()
+        today = dt.date.today()
+        text(cr, self, str(day.day), x + 7, y + 2, 8.5, th["ink"], bold=(day == today), alpha=0.75)
+        if self.win.store.has_note(day):
+            src(cr, th["ink"], 0.7)
+            cr.arc(x + size - 9, y + 8, 2.4, 0, 2 * math.pi)
+            cr.fill()
+        shown = moods if len(moods) <= self.MAX_TILES else moods[:self.MAX_TILES - 1]
+        extra = len(moods) - len(shown)
+        tiles = len(shown) + (1 if extra else 0)
+        cols = math.ceil(math.sqrt(tiles))
+        rows = math.ceil(tiles / cols)
+        gap = 2
+        gx, gy = x, y + self.HEADER
+        gw, gh = size, size - self.HEADER
+        tw = (gw - gap * (cols - 1)) / cols
+        th_ = (gh - gap * (rows - 1)) / rows
+        for i in range(tiles):
+            r, c = divmod(i, cols)
+            tx, ty = gx + c * (tw + gap), gy + r * (th_ + gap)
+            cr.rectangle(tx, ty, tw, th_)
+            if i < len(shown):
+                src(cr, th["moods"][shown[i]])
+                cr.fill()
+                radius = min(tw, th_) * 0.3
+                if radius >= 4.5:
+                    draw_face(cr, tx + tw / 2, ty + th_ / 2, radius, shown[i],
+                              FACE_INK[shown[i]], outline=False)
+            else:
+                src(cr, th["ink"], 0.12)
+                cr.fill()
+                text(cr, self, "+%d" % extra, tx + tw / 2, ty + th_ / 2, 7.5, th["ink"],
+                     ax=0.5, ay=0.5, alpha=0.8)
+        cr.restore()
+
+    def draw_marks(self, cr, x, y, size, day, today, th):
+        """Today and selection outlines, and the hover text, for any cell."""
+        win = self.win
+        events = win.events.on(day)
+        if events:
+            draw_event_badge(cr, x + 10, y + size - 10, 7.5, th)
+        if day == today and day != win.selected:
+            rounded_rect(cr, x + 0.75, y + 0.75, size - 1.5, size - 1.5, 10)
+            src(cr, th["ink"], 0.45)
+            cr.set_line_width(1.5)
+            cr.stroke()
+        if day == win.selected:
+            rounded_rect(cr, x - 2.5, y - 2.5, size + 5, size + 5, 12)
+            src(cr, th["ink"])
+            cr.set_line_width(2)
+            cr.stroke()
+        if day <= today or events:
+            title = day.strftime("%a %-d %b")
+            tip = win.store.describe_day(day, title) if day <= today else title
+            for event in events:
+                tip += "\nEvent \u2014 %s: %s" % (EVENT_LABELS[event[1]], event[2])
+            self.hits.append((x, y, size, size, tip))
+
+
+# ----------------------------------------------------------------- charts
+
+def no_data(cr, widget, w, h, th):
+    text(cr, widget, "No moods logged in this period yet", w / 2, h / 2, 10.5,
+         th["muted"], ax=0.5, ay=0.5)
+
+
+PLOT_LEFT, PLOT_RIGHT = 58, 18
+
+
+def time_axis(win):
+    """Shared x axis for the period on screen.
+
+    Returns (slots, tick labels, date -> slot index, slot index -> description).
+    A slot is a day in month view and a month in year / all-time view.
+    """
+    mode, cur = win.range_mode, win.cursor
+    if mode == "month":
+        n = calendar.monthrange(cur.year, cur.month)[1]
+        labels = [(d - 1, str(d)) for d in range(1, n + 1) if d == 1 or d % 5 == 0]
+        return (n, labels, lambda day: day.day - 1,
+                lambda i: cur.replace(day=i + 1).strftime("%a %-d %b"))
+    if mode == "year":
+        months = [(cur.year, m) for m in range(1, 13)]
+    else:
+        firsts = [min(win.store.days)] if win.store.days else []
+        firsts += [min(days) for days in win.health.values.values() if days]
+        months = []
+        if firsts:
+            first, today = min(firsts), dt.date.today()
+            y, m = first.year, first.month
+            while (y, m) <= (today.year, today.month):
+                months.append((y, m))
+                y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    index = {ym: i for i, ym in enumerate(months)}
+    step = max(1, math.ceil(len(months) / 12))
+    labels = []
+    for i, (y, m) in enumerate(months):
+        if i % step == 0:
+            name = MONTHS[m - 1][:3]
+            labels.append((i, name if mode == "year" else "%s %02d" % (name, y % 100)))
+    return (len(months), labels, lambda day: index.get((day.year, day.month)),
+            lambda i: "%s %d" % (MONTHS[months[i][1] - 1], months[i][0]))
+
+
+def slot_x(i, n, w):
+    pw = w - PLOT_LEFT - PLOT_RIGHT
+    return PLOT_LEFT + (pw / 2 if n <= 1 else 8 + i / (n - 1) * (pw - 16))
+
+
+def nice_step(span, target=3):
+    raw = max(span, 1e-9) / target
+    mag = 10 ** math.floor(math.log10(raw))
+    for mult in (1, 2, 2.5, 5, 10):
+        if raw <= mult * mag:
+            return mult * mag
+    return 10 * mag
+
+
+class TrendChart(Canvas):
+    """Mood over time. Daily points for a month, monthly averages otherwise."""
+
+    def __init__(self, win):
+        super().__init__(-1, 250)
+        self.win = win
+        self.set_hexpand(True)
+
+    def draw(self, cr, w, h, th):
+        win = self.win
+        n, labels, slot, describe = time_axis(win)
+        daily = win.range_mode == "month"
+        buckets = {}
+        for day, mood in win.period_moods():
+            i = slot(day)
+            if i is not None:
+                buckets.setdefault(i, []).append((day, mood))
+        pts = []
+        for i in sorted(buckets):
+            vals = [m for _d, m in buckets[i]]
+            avg = sum(vals) / len(vals)
+            if daily:
+                day = buckets[i][0][0]
+                avg = win.store.day_avg(day)  # exact average of that day's entries
+                tip = win.store.describe_day(day, describe(i))
+            else:
+                tip = "%s — average %.1f (%s), %d day%s logged" % (
+                    describe(i), avg, MOOD_NAMES[to_level(avg)].lower(), len(vals),
+                    "" if len(vals) == 1 else "s")
+            pts.append((i, avg, tip))
+
+        top, bottom = 24, 30
+        ph = h - top - bottom
+
+        def ypos(v):
+            return top + ph - (v - 1) / 4 * ph
+
+        cr.set_line_width(1)
+        for level in range(1, 6):
+            y = round(ypos(level)) + 0.5
+            src(cr, th["grid"])
+            cr.move_to(PLOT_LEFT, y)
+            cr.line_to(w - PLOT_RIGHT, y)
+            cr.stroke()
+            text(cr, self, MOOD_NAMES[level], PLOT_LEFT - 10, y, 9, th["muted"], ax=1, ay=0.5)
+        draw_event_lines(self, cr, w, top, top + ph, th, n, slot)
+        if not pts:
+            no_data(cr, self, w + PLOT_LEFT - PLOT_RIGHT, h - bottom + top, th)
+            return
+        for i, label in labels:
+            text(cr, self, label, slot_x(i, n, w), h - bottom + 9, 9, th["muted"], ax=0.5)
+        # line: only joins neighbouring points, so skipped days show as gaps
+        src(cr, th["ink2"])
+        cr.set_line_width(2)
+        cr.set_line_join(1)
+        cr.set_line_cap(1)
+        prev = None
+        for i, v, _tip in pts:
+            if prev is not None and i - prev == 1:
+                cr.line_to(slot_x(i, n, w), ypos(v))
+            else:
+                cr.stroke()
+                cr.move_to(slot_x(i, n, w), ypos(v))
+            prev = i
+        cr.stroke()
+        for i, v, tip in pts:
+            x, y = slot_x(i, n, w), ypos(v)
+            src(cr, th["surface"])
+            cr.arc(x, y, 7, 0, 2 * math.pi)
+            cr.fill()
+            src(cr, th["moods"][to_level(v)])
+            cr.arc(x, y, 5, 0, 2 * math.pi)
+            cr.fill()
+            self.hits.append((x - 10, y - 10, 20, 20, tip))
+
+
+class HealthChart(Canvas):
+    """One health metric on the same time axis as the mood chart above it."""
+
+    def __init__(self, win):
+        super().__init__(-1, 190)
+        self.win = win
+        self.set_hexpand(True)
+
+    def draw(self, cr, w, h, th):
+        win, metric = self.win, self.win.health_metric
+        if not metric:
+            return
+        title, _unit, _dec, how = metric_info(metric)
+        n, labels, slot, describe = time_axis(win)
+        start, end = win.period()
+        buckets = {}
+        for day, value in win.health.series(metric, start, end):
+            i = slot(day)
+            if i is not None:
+                buckets.setdefault(i, []).append(value)
+        if not buckets:
+            text(cr, self, "No %s data in this period" % title.lower(), w / 2, h / 2, 10.5,
+                 th["muted"], ax=0.5, ay=0.5)
+            return
+        daily = win.range_mode == "month"
+        pts = [(i, sum(v) / len(v), len(v)) for i, v in sorted(buckets.items())]
+        values = [v for _i, v, _c in pts]
+        columns = how == "max"  # totals grow from zero; rates get a line
+        lo = 0 if columns else min(values)
+        step = nice_step(max(values) - lo if max(values) > lo else max(values) or 1)
+        lo = 0 if columns else math.floor(lo / step) * step
+        hi = math.ceil(max(values) / step) * step
+        if hi <= lo:
+            hi = lo + step
+        top, bottom = 22, 28
+        ph = h - top - bottom
+
+        def ypos(v):
+            return top + ph - (v - lo) / (hi - lo) * ph
+
+        cr.set_line_width(1)
+        tick = lo
+        while tick <= hi + step / 1000:
+            y = round(ypos(tick)) + 0.5
+            src(cr, th["axis"] if (columns and tick == lo) else th["grid"])
+            cr.move_to(PLOT_LEFT, y)
+            cr.line_to(w - PLOT_RIGHT, y)
+            cr.stroke()
+            label = "{:,.{}f}".format(tick, 0 if step >= 1 else 1)
+            text(cr, self, label, PLOT_LEFT - 10, y, 9, th["muted"], ax=1, ay=0.5)
+            tick += step
+        for i, label in labels:
+            text(cr, self, label, slot_x(i, n, w), h - bottom + 8, 9, th["muted"], ax=0.5)
+        draw_event_lines(self, cr, w, top, top + ph, th, n, slot)
+
+        def tip(i, v, count):
+            if daily:
+                return "%s — %s" % (describe(i), format_value(metric, v))
+            return "%s — average %s over %d day%s" % (
+                describe(i), format_value(metric, v), count, "" if count == 1 else "s")
+
+        if columns:
+            gap = (w - PLOT_LEFT - PLOT_RIGHT - 16) / max(n - 1, 1)
+            bw = max(3, min(24, gap - 2))
+            for i, v, count in pts:
+                x, bh = slot_x(i, n, w), max(1.5, ypos(lo) - ypos(v))
+                bar_up(cr, x - bw / 2, ypos(lo) - bh, bw, bh)
+                src(cr, th["health"])
+                cr.fill()
+                self.hits.append((x - max(bw, 16) / 2, top, max(bw, 16), ph, tip(i, v, count)))
+            return
+        src(cr, th["health"])
+        cr.set_line_width(2)
+        cr.set_line_join(1)
+        cr.set_line_cap(1)
+        prev = None
+        for i, v, _c in pts:
+            if prev is not None and i - prev == 1:
+                cr.line_to(slot_x(i, n, w), ypos(v))
+            else:
+                cr.stroke()
+                cr.move_to(slot_x(i, n, w), ypos(v))
+            prev = i
+        cr.stroke()
+        for i, v, count in pts:
+            x, y = slot_x(i, n, w), ypos(v)
+            src(cr, th["surface"])
+            cr.arc(x, y, 6, 0, 2 * math.pi)
+            cr.fill()
+            src(cr, th["health"])
+            cr.arc(x, y, 4, 0, 2 * math.pi)
+            cr.fill()
+            self.hits.append((x - 10, y - 10, 20, 20, tip(i, v, count)))
+
+
+class CountChart(Canvas):
+    """How many days of each mood."""
+
+    def __init__(self, win):
+        super().__init__(-1, 214)
+        self.win = win
+        self.set_hexpand(True)
+
+    def draw(self, cr, w, h, th):
+        moods = [m for _d, _t, m in self.win.period_entries()]
+        if not moods:
+            no_data(cr, self, w, h, th)
+            return
+        counts = {m: moods.count(m) for m in range(1, 6)}
+        top_count, total = max(counts.values()), len(moods)
+        left, right = 92, 78
+        row = (h - 8) / 5
+        thick = min(20, row - 12)
+        for i, mood in enumerate([5, 4, 3, 2, 1]):
+            cy = 4 + row * i + row / 2
+            draw_mood_badge(cr, 14, cy, 11, mood, th)
+            text(cr, self, MOOD_NAMES[mood], 34, cy, 10, th["ink2"], ay=0.5)
+            n = counts[mood]
+            length = (w - left - right) * n / top_count
+            if n:
+                bar_right(cr, left, cy - thick / 2, max(length, 3), thick)
+                src(cr, th["moods"][mood])
+                cr.fill()
+            else:
+                src(cr, th["axis"])
+                cr.set_line_width(1)
+                cr.move_to(left + 0.5, cy - thick / 2)
+                cr.line_to(left + 0.5, cy + thick / 2)
+                cr.stroke()
+            label = "%d · %d%%" % (n, round(100 * n / total)) if n else "0"
+            text(cr, self, label, left + length + 8, cy, 9.5, th["ink2"], ay=0.5)
+            self.hits.append((0, cy - row / 2, w, row, "%s: %d of %d entr%s" % (
+                MOOD_NAMES[mood], n, total, "y" if total == 1 else "ies")))
+
+
+class WeekdayChart(Canvas):
+    """Average mood for each day of the week."""
+
+    def __init__(self, win):
+        super().__init__(-1, 214)
+        self.win = win
+        self.set_hexpand(True)
+
+    def draw(self, cr, w, h, th):
+        data = self.win.period_moods()
+        if not data:
+            no_data(cr, self, w, h, th)
+            return
+        by_day = {i: [] for i in range(7)}
+        for day, mood in data:
+            by_day[day.weekday()].append(mood)
+        left, right, top, bottom = 26, 8, 20, 26
+        pw, ph = w - left - right, h - top - bottom
+        cr.set_line_width(1)
+        for level in range(0, 6):
+            y = round(top + ph - level / 5 * ph) + 0.5
+            src(cr, th["axis"] if level == 0 else th["grid"])
+            cr.move_to(left, y)
+            cr.line_to(w - right, y)
+            cr.stroke()
+            if level:
+                text(cr, self, str(level), left - 8, y, 9, th["muted"], ax=1, ay=0.5)
+        band = pw / 7
+        bw = min(24, band * 0.6)
+        for i in range(7):
+            cx = left + band * i + band / 2
+            text(cr, self, WEEKDAYS[i], cx, h - bottom + 7, 9, th["muted"], ax=0.5)
+            vals = by_day[i]
+            if not vals:
+                text(cr, self, "–", cx, top + ph - 6, 9.5, th["muted"], ax=0.5, ay=1)
+                self.hits.append((cx - band / 2, top, band, ph, "%s: nothing logged" % WEEKDAYS[i]))
+                continue
+            avg = sum(vals) / len(vals)
+            bh = avg / 5 * ph
+            bar_up(cr, cx - bw / 2, top + ph - bh, bw, bh)
+            src(cr, th["moods"][to_level(avg)])
+            cr.fill()
+            text(cr, self, "%.1f" % avg, cx, top + ph - bh - 4, 9.5, th["ink2"], ax=0.5, ay=1)
+            self.hits.append((cx - band / 2, top, band, ph, "%s: average %.1f (%s) over %d day%s" % (
+                WEEKDAYS[i], avg, MOOD_NAMES[to_level(avg)].lower(), len(vals),
+                "" if len(vals) == 1 else "s")))
+
+
+class HoursChart(Canvas):
+    """Average mood by time of day, in three-hour blocks."""
+
+    def __init__(self, win):
+        super().__init__(-1, 214)
+        self.win = win
+        self.set_hexpand(True)
+
+    def draw(self, cr, w, h, th):
+        data = [(t, m) for _d, t, m in self.win.period_entries() if t]
+        if not data:
+            text(cr, self, "No entries with a time in this period yet", w / 2, h / 2, 10.5,
+                 th["muted"], ax=0.5, ay=0.5)
+            return
+        blocks = {i: [] for i in range(8)}
+        for time, mood in data:
+            blocks[int(time[:2]) // 3].append(mood)
+        left, right, top, bottom = 26, 8, 20, 26
+        pw, ph = w - left - right, h - top - bottom
+        cr.set_line_width(1)
+        for level in range(0, 6):
+            y = round(top + ph - level / 5 * ph) + 0.5
+            src(cr, th["axis"] if level == 0 else th["grid"])
+            cr.move_to(left, y)
+            cr.line_to(w - right, y)
+            cr.stroke()
+            if level:
+                text(cr, self, str(level), left - 8, y, 9, th["muted"], ax=1, ay=0.5)
+        band = pw / 8
+        bw = min(24, band * 0.6)
+        for i in range(8):
+            cx = left + band * i + band / 2
+            span = "%02d–%02d" % (i * 3, i * 3 + 3)
+            text(cr, self, span, cx, h - bottom + 7, 9, th["muted"], ax=0.5)
+            vals = blocks[i]
+            if not vals:
+                text(cr, self, "–", cx, top + ph - 6, 9.5, th["muted"], ax=0.5, ay=1)
+                self.hits.append((cx - band / 2, top, band, ph, "%s: nothing logged" % span))
+                continue
+            avg = sum(vals) / len(vals)
+            bh = avg / 5 * ph
+            bar_up(cr, cx - bw / 2, top + ph - bh, bw, bh)
+            src(cr, th["moods"][to_level(avg)])
+            cr.fill()
+            text(cr, self, "%.1f" % avg, cx, top + ph - bh - 4, 9.5, th["ink2"], ax=0.5, ay=1)
+            self.hits.append((cx - band / 2, top, band, ph, "%s:00 to %s:00 — average %.1f (%s) over %d entr%s" % (
+                span[:2], span[3:], avg, MOOD_NAMES[to_level(avg)].lower(), len(vals),
+                "y" if len(vals) == 1 else "ies")))
+
+
+class FaceIcon(Gtk.DrawingArea):
+    def __init__(self, mood, size=44, badge=False):
+        super().__init__()
+        self.mood, self.badge = mood, badge
+        self.set_content_width(size)
+        self.set_content_height(size)
+        self.set_valign(Gtk.Align.CENTER)
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _a, cr, w, h):
+        th = theme()
+        r = min(w, h) / 2 - 2
+        if self.badge:
+            draw_mood_badge(cr, w / 2, h / 2, r, self.mood, th)
+        else:
+            draw_face(cr, w / 2, h / 2, r, self.mood, th["ink"])
+
+
+# ----------------------------------------------------------------- phone sync window
+
+SHORTCUT_STEPS = """Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.
+
+A. Build the shortcut
+1. Shortcuts → + → name it "Moodlog Sync".
+2. Add the action "Find Health Samples". Set Type to Steps. Add a filter: Start Date → is in the last → 7 days. Set Group By to Day.
+3. Add "Repeat with Each" (it repeats over the health samples). Inside it add a "Text" action with exactly:
+      steps;START;VALUE
+   Replace START and VALUE with the Repeat Item variable: insert it, tap it, and pick Start Date (set Date Format to ISO 8601) for the first and Value for the second.
+4. Below End Repeat add "Add to Variable" and name the variable Lines.
+5. Do steps 2–4 again with Type "Resting Heart Rate" and the text:
+      resting_hr;START;VALUE
+6. Do steps 2–4 again with Type "Sleep", Group By left off, and the text:
+      sleep;START;END;VALUE
+   (START = Start Date, END = End Date, both ISO 8601.)
+7. Add "Combine Text": combine Lines with New Lines.
+8. Add "Get Contents of URL". URL: the address above. Method: POST. Headers: add Authorization with the value "Bearer " followed by the token above. Request Body: JSON, with one Text field named data whose value is Combined Text.
+9. Add "Show Result", run the shortcut and allow Health access. It should answer "OK. Stored …". If lines were skipped, the answer says why.
+
+B. Run it every day
+Automation tab → + → Time of Day → pick a time when you are normally using the phone (Health data cannot be read while the iPhone is locked) → Run Immediately → choose Moodlog Sync. Once it works, remove Show Result.
+
+Every run sends the last 7 days, so days that were missed fill in on the next run.
+Other names you can send the same way: heart_rate, hrv, active_energy.
+If the iPhone cannot connect and this PC has a firewall on, allow the port: sudo ufw allow 8765/tcp"""
+
+SERVICE = "moodlog-sync.service"
+
+
+def systemctl(*args):
+    try:
+        done = subprocess.run(["systemctl", "--user"] + list(args), capture_output=True,
+                              text=True, timeout=15)
+        return done.returncode == 0, (done.stderr or done.stdout).strip()
+    except (OSError, subprocess.SubprocessError) as err:
+        return False, str(err)
+
+
+class EventIcon(Gtk.DrawingArea):
+    def __init__(self, size=30):
+        super().__init__()
+        self.set_content_width(size)
+        self.set_content_height(size)
+        self.set_valign(Gtk.Align.CENTER)
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _a, cr, w, h):
+        draw_event_badge(cr, w / 2, h / 2, min(w, h) / 2 - 1, theme())
+
+
+class EventWindow(Gtk.Window):
+    """Add or edit one event."""
+
+    def __init__(self, win, event=None, day=None):
+        super().__init__(title="Edit event" if event else "Add event", transient_for=win,
+                         modal=True)
+        self.set_default_size(440, -1)
+        self.win, self.event = win, event
+        day = event[0] if event else (day or dt.date.today())
+
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(18)
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        self.date_entry = Gtk.Entry(text=day.isoformat(), hexpand=True)
+        self.date_entry.set_placeholder_text("YYYY-MM-DD")
+        self.kind_drop = Gtk.DropDown.new_from_strings([label for _k, label in EVENT_KINDS])
+        kinds = [k for k, _label in EVENT_KINDS]
+        self.kind_drop.set_selected(kinds.index(event[1]) if event else 0)
+        self.title_entry = Gtk.Entry(text=event[2] if event else "", hexpand=True)
+        self.title_entry.set_placeholder_text("What happened, e.g. new dose")
+        self.title_entry.connect("activate", self.on_save)
+        for r, (name, widget) in enumerate((("Date", self.date_entry), ("Type", self.kind_drop),
+                                            ("Title", self.title_entry))):
+            label = Gtk.Label(label=name, xalign=0)
+            label.add_css_class("dim-label")
+            grid.attach(label, 0, r, 1, 1)
+            grid.attach(widget, 1, r, 1, 1)
+        col.append(grid)
+        details = Gtk.Label(label="Details (optional)", xalign=0)
+        details.add_css_class("dim-label")
+        col.append(details)
+        self.note_view = Gtk.TextView()
+        self.note_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        for side in ("top", "bottom", "left", "right"):
+            getattr(self.note_view, "set_%s_margin" % side)(8)
+        self.note_view.get_buffer().set_text(event[3] if event else "")
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_min_content_height(80)
+        scroll.set_child(self.note_view)
+        frame = Gtk.Frame()
+        frame.set_child(scroll)
+        col.append(frame)
+        self.error = Gtk.Label(xalign=0, wrap=True)
+        self.error.add_css_class("error")
+        self.error.set_visible(False)
+        col.append(self.error)
+
+        buttons = Gtk.Box(spacing=8)
+        if event:
+            delete = Gtk.Button(label="Delete")
+            delete.add_css_class("destructive-action")
+            delete.connect("clicked", self.on_delete)
+            buttons.append(delete)
+        spacer = Gtk.Box(hexpand=True)
+        buttons.append(spacer)
+        cancel = Gtk.Button(label="Cancel")
+        cancel.connect("clicked", lambda *_: self.close())
+        save = Gtk.Button(label="Save")
+        save.add_css_class("suggested-action")
+        save.connect("clicked", self.on_save)
+        buttons.append(cancel)
+        buttons.append(save)
+        col.append(buttons)
+        self.set_child(col)
+        self.title_entry.grab_focus()
+
+    def fail(self, message):
+        self.error.set_text(message)
+        self.error.set_visible(True)
+
+    def on_save(self, *_):
+        raw = self.date_entry.get_text().strip()
+        try:
+            day = dt.date.fromisoformat(raw)
+        except ValueError:
+            self.fail("Write the date as year-month-day, for example %s." % dt.date.today().isoformat())
+            return
+        title = " ".join(self.title_entry.get_text().split())
+        if not title:
+            self.fail("Give the event a short title.")
+            return
+        kind = EVENT_KINDS[self.kind_drop.get_selected()][0]
+        buf = self.note_view.get_buffer()
+        note = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
+        events = self.win.events
+        if self.event:
+            self.event[:] = [day, kind, title, note]
+            events.sort()
+        else:
+            events.add(day, kind, title, note)
+        if self.win.save_events():
+            self.close()
+        else:
+            self.fail("Could not save the event to events.csv.")
+
+    def on_delete(self, *_):
+        self.win.events.remove(self.event)
+        if self.win.save_events():
+            self.close()
+        else:
+            self.fail("Could not save the change to events.csv.")
+
+
+class SyncWindow(Gtk.Window):
+    def __init__(self, parent):
+        super().__init__(title="Phone sync", transient_for=parent, modal=True)
+        self.set_default_size(600, 700)
+        self.parent_win = parent
+        cfg = sync_config()
+        self._setting = False
+
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(18)
+
+        title = Gtk.Label(label="Receive health data from my iPhone", xalign=0, hexpand=True)
+        title.add_css_class("heading")
+        self.switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.switch.connect("state-set", self.on_switch)
+        top = Gtk.Box(spacing=12)
+        top.append(title)
+        top.append(self.switch)
+        col.append(top)
+        self.status = Gtk.Label(xalign=0, wrap=True)
+        self.status.add_css_class("dim-label")
+        col.append(self.status)
+
+        host = socket.gethostname()
+        ip = lan_address()
+        address = "http://%s.local:%d/health" % (host, cfg["port"])
+        grid = Gtk.Grid(column_spacing=12, row_spacing=8)
+        rows = [("Address", address), ("Token", cfg["token"])]
+        if ip:
+            rows.insert(1, ("If that fails", "http://%s:%d/health" % (ip, cfg["port"])))
+        for r, (name, value) in enumerate(rows):
+            key = Gtk.Label(label=name, xalign=0)
+            key.add_css_class("dim-label")
+            val = Gtk.Label(label=value, xalign=0, selectable=True, hexpand=True)
+            val.set_wrap(True)
+            val.set_wrap_mode(Pango.WrapMode.CHAR)
+            copy = Gtk.Button.new_from_icon_name("edit-copy-symbolic")
+            copy.set_tooltip_text("Copy")
+            copy.add_css_class("flat")
+            copy.connect("clicked", self.on_copy, value)
+            grid.attach(key, 0, r, 1, 1)
+            grid.attach(val, 1, r, 1, 1)
+            grid.attach(copy, 2, r, 1, 1)
+        col.append(card(grid))
+
+        note = Gtk.Label(xalign=0, wrap=True, label=(
+            "The token is a password: only requests that carry it are accepted. The receiver "
+            "only takes data in over your local network and never sends any out. "
+            "Health values are saved next to your moods, in health.csv."))
+        note.add_css_class("dim-label")
+        note.add_css_class("caption")
+        col.append(note)
+
+        steps = Gtk.Label(label=SHORTCUT_STEPS, xalign=0, wrap=True, selectable=True)
+        col.append(card(steps, "iPhone setup"))
+
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(col)
+        self.set_child(scroll)
+        self.update_status()
+        self._timer = GLib.timeout_add_seconds(3, self.update_status)
+        self.connect("close-request", self.on_close)
+
+    def on_close(self, *_):
+        GLib.source_remove(self._timer)
+        return False
+
+    def on_copy(self, _btn, value):
+        self.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(value))
+
+    def on_switch(self, _switch, state):
+        if self._setting:
+            return False
+        systemctl("daemon-reload")
+        ok, err = systemctl("enable" if state else "disable", "--now", SERVICE)
+        if not ok:
+            self.error = ("Could not %s the receiver (%s). You can also start it by hand "
+                          "in a terminal: moodlog --sync-server" % (
+                              "start" if state else "stop", err or "systemctl failed"))
+        else:
+            self.error = ""
+        GLib.idle_add(self.update_status)
+        return False
+
+    def update_status(self):
+        active, _ = systemctl("is-active", "--quiet", SERVICE)
+        self._setting = True
+        self.switch.set_active(active)
+        self._setting = False
+        lines = []
+        if getattr(self, "error", ""):
+            lines.append(self.error)
+        lines.append("The receiver is running." if active else "The receiver is off.")
+        try:
+            with open(sync_status_path(), encoding="utf-8") as f:
+                stamp, _, message = f.read().strip().partition("\n")
+            lines.append("Last sync attempt %s. %s" % (stamp, message.replace("\n", " ")))
+        except OSError:
+            lines.append("Nothing received from the phone yet.")
+        self.status.set_text("\n".join(lines))
+        return True
+
+
+# ----------------------------------------------------------------- window
+
+def card(child, title=None):
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    box.add_css_class("card")
+    for side in ("top", "bottom", "start", "end"):
+        getattr(child, "set_margin_" + side)(0)
+    inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    inner.set_margin_top(16)
+    inner.set_margin_bottom(16)
+    inner.set_margin_start(16)
+    inner.set_margin_end(16)
+    if title:
+        label = Gtk.Label(label=title, xalign=0)
+        label.add_css_class("heading")
+        inner.append(label)
+    inner.append(child)
+    box.append(inner)
+    return box
+
+
+class Window(Adw.ApplicationWindow):
+    def __init__(self, app, page=None):
+        super().__init__(application=app, title="Moodlog")
+        self.set_default_size(940, 680)
+        self.store = Store()
+        self.health = HealthStore()
+        self.events = EventStore()
+        self.link = GridgetsLink(self.store)
+        if self.link.reconcile_all():
+            self.store.save()
+        self.health_metric = None
+        self._metric_keys = None
+        today = dt.date.today()
+        self.selected = today
+        self.cursor = today.replace(day=1)  # month (or year) being shown
+        self.range_mode = "month"
+        self._loading = False
+        self._save_id = 0
+        self.current = None  # entry being edited; None = a new one
+        self._time_touched = False
+
+        self.stack = Gtk.Stack()
+        self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        switcher = Gtk.StackSwitcher(stack=self.stack)
+        header = Adw.HeaderBar()
+        header.set_title_widget(switcher)
+        folder = Gtk.Button.new_from_icon_name("folder-open-symbolic")
+        folder.set_tooltip_text("Open the folder with your data (moods.csv, events.csv)")
+        folder.connect("clicked", self.open_data_folder)
+        header.pack_end(folder)
+        for name, kind in (("export-xlsx", "xlsx"), ("export-csv", "csv")):
+            action = Gio.SimpleAction.new(name, None)
+            action.connect("activate", lambda _a, _p, k=kind: self.on_export(k))
+            self.add_action(action)
+        menu = Gio.Menu()
+        menu.append("Spreadsheet with colours and charts (.xlsx)", "win.export-xlsx")
+        menu.append("Plain CSV file (.csv)", "win.export-csv")
+        export = Gtk.MenuButton(label="Export", menu_model=menu)
+        export.set_tooltip_text("Save everything (moods, notes, events, health data) to a file")
+        header.pack_end(export)
+        sync = Gtk.Button(label="Phone sync")
+        sync.set_tooltip_text("Receive steps, sleep and heart rate from your iPhone")
+        sync.connect("clicked", lambda *_: SyncWindow(self).present())
+        header.pack_start(sync)
+
+        self.stack.add_titled(self.build_log_page(), "log", "Log")
+        self.stack.add_titled(self.build_charts_page(), "charts", "Charts")
+        self.stack.add_titled(self.build_notes_page(), "notes", "Notes")
+        self.stack.add_titled(self.build_events_page(), "events", "Events")
+        self.stack.connect("notify::visible-child", lambda *_: self.refresh())
+
+        root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        root.append(header)
+        root.append(self.stack)
+        self.set_content(root)
+
+        Adw.StyleManager.get_default().connect("notify::dark", lambda *_: self.redraw_all())
+        self.connect("close-request", self.on_close)
+        self.load_selected()
+        self.refresh()
+        GLib.timeout_add_seconds(5, self.poll_health)
+        if page:
+            self.stack.set_visible_child_name(page)
+
+    # -- log page
+
+    def build_log_page(self):
+        prev_b = Gtk.Button.new_from_icon_name("go-previous-symbolic")
+        prev_b.set_tooltip_text("Previous month")
+        prev_b.connect("clicked", lambda *_: self.shift(-1))
+        self.log_next = Gtk.Button.new_from_icon_name("go-next-symbolic")
+        self.log_next.set_tooltip_text("Next month")
+        self.log_next.connect("clicked", lambda *_: self.shift(1))
+        for b in (prev_b, self.log_next):
+            b.add_css_class("flat")
+        self.month_label = Gtk.Label(xalign=0, hexpand=True)
+        self.month_label.add_css_class("title-3")
+        today_b = Gtk.Button(label="Today")
+        today_b.connect("clicked", lambda *_: self.select_day(dt.date.today()))
+        nav = Gtk.Box(spacing=6)
+        for wdg in (self.month_label, today_b, prev_b, self.log_next):
+            nav.append(wdg)
+        self.calendar = CalendarView(self)
+        self.month_summary = Gtk.Label(xalign=0)
+        self.month_summary.add_css_class("dim-label")
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        left.append(nav)
+        left.append(self.calendar)
+        left.append(self.month_summary)
+        link_label = Gtk.Label(xalign=0, hexpand=True, wrap=True,
+                               label="Linked with the Gridgets mood widget on your desktop")
+        link_label.add_css_class("dim-label")
+        link_label.add_css_class("caption")
+        self.link_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.link_switch.set_active(self.link.enabled)
+        self.link_switch.set_tooltip_text(
+            "A mood picked in the widget is logged here, and moods logged here show up "
+            "in the widget (after the next unlock or login)")
+        self.link_switch.connect("notify::active", self.on_link_toggled)
+        link_row = Gtk.Box(spacing=10)
+        link_row.append(link_label)
+        link_row.append(self.link_switch)
+        link_row.set_visible(self.link.available())
+        left.append(link_row)
+        left_card = card(left)
+        left_card.set_hexpand(True)
+
+        self.day_label = Gtk.Label(xalign=0, hexpand=True)
+        self.day_label.add_css_class("title-3")
+        add_event = Gtk.Button(label="Add event")
+        add_event.set_tooltip_text("Log an important event on this day, e.g. a medication change")
+        add_event.connect("clicked", lambda *_: self.open_event(day=self.selected))
+        day_row = Gtk.Box(spacing=8)
+        day_row.append(self.day_label)
+        day_row.append(add_event)
+        self.day_events = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+        self.entry_list = Gtk.ListBox()
+        self.entry_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.entry_list.add_css_class("boxed-list")
+        self.entry_list.connect("row-activated", self.on_entry_row)
+        self.entry_scroll = Gtk.ScrolledWindow()
+        self.entry_scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        self.entry_scroll.set_max_content_height(156)
+        self.entry_scroll.set_propagate_natural_height(True)
+        self.entry_scroll.set_child(self.entry_list)
+        self.mode_label = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        self.mode_label.add_css_class("heading")
+        self.time_entry = Gtk.Entry()
+        self.time_entry.set_max_length(5)
+        self.time_entry.set_width_chars(5)
+        self.time_entry.set_max_width_chars(5)
+        self.time_entry.set_placeholder_text("HH:MM")
+        self.time_entry.set_tooltip_text("Time of this entry, 24-hour (optional). Press Enter to apply a change.")
+        self.time_entry.connect("changed", self.on_time_changed)
+        self.time_entry.connect("activate", self.apply_time)
+        leave = Gtk.EventControllerFocus.new()
+        leave.connect("leave", self.apply_time)
+        self.time_entry.add_controller(leave)
+        mode_row = Gtk.Box(spacing=8)
+        mode_row.append(self.mode_label)
+        mode_row.append(self.time_entry)
+        faces = Gtk.Box(spacing=4, homogeneous=True)
+        self.face_buttons = {}
+        for mood in range(1, 6):
+            inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            inner.append(FaceIcon(mood, 40))
+            name = Gtk.Label(label=MOOD_NAMES[mood])
+            name.add_css_class("caption")
+            inner.append(name)
+            btn = Gtk.ToggleButton()
+            btn.set_child(inner)
+            btn.add_css_class("flat")
+            btn.set_tooltip_text("%s (%d of 5)" % (MOOD_NAMES[mood], mood))
+            btn.connect("toggled", self.on_face_toggled, mood)
+            self.face_buttons[mood] = btn
+            faces.append(btn)
+        note_label = Gtk.Label(label="Note", xalign=0)
+        note_label.add_css_class("heading")
+        self.note_view = Gtk.TextView()
+        self.note_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        for side in ("top", "bottom", "left", "right"):
+            getattr(self.note_view, "set_%s_margin" % side)(10)
+        self.note_view.get_buffer().connect("changed", self.on_note_changed)
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_min_content_height(90)
+        scroll.set_child(self.note_view)
+        frame = Gtk.Frame()
+        frame.set_child(scroll)
+        self.saved_label = Gtk.Label(xalign=0, hexpand=True)
+        self.saved_label.add_css_class("dim-label")
+        self.saved_label.add_css_class("caption")
+        self.delete_btn = Gtk.Button(label="Delete entry")
+        self.delete_btn.connect("clicked", self.on_delete)
+        self.new_btn = Gtk.Button(label="New entry")
+        self.new_btn.add_css_class("suggested-action")
+        self.new_btn.set_tooltip_text("Log another mood for this day")
+        self.new_btn.connect("clicked", self.on_new)
+        bottom = Gtk.Box(spacing=8)
+        for wdg in (self.saved_label, self.delete_btn, self.new_btn):
+            bottom.append(wdg)
+        right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for wdg in (day_row, self.day_events, self.entry_scroll, mode_row, faces, note_label,
+                    frame, bottom):
+            right.append(wdg)
+        right_card = card(right)
+        right_card.set_size_request(350, -1)
+
+        page = Gtk.Box(spacing=16)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(page, "set_margin_" + side)(16)
+        page.append(left_card)
+        page.append(right_card)
+        return page
+
+    # -- charts page
+
+    def build_charts_page(self):
+        self.range_drop = Gtk.DropDown.new_from_strings(["Month", "Year", "All time"])
+        self.range_drop.connect("notify::selected", self.on_range_changed)
+        self.chart_prev = Gtk.Button.new_from_icon_name("go-previous-symbolic")
+        self.chart_prev.connect("clicked", lambda *_: self.shift(-1, charts=True))
+        self.chart_next = Gtk.Button.new_from_icon_name("go-next-symbolic")
+        self.chart_next.connect("clicked", lambda *_: self.shift(1, charts=True))
+        for b in (self.chart_prev, self.chart_next):
+            b.add_css_class("flat")
+        self.period_label = Gtk.Label(xalign=0, hexpand=True)
+        self.period_label.add_css_class("title-3")
+        bar = Gtk.Box(spacing=6)
+        for wdg in (self.period_label, self.range_drop, self.chart_prev, self.chart_next):
+            bar.append(wdg)
+
+        self.tiles = {}
+        tiles = Gtk.Box(spacing=12, homogeneous=True)
+        for key, caption in (("avg", "Average mood"), ("days", "Days logged"),
+                             ("common", "Most common"), ("streak", "Current streak")):
+            value = Gtk.Label(xalign=0)
+            value.add_css_class("title-1")
+            sub = Gtk.Label(xalign=0)
+            sub.add_css_class("dim-label")
+            sub.add_css_class("caption")
+            cap = Gtk.Label(label=caption, xalign=0)
+            cap.add_css_class("dim-label")
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            for wdg in (cap, value, sub):
+                box.append(wdg)
+            self.tiles[key] = (value, sub)
+            tiles.append(card(box))
+
+        self.trend = TrendChart(self)
+        self.trend_title = Gtk.Label(xalign=0)
+        self.trend_title.add_css_class("heading")
+        trend_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        trend_box.append(self.trend_title)
+        trend_box.append(self.trend)
+        self.counts = CountChart(self)
+        self.weekdays = WeekdayChart(self)
+        self.hours = HoursChart(self)
+        pair = Gtk.Box(spacing=12, homogeneous=True)
+        pair.append(card(self.counts, "How often you logged each mood"))
+        pair.append(card(self.weekdays, "Average mood by weekday (1–5)"))
+
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(16)
+        health_title = Gtk.Label(label="Mood and your health data", xalign=0, hexpand=True)
+        health_title.add_css_class("heading")
+        self.metric_drop = Gtk.DropDown.new_from_strings([])
+        self.metric_drop.connect("notify::selected", self.on_metric_changed)
+        health_head = Gtk.Box(spacing=8)
+        health_head.append(health_title)
+        health_head.append(self.metric_drop)
+        self.health_text = Gtk.Label(xalign=0, wrap=True)
+        self.health_text.add_css_class("dim-label")
+        self.health_chart = HealthChart(self)
+        health_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        for wdg in (health_head, self.health_chart, self.health_text):
+            health_box.append(wdg)
+        for wdg in (bar, tiles, card(trend_box), card(health_box), pair,
+                    card(self.hours, "Average mood by time of day (1\u20135)")):
+            col.append(wdg)
+        clamp = Adw.Clamp(maximum_size=1000)
+        clamp.set_child(col)
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(clamp)
+        return scroll
+
+    # -- notes page
+
+    # -- events
+
+    def save_events(self):
+        try:
+            self.events.save()
+        except OSError:
+            return False
+        self.rebuild_day_events()
+        self.redraw_all()
+        self.refresh()
+        return True
+
+    def open_event(self, event=None, day=None):
+        EventWindow(self, event=event, day=day).present()
+
+    def rebuild_day_events(self):
+        child = self.day_events.get_first_child()
+        while child:
+            self.day_events.remove(child)
+            child = self.day_events.get_first_child()
+        events = self.events.on(self.selected)
+        for event in events:
+            btn = Gtk.Button()
+            btn.add_css_class("flat")
+            btn.set_tooltip_text("Edit this event")
+            box = Gtk.Box(spacing=8)
+            box.append(EventIcon(22))
+            label = Gtk.Label(label="%s: %s" % (EVENT_LABELS[event[1]], event[2]), xalign=0,
+                              hexpand=True)
+            label.set_ellipsize(Pango.EllipsizeMode.END)
+            box.append(label)
+            btn.set_child(box)
+            btn.connect("clicked", lambda _b, e=event: self.open_event(e))
+            self.day_events.append(btn)
+        self.day_events.set_visible(bool(events))
+
+    def build_events_page(self):
+        intro = Gtk.Label(wrap=True, xalign=0, hexpand=True, label=(
+            "Log things that can affect how you feel, such as a medication change. They show as "
+            "a flag in the calendar and as a dashed line on the charts, and each one compares "
+            "your mood in the two weeks before and after it."))
+        intro.add_css_class("dim-label")
+        add = Gtk.Button(label="Add event", valign=Gtk.Align.START)
+        add.add_css_class("suggested-action")
+        add.connect("clicked", lambda *_: self.open_event(day=dt.date.today()))
+        top = Gtk.Box(spacing=16)
+        top.append(intro)
+        top.append(add)
+        self.events_list = Gtk.ListBox()
+        self.events_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.events_list.add_css_class("boxed-list")
+        self.events_list.connect("row-activated", lambda _l, row: self.open_event(row.event))
+        self.events_empty = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
+                                      label="No events yet.")
+        self.events_empty.add_css_class("dim-label")
+        self.events_empty.set_margin_top(48)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(16)
+        for wdg in (top, self.events_list, self.events_empty):
+            col.append(wdg)
+        clamp = Adw.Clamp(maximum_size=760)
+        clamp.set_child(col)
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(clamp)
+        return scroll
+
+    def refresh_events(self):
+        child = self.events_list.get_first_child()
+        while child:
+            self.events_list.remove(child)
+            child = self.events_list.get_first_child()
+        for event in sorted(self.events.items, key=lambda e: e[0], reverse=True):
+            day, kind, title, note = event
+            row = Gtk.ListBoxRow()
+            row.event = event
+            row.set_tooltip_text("Click to edit")
+            box = Gtk.Box(spacing=12)
+            for side in ("top", "bottom", "start", "end"):
+                getattr(box, "set_margin_" + side)(12)
+            icon = EventIcon(32)
+            icon.set_valign(Gtk.Align.START)
+            box.append(icon)
+            textbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
+            when = Gtk.Label(label="%s · %s" % (day.strftime("%A, %-d %B %Y"),
+                                                     EVENT_LABELS[kind]), xalign=0)
+            when.add_css_class("dim-label")
+            when.add_css_class("caption")
+            head = Gtk.Label(label=title, xalign=0, wrap=True)
+            head.add_css_class("heading")
+            textbox.append(when)
+            textbox.append(head)
+            if note.strip():
+                body = Gtk.Label(label=note.strip(), xalign=0, wrap=True)
+                body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                textbox.append(body)
+            summary = Gtk.Label(label=event_summary(self.store, event), xalign=0, wrap=True)
+            summary.add_css_class("dim-label")
+            summary.add_css_class("caption")
+            textbox.append(summary)
+            box.append(textbox)
+            row.set_child(box)
+            self.events_list.append(row)
+        has = bool(self.events.items)
+        self.events_list.set_visible(has)
+        self.events_empty.set_visible(not has)
+
+
+    def build_notes_page(self):
+        self.search = Gtk.SearchEntry(placeholder_text="Search your notes")
+        self.search.connect("search-changed", lambda *_: self.refresh_notes())
+        self.notes_list = Gtk.ListBox()
+        self.notes_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.notes_list.add_css_class("boxed-list")
+        self.notes_list.connect("row-activated", self.on_note_row)
+        self.notes_empty = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
+        self.notes_empty.add_css_class("dim-label")
+        self.notes_empty.set_margin_top(48)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(16)
+        for wdg in (self.search, self.notes_list, self.notes_empty):
+            col.append(wdg)
+        clamp = Adw.Clamp(maximum_size=720)
+        clamp.set_child(col)
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(clamp)
+        return scroll
+
+    # -- state
+
+    def period(self):
+        """(start, end) dates of the period the charts show; None = open."""
+        cur = self.cursor
+        if self.range_mode == "month":
+            last = calendar.monthrange(cur.year, cur.month)[1]
+            return cur.replace(day=1), cur.replace(day=last)
+        if self.range_mode == "year":
+            return dt.date(cur.year, 1, 1), dt.date(cur.year, 12, 31)
+        return None, None
+
+    def period_moods(self):
+        """(date, level) for each day with a mood in the period on screen."""
+        start, end = self.period()
+        return self.store.moods(start, end)
+
+    def period_entries(self):
+        """(date, time, mood) for every single entry in the period on screen."""
+        start, end = self.period()
+        return self.store.timed(start, end)
+
+    def shift(self, step, charts=False):
+        cur = self.cursor
+        if charts and self.range_mode == "year":
+            cur = cur.replace(year=cur.year + step)
+        else:
+            index = cur.year * 12 + cur.month - 1 + step
+            cur = dt.date(index // 12, index % 12 + 1, 1)
+        today = dt.date.today()
+        if (cur.year, cur.month) > (today.year, today.month):
+            cur = today.replace(day=1)
+        self.cursor = cur
+        self.refresh()
+
+    def select_day(self, day, entry=None):
+        self.flush()
+        self.selected = day
+        self.cursor = day.replace(day=1)
+        self.load_selected(entry)
+        self.refresh()
+
+    def load_selected(self, entry=None):
+        """Show a day. Today opens ready for a new entry; a past day opens its last entry."""
+        day, today = self.selected, dt.date.today()
+        items = self.store.entries(day)
+        if entry is not None and any(e is entry for e in items):
+            self.current = entry
+        elif day == today or not items:
+            self.current = None
+        else:
+            self.current = items[-1]
+        if day == today:
+            title = "Today"
+        elif day == today - dt.timedelta(days=1):
+            title = "Yesterday"
+        else:
+            title = day.strftime("%A")
+        self.day_label.set_text("%s, %s" % (title, day.strftime("%-d %B %Y")))
+        self.rebuild_day_events()
+        self.load_editor()
+        self.rebuild_entries()
+
+    def load_editor(self):
+        """Fill the editor from the current entry (or blank it for a new one)."""
+        entry = self.current
+        self._loading = True
+        for m, btn in self.face_buttons.items():
+            btn.set_active(bool(entry) and m == entry[1])
+        self.note_view.get_buffer().set_text(entry[2] if entry else "")
+        if entry:
+            self.time_entry.set_text(entry[0])
+        elif self.selected == dt.date.today():
+            self.time_entry.set_text(dt.datetime.now().strftime("%H:%M"))
+        else:
+            self.time_entry.set_text("")
+        self.time_entry.remove_css_class("error")
+        self._time_touched = False
+        self.saved_label.set_text("")
+        self._loading = False
+        self.update_mode()
+
+    def update_mode(self):
+        editing = self.current is not None
+        if editing:
+            self.mode_label.set_text("Editing this entry")
+        elif self.selected == dt.date.today():
+            self.mode_label.set_text("New entry: how do you feel now?")
+        else:
+            self.mode_label.set_text("New entry: how was this day?")
+        self.delete_btn.set_visible(editing)
+        self.new_btn.set_visible(editing)
+
+    def read_time(self):
+        """Time typed in the field: 'HH:MM', '' for none, or None if it is not a time."""
+        value = self.time_entry.get_text().strip()
+        loose = re.fullmatch(r"(\d{1,2})[:.,](\d{2})", value)
+        if loose:
+            value = "%02d:%s" % (int(loose.group(1)), loose.group(2))
+        return value if (not value or TIME_RE.match(value)) else None
+
+    def current_note(self):
+        buf = self.note_view.get_buffer()
+        return buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False)
+
+    def current_mood(self):
+        for m, btn in self.face_buttons.items():
+            if btn.get_active():
+                return m
+        return 0
+
+    def on_time_changed(self, _entry):
+        if self._loading:
+            return
+        self._time_touched = True
+        value = self.read_time()
+        if value is None:
+            self.time_entry.add_css_class("error")
+            return
+        self.time_entry.remove_css_class("error")
+
+    def apply_time(self, *_args):
+        """Give the entry being edited the time in the field, once typing is finished."""
+        if self._loading or self.current is None:
+            return
+        value = self.read_time()
+        if value is None:  # not a time: put the entry's own time back
+            self._loading = True
+            self.time_entry.set_text(self.current[0])
+            self.time_entry.remove_css_class("error")
+            self._loading = False
+        elif self.current[0] != value:
+            self.current[0] = value
+            self.store.resort(self.selected)
+            self.schedule_save()
+            self.rebuild_entries()
+
+    def on_face_toggled(self, btn, mood):
+        if self._loading:
+            return
+        if btn.get_active():
+            self._loading = True
+            for m, other in self.face_buttons.items():
+                if m != mood:
+                    other.set_active(False)
+            self._loading = False
+        self.commit()
+        self.rebuild_entries()
+        self.refresh()
+
+    def on_note_changed(self, _buf):
+        if self._loading:
+            return
+        self.commit()
+        self.calendar.queue_draw()
+
+    def on_entry_row(self, _list, row):
+        self.apply_time()
+        self.current = row.entry
+        self.load_editor()
+        GLib.idle_add(self.rebuild_entries)
+
+    def on_new(self, _btn):
+        self.apply_time()
+        self.current = None
+        self.load_editor()
+        self.rebuild_entries()
+
+    def on_delete(self, _btn):
+        if self.current is None:
+            return
+        self.store.remove(self.selected, self.current)
+        self.current = None
+        self.load_editor()
+        self.rebuild_entries()
+        self.schedule_save()
+        self.refresh()
+
+    def commit(self):
+        """Write the editor into the store: creates the entry on first input."""
+        mood, note, day = self.current_mood(), self.current_note(), self.selected
+        if self.current is None:
+            if not mood and not note.strip():
+                return
+            value = self.read_time() or ""
+            if day == dt.date.today() and not self._time_touched:
+                value = dt.datetime.now().strftime("%H:%M")
+            self.current = self.store.add(day, value, mood, note)
+            self._loading = True
+            self.time_entry.set_text(self.current[0])
+            self.time_entry.remove_css_class("error")
+            self._loading = False
+            self.update_mode()
+        else:
+            self.current[1], self.current[2] = mood, note
+            if not mood and not note.strip():
+                self.store.remove(day, self.current)
+                self.current = None
+                self.update_mode()
+        self.schedule_save()
+
+    def rebuild_entries(self):
+        """List of the selected day's entries, above the editor."""
+        child = self.entry_list.get_first_child()
+        while child:
+            self.entry_list.remove(child)
+            child = self.entry_list.get_first_child()
+        items = self.store.entries(self.selected)
+        for entry in items:
+            time, mood, note = entry
+            row = Gtk.ListBoxRow()
+            row.entry = entry
+            row.set_tooltip_text("Click to edit this entry")
+            box = Gtk.Box(spacing=10)
+            for side in ("top", "bottom"):
+                getattr(box, "set_margin_" + side)(6)
+            for side in ("start", "end"):
+                getattr(box, "set_margin_" + side)(10)
+            when = Gtk.Label(label=time or "––:––", xalign=0)
+            when.set_width_chars(5)
+            when.add_css_class("heading" if entry is self.current else "dim-label")
+            box.append(when)
+            if mood:
+                box.append(FaceIcon(mood, 26, badge=True))
+                name = Gtk.Label(label=MOOD_NAMES[mood], xalign=0)
+                box.append(name)
+            snippet = Gtk.Label(label=" ".join(note.split()), xalign=0, hexpand=True)
+            snippet.set_ellipsize(Pango.EllipsizeMode.END)
+            snippet.add_css_class("dim-label")
+            box.append(snippet)
+            row.set_child(box)
+            self.entry_list.append(row)
+        self.entry_scroll.set_visible(bool(items))
+        return False
+
+    def schedule_save(self):
+        if self._save_id:
+            GLib.source_remove(self._save_id)
+        self._save_id = GLib.timeout_add(500, self.flush)
+
+    def flush(self):
+        self.apply_time()
+        if self._save_id:
+            GLib.source_remove(self._save_id)
+            self._save_id = 0
+            try:
+                self.store.save()
+                self.saved_label.set_text("Saved")
+            except OSError as err:
+                self.saved_label.set_text("Could not save: %s" % err)
+            self.sync_widget()
+            self.rebuild_entries()
+        return False
+
+    def on_close(self, *_):
+        self.flush()
+        return False
+
+    def on_range_changed(self, drop, _param):
+        self.range_mode = ("month", "year", "all")[drop.get_selected()]
+        self.refresh()
+
+    def on_metric_changed(self, drop, _param):
+        keys = self._metric_keys or []
+        if self._loading or not keys or drop.get_selected() >= len(keys):
+            return
+        self.health_metric = keys[drop.get_selected()]
+        self.refresh_health()
+
+    def sync_widget(self):
+        """Exchange moods with the Gridgets widget; True if Moodlog's entries changed."""
+        if not self.link.active():
+            return False
+        try:
+            changed = self.link.reconcile_all()
+            if changed:
+                self.store.save()
+        except OSError:
+            return False
+        return changed
+
+    def on_link_toggled(self, switch, _param):
+        self.link.enabled = switch.get_active()
+        self.link.save_state()
+        if self.sync_widget():
+            self.show_selected_mood()
+            self.refresh()
+
+    def show_selected_mood(self):
+        """Entries were changed from outside the editor (the desktop widget)."""
+        if self.current is not None and not any(
+                e is self.current for e in self.store.entries(self.selected)):
+            self.current = None
+            self.load_editor()
+        self.rebuild_entries()
+
+    def poll_health(self):
+        if not self._save_id and self.link.active() and self.link.changed_on_disk():
+            if self.sync_widget():
+                self.show_selected_mood()
+                self.refresh()
+        if self.health.changed_on_disk():
+            self.health.load()
+            if self.stack.get_visible_child_name() == "charts":
+                self.refresh_charts()
+        return True
+
+    def insight(self):
+        """Plain-language comparison of mood on higher vs lower days of the metric."""
+        metric = self.health_metric
+        title = metric_info(metric)[0].lower()
+        start, end = self.period()
+        values = dict(self.health.series(metric, start, end))
+        pairs = [(mood, values[day]) for day, mood in self.period_moods() if day in values]
+        if len(pairs) < 8:
+            return ("%d day%s in this period have both a mood and %s data. With 8 or more, "
+                    "Moodlog compares your mood on higher and lower days." % (
+                        len(pairs), "" if len(pairs) == 1 else "s", title))
+        ordered = sorted(v for _m, v in pairs)
+        median = ordered[len(ordered) // 2]
+        high = [m for m, v in pairs if v >= median]
+        low = [m for m, v in pairs if v < median]
+        if len(high) < 3 or len(low) < 3:
+            return "Your %s barely changed in this period, so there is nothing to compare yet." % title
+        a, b = sum(high) / len(high), sum(low) / len(low)
+        cut = format_value(metric, median)
+        if abs(a - b) < 0.25:
+            return ("Your mood was about the same on days with more and less %s: %.1f at %s or "
+                    "more, %.1f below (%d days compared)." % (title, a, cut, b, len(pairs)))
+        return ("On days with %s at %s or more, your average mood was %.1f. On days below that "
+                "it was %.1f (%d days compared). This shows a pattern in your data, not a cause."
+                % (title, cut, a, b, len(pairs)))
+
+    def refresh_health(self):
+        keys = self.health.metrics()
+        if keys != self._metric_keys:
+            self._metric_keys = keys
+            if self.health_metric not in keys:
+                self.health_metric = keys[0] if keys else None
+            self._loading = True
+            self.metric_drop.set_model(Gtk.StringList.new([metric_info(k)[0] for k in keys]))
+            if keys:
+                self.metric_drop.set_selected(keys.index(self.health_metric))
+            self._loading = False
+        self.metric_drop.set_visible(bool(keys))
+        self.health_chart.set_visible(bool(keys))
+        if keys:
+            self.health_text.set_text(self.insight())
+        else:
+            self.health_text.set_text(
+                "No health data yet. Use Phone sync in the title bar to bring in sleep, steps "
+                "and heart rate from your iPhone, and compare them with your mood here.")
+        self.health_chart.queue_draw()
+
+    def on_note_row(self, _list, row):
+        self.select_day(row.day, row.entry)
+        self.stack.set_visible_child_name("log")
+
+    def export_name(self, kind="csv"):
+        return "moodlog-export-%s.%s" % (dt.date.today().isoformat(), kind)
+
+    def on_export(self, kind="csv"):
+        self.flush()
+        self._export_kind = kind
+        title = "Export to a spreadsheet" if kind == "xlsx" else "Export to CSV"
+        if hasattr(Gtk, "FileDialog"):  # GTK 4.10 and newer
+            dialog = Gtk.FileDialog(title=title, initial_name=self.export_name(kind))
+            dialog.save(self, None, self._export_done_new)
+            return
+        dialog = Gtk.FileChooserNative.new(title, self, Gtk.FileChooserAction.SAVE,
+                                           "Export", "Cancel")
+        dialog.set_current_name(self.export_name(kind))
+        dialog.connect("response", self._export_done_old)
+        self._chooser = dialog  # keep a reference while it is open
+        dialog.show()
+
+    def _export_done_new(self, dialog, result):
+        try:
+            gfile = dialog.save_finish(result)
+        except GLib.Error:
+            return  # cancelled
+        if gfile:
+            self.write_export(gfile.get_path(), self._export_kind)
+
+    def _export_done_old(self, dialog, response):
+        if response == Gtk.ResponseType.ACCEPT and dialog.get_file():
+            self.write_export(dialog.get_file().get_path(), self._export_kind)
+        self._chooser = None
+
+    def write_export(self, path, kind="csv"):
+        if not path:
+            return
+        if not path.lower().endswith("." + kind):
+            path += "." + kind
+        writer = export_xlsx if kind == "xlsx" else export_csv
+        try:
+            count = writer(path, self.store, self.events, self.health)
+            message = "Exported %d day%s to %s" % (count, "" if count == 1 else "s",
+                                                   os.path.basename(path))
+        except ExportError as err:
+            message = str(err)
+        except OSError as err:
+            message = "Could not export: %s" % (err.strerror or err)
+        self.saved_label.set_text(message)
+        if hasattr(Gtk, "AlertDialog"):  # GTK 4.10 and newer
+            Gtk.AlertDialog(message=message).show(self)
+
+    def open_data_folder(self, _btn):
+        self.flush()
+        Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(data_dir(), None), None)
+
+    # -- refresh
+
+    def redraw_all(self):
+        def walk(widget):
+            if isinstance(widget, Gtk.DrawingArea):
+                widget.queue_draw()
+            child = widget.get_first_child()
+            while child:
+                walk(child)
+                child = child.get_next_sibling()
+        walk(self)
+
+    def streak(self):
+        day = dt.date.today()
+        if not self.store.day_level(day):
+            day -= dt.timedelta(days=1)
+        count = 0
+        while self.store.day_level(day):
+            count += 1
+            day -= dt.timedelta(days=1)
+        return count
+
+    def refresh(self):
+        cur, today = self.cursor, dt.date.today()
+        at_now = (cur.year, cur.month) >= (today.year, today.month)
+        self.month_label.set_text("%s %d" % (MONTHS[cur.month - 1], cur.year))
+        self.log_next.set_sensitive(not at_now)
+        last = calendar.monthrange(cur.year, cur.month)[1]
+        month_moods = [m for _d, m in self.store.moods(cur, cur.replace(day=last))]
+        if month_moods:
+            avg = sum(month_moods) / len(month_moods)
+            self.month_summary.set_text("%d day%s logged this month · average %.1f (%s)" % (
+                len(month_moods), "" if len(month_moods) == 1 else "s", avg,
+                MOOD_NAMES[to_level(avg)].lower()))
+        else:
+            self.month_summary.set_text("Nothing logged this month yet")
+        self.calendar.queue_draw()
+
+        visible = self.stack.get_visible_child_name()
+        if visible == "charts":
+            self.refresh_charts()
+        elif visible == "notes":
+            self.refresh_notes()
+        elif visible == "events":
+            self.refresh_events()
+
+    def refresh_charts(self):
+        cur, today, mode = self.cursor, dt.date.today(), self.range_mode
+        if mode == "month":
+            self.period_label.set_text("%s %d" % (MONTHS[cur.month - 1], cur.year))
+            at_now = (cur.year, cur.month) >= (today.year, today.month)
+            days_total = calendar.monthrange(cur.year, cur.month)[1]
+            if at_now:
+                days_total = today.day
+            self.trend_title.set_text("Mood day by day")
+        elif mode == "year":
+            self.period_label.set_text(str(cur.year))
+            at_now = cur.year >= today.year
+            end = today if at_now else dt.date(cur.year, 12, 31)
+            days_total = (end - dt.date(cur.year, 1, 1)).days + 1
+            self.trend_title.set_text("Average mood by month")
+        else:
+            self.period_label.set_text("All time")
+            at_now = True
+            first = min(self.store.days) if self.store.days else today
+            days_total = (today - first).days + 1
+            self.trend_title.set_text("Average mood by month")
+        self.chart_prev.set_visible(mode != "all")
+        self.chart_next.set_visible(mode != "all")
+        self.chart_next.set_sensitive(not at_now)
+
+        moods = [m for _d, m in self.period_moods()]
+        value, sub = self.tiles["avg"]
+        if moods:
+            avg = sum(moods) / len(moods)
+            value.set_text("%.1f" % avg)
+            sub.set_text("%s, on a 1–5 scale" % MOOD_NAMES[to_level(avg)])
+        else:
+            value.set_text("–")
+            sub.set_text("nothing logged")
+        value, sub = self.tiles["days"]
+        value.set_text(str(len(moods)))
+        sub.set_text("of %d day%s so far" % (days_total, "" if days_total == 1 else "s"))
+        value, sub = self.tiles["common"]
+        if moods:
+            best = max(range(1, 6), key=lambda m: (moods.count(m), m))
+            value.set_text(MOOD_NAMES[best])
+            sub.set_text("%d day%s" % (moods.count(best), "" if moods.count(best) == 1 else "s"))
+        else:
+            value.set_text("–")
+            sub.set_text("")
+        value, sub = self.tiles["streak"]
+        streak = self.streak()
+        value.set_text("%d day%s" % (streak, "" if streak == 1 else "s"))
+        sub.set_text("logged in a row, up to today")
+        for chart in (self.trend, self.counts, self.weekdays, self.hours):
+            chart.queue_draw()
+        self.refresh_health()
+
+    def refresh_notes(self):
+        child = self.notes_list.get_first_child()
+        while child:
+            self.notes_list.remove(child)
+            child = self.notes_list.get_first_child()
+        query = self.search.get_text().strip().lower()
+        shown = 0
+        for day in sorted(self.store.days, reverse=True):
+            for entry in reversed(self.store.entries(day)):
+                time, mood, note = entry
+                if not note.strip() or (query and query not in note.lower()):
+                    continue
+                row = Gtk.ListBoxRow()
+                row.day = day
+                row.entry = entry
+                box = Gtk.Box(spacing=12)
+                for side in ("top", "bottom", "start", "end"):
+                    getattr(box, "set_margin_" + side)(12)
+                if mood:
+                    icon = FaceIcon(mood, 34, badge=True)
+                    icon.set_valign(Gtk.Align.START)
+                    icon.set_tooltip_text(MOOD_NAMES[mood])
+                    box.append(icon)
+                else:
+                    spacer = Gtk.Box()
+                    spacer.set_size_request(34, 34)
+                    box.append(spacer)
+                when = day.strftime("%A, %-d %B %Y")
+                if time:
+                    when += " · " + time
+                if mood:
+                    when += " · " + MOOD_NAMES[mood]
+                head = Gtk.Label(label=when, xalign=0)
+                head.add_css_class("heading")
+                body = Gtk.Label(label=note.strip(), xalign=0, wrap=True)
+                body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                body.set_selectable(False)
+                textbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
+                textbox.append(head)
+                textbox.append(body)
+                box.append(textbox)
+                row.set_child(box)
+                self.notes_list.append(row)
+                shown += 1
+        self.notes_list.set_visible(shown > 0)
+        self.notes_empty.set_visible(shown == 0)
+        if query:
+            self.notes_empty.set_text("No notes match “%s”." % self.search.get_text().strip())
+        else:
+            self.notes_empty.set_text(
+                "No notes yet.\nAdd a few words when you log a mood and they will show up here.")
+
+
+class App(Adw.Application):
+    def __init__(self, page=None):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
+        self.page = page
+
+    def do_activate(self):
+        win = self.get_active_window() or Window(self, self.page)
+        win.present()
+
+
+def main(argv):
+    if "--version" in argv:
+        print("Moodlog", VERSION)
+        return 0
+    if "--sync-server" in argv:
+        return run_sync_server()
+    if "--export" in argv:
+        i = argv.index("--export")
+        if i + 1 >= len(argv):
+            print("usage: moodlog --export FILE.csv|FILE.xlsx", file=sys.stderr)
+            return 2
+        writer = export_xlsx if argv[i + 1].lower().endswith(".xlsx") else export_csv
+        try:
+            count = writer(argv[i + 1], Store(), EventStore(), HealthStore())
+        except ExportError as err:
+            print(err, file=sys.stderr)
+            return 1
+        print("Exported %d days to %s" % (count, argv[i + 1]))
+        return 0
+    page = None
+    for arg in argv[1:]:
+        if arg.startswith("--page="):
+            page = arg.split("=", 1)[1]
+    return App(page).run([argv[0]])
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
