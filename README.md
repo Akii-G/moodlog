@@ -67,7 +67,7 @@ computer. The folder button in the title bar opens that folder. Copy the file to
 
 ## Install
 
-    sudo apt install ./moodlog_1.7.0_all.deb
+    sudo apt install ./moodlog_1.7.1_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 

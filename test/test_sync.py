@@ -57,3 +57,15 @@ assert hs.values["steps"] == {D(2026,11,10): 9000, D(2026,11,11): 500}
 assert hs.values["resting_hr"] == {D(2026,11,10): 60, D(2026,11,11): 57}
 hs.save(); assert m.HealthStore().values == hs.values
 print("parser + merge OK")
+
+# sleep sent with dates only (Shortcuts "Include time" off) must not become 24 h nights
+inc, pr = m.parse_payload(b"sleep;2026-11-15;2026-11-16;Core\nsleep;2026-11-16;2026-11-17;REM\nsteps;2026-11-16;5000\n")
+assert "sleep_hours" not in inc and inc["steps"] == {D(2026, 11, 16): 5000}, inc
+assert len(pr) == 2 and pr[0].startswith("sleep times arrived without a clock time"), pr
+# 24 h values already stored are dropped when the file is loaded, and the file is cleaned
+open(os.path.join(sys.argv[1], "health.csv"), "w").write(
+    "date,metric,value\n2026-11-15,sleep_hours,24\n2026-11-16,sleep_hours,7.25\n2026-11-16,steps,5000\n")
+h = m.HealthStore()
+assert h.values["sleep_hours"] == {D(2026, 11, 16): 7.25} and h.values["steps"] == {D(2026, 11, 16): 5000}
+assert "24" not in open(os.path.join(sys.argv[1], "health.csv")).read().split("2026-11-16")[0]
+print("date-only sleep OK")

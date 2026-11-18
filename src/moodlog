@@ -29,7 +29,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "1.7.0"
+VERSION = "1.7.1"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -754,6 +754,7 @@ class HealthStore:
 
     def load(self):
         self.values = {}
+        self.dirty = False
         try:
             self.mtime = os.path.getmtime(self.path)
             with open(self.path, newline="", encoding="utf-8") as f:
@@ -761,11 +762,19 @@ class HealthStore:
                     try:
                         day = dt.date.fromisoformat(row["date"])
                         value = float(row["value"])
+                        if row.get("metric") == "sleep_hours" and value >= 23.99:
+                            self.dirty = True  # a full 24 h came from date-only times
+                            continue
                     except (KeyError, TypeError, ValueError):
                         continue
                     self.values.setdefault(row.get("metric") or "?", {})[day] = value
         except OSError:
             self.mtime = 0
+        if self.dirty:  # write the file back without the impossible values
+            try:
+                self.save()
+            except OSError:
+                pass
 
     def changed_on_disk(self):
         try:
@@ -869,6 +878,12 @@ def parse_when(raw):
         return None
 
 
+def has_clock(raw):
+    """True if a date-time text includes a time of day, not just a date."""
+    m = _STAMP.search(str(raw))
+    return bool(m and m.group(2))
+
+
 def _sleep_hours(segments):
     """Asleep segments -> {wake-up date: hours}, overlapping sources merged."""
     nights = {}
@@ -926,6 +941,12 @@ def parse_payload(body):
             if metric == "sleep":
                 end = parse_when(parts[2]) if len(parts) >= 4 else None
                 if end is not None:
+                    if not (has_clock(parts[1]) and has_clock(parts[2])):
+                        problems.append(
+                            "sleep times arrived without a clock time, so they were skipped. In "
+                            "the shortcut, tap Data di inizio and Data di fine in the sleep line "
+                            "and turn on Includi ora (Include Time).")
+                        continue
                     stage = parts[3].lower()
                     if not any(word in stage for word in NOT_ASLEEP):
                         segments.append((when, end))
@@ -1102,7 +1123,8 @@ def run_sync_server():
             message = ("OK. Stored " + ", ".join(parts) + ".") if parts else \
                 "Nothing stored: no health values found in what was sent."
             if problems:
-                message += "\n%d line(s) skipped. First: %s" % (len(problems), problems[0])
+                key = next((p for p in problems if p.startswith("sleep times")), problems[0])
+                message += "\n%d line(s) skipped. %s" % (len(problems), key)
             stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
             try:
                 with open(sync_status_path(), "w", encoding="utf-8") as f:
