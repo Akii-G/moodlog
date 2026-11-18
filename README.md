@@ -2,8 +2,8 @@
 
 A small, local mood tracker for Linux (GTK 4 / libadwaita, one Python file).
 
-- **Log**: pick one of five moods and add a note. A day can hold several entries, each with its own time, so you can record how your mood changes through the day. Click any past day in the month calendar to add or edit entries.
-- **Charts**: per month, per year or all time: average, days logged, most common mood, streak, mood over time, how often each mood, average by weekday and by time of day, and mood next to your health data.
+- **Log**: pick one of five moods, optionally rate your energy and anxiety (1-5), and add a note. A day can hold several entries, each with its own time, so you can record how your mood changes through the day. Click any past day in the month calendar to add or edit entries.
+- **Charts**: per month, per year or all time: average, days logged, most common mood, streak, mood over time, how often each mood, average by weekday and by time of day, mood next to your health data, and energy and anxiety over time.
 - **Notes**: every note, newest first, with search. Click one to jump to that day.
 - **Events**: log important events, such as a medication change. They show as a flag on the calendar day and as a dashed line on the charts, and each one shows your average mood in the two weeks before and after it.
 
@@ -84,15 +84,40 @@ It sends the last 7 days of steps, resting heart rate and sleep to Moodlog.
 The iPhone and the PC must be on the same Wi-Fi, and the PC must be on when the
 shortcut runs. Days that were missed are filled in on the next run.
 
+## Report for your doctor
+
+**Export → Report for your doctor (.pdf)** makes a printable A4 report for a period
+you choose (last 30 days, 3 or 6 months, this year, everything, or your own dates):
+key numbers, how often each mood was logged, your mood over time with your events
+(such as medication changes) marked and numbered, energy and anxiety, sleep, a
+table of the events with your mood in the two weeks before and after each one,
+and a day-by-day table. Notes are left out unless you tick "Include my notes".
+From a terminal: `moodlog --report FILE.pdf --from 2026-09-01 --to 2026-11-30`.
+
+## Backup, restore and two computers
+
+The folder button in the title bar has **Back up…** (one .zip file with all your
+data) and **Restore from a backup…**. Restoring always saves a copy of your current
+data first, in `backups/` inside your data folder.
+
+**Data folder and sync…** lets you keep your data in another folder, for example
+one that Syncthing or Nextcloud keeps in sync, so you can use Moodlog on two
+computers. Choose the folder on both. When the second computer already has data of
+its own, choose **Merge** to combine both. Moodlog picks up changes from the other
+computer within a few seconds. If both change something at the same moment and the
+sync app makes a conflict copy, Moodlog shows a bar at the top to merge it, so
+nothing is lost. Settings such as the Gridgets link stay on each computer
+(`~/.config/moodlog/`).
+
 ## Your data
 
-Everything is in one plain CSV file, `~/.local/share/moodlog/moods.csv`
-(columns: `date,time,mood,note`; one row per entry, time is `HH:MM` or empty, mood is 1 = awful to 5 = great). In the calendar, a day with one entry is coloured by that mood, and a day with several shows a small grid with one tile per entry, in time order. A day's point in the charts is the average of its entries. Nothing leaves your
-computer. The folder button in the title bar opens that folder. Copy the file to back it up.
+Your moods are in a plain CSV file, `~/.local/share/moodlog/moods.csv` (or in the folder you chose)
+(columns: `date,time,mood,energy,anxiety,note`; one row per entry, time is `HH:MM` or empty, mood is 1 = awful to 5 = great, energy and anxiety are 1-5 or empty). In the calendar, a day with one entry is coloured by that mood, and a day with several shows a small grid with one tile per entry, in time order. A day's point in the charts is the average of its entries. Nothing leaves your
+computer. The folder button in the title bar opens that folder and makes backups.
 
 ## Install
 
-    sudo apt install ./moodlog_1.7.1_all.deb
+    sudo apt install ./moodlog_1.8.0_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 

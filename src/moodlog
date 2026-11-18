@@ -2,7 +2,7 @@
 # Moodlog - a small, local mood tracker.
 # Entries have a mood (1-5), an optional time of day and an optional note.
 # Everything is stored in plain CSV files in ~/.local/share/moodlog/
-#   moods.csv   date,time,mood,note   (several entries a day are allowed)
+#   moods.csv   date,time,mood,energy,anxiety,note   (several entries a day are allowed)
 #   events.csv  date,kind,title,note   (important events, e.g. a medication change)
 #   health.csv  date,metric,value   (optional, sent by your phone: see Phone sync)
 #
@@ -29,9 +29,14 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "1.7.1"
+VERSION = "1.8.0"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
+# Two optional 1-5 scales next to the mood. Index = position in an entry.
+SCALES = [(3, "energy", "Energy", "1 = very low, 5 = very high"),
+          (4, "anxiety", "Anxiety", "1 = calm, 5 = very anxious")]
+SCALE_WORDS = {"energy": {1: "very low", 2: "low", 3: "medium", 4: "high", 5: "very high"},
+               "anxiety": {1: "calm", 2: "a little", 3: "some", 4: "a lot", 5: "very anxious"}}
 WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 WEEKDAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 MONTHS = ["January", "February", "March", "April", "May", "June", "July",
@@ -47,9 +52,42 @@ FACE_INK = {1: "#ffffff", 2: "#1b1b1b", 3: "#1b1b1b", 4: "#1b1b1b", 5: "#ffffff"
 
 # ----------------------------------------------------------------- storage
 
+def default_data_dir():
+    return os.path.join(GLib.get_user_data_dir(), "moodlog")
+
+
+def config_dir():
+    """Settings for this computer only (not synced): ~/.config/moodlog."""
+    base = (os.environ.get("MOODLOG_CONFIG_DIR") or os.environ.get("MOODLOG_DATA_DIR")
+            or os.path.join(GLib.get_user_config_dir(), "moodlog"))
+    os.makedirs(base, exist_ok=True)
+    return base
+
+
+def load_config():
+    try:
+        with open(os.path.join(config_dir(), "config.json"), encoding="utf-8") as f:
+            cfg = json.load(f)
+        return cfg if isinstance(cfg, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_config(cfg):
+    path = os.path.join(config_dir(), "config.json")
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2)
+    os.replace(tmp, path)
+
+
 def data_dir():
-    base = os.environ.get("MOODLOG_DATA_DIR") or os.path.join(
-        GLib.get_user_data_dir(), "moodlog")
+    """Where moods, events and health data live: the default folder, or one the user chose
+    (for example a folder kept in sync by Syncthing or Nextcloud)."""
+    base = os.environ.get("MOODLOG_DATA_DIR")
+    if not base:
+        chosen = load_config().get("data_dir")
+        base = chosen if isinstance(chosen, str) and os.path.isdir(chosen) else default_data_dir()
     os.makedirs(base, exist_ok=True)
     return base
 
@@ -62,22 +100,33 @@ def to_level(avg):
     return max(1, min(5, int(avg + 0.5)))
 
 
+def file_mtime(path):
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return None
+
+
 class Store:
     """All entries, kept in memory and mirrored to a CSV file.
 
-    A day can hold several entries. Each entry is a list [time, mood, note]:
-    time is "HH:MM" or "" (unknown), mood is 1-5 or 0 (note only).
+    A day can hold several entries. Each entry is a list
+    [time, mood, note, energy, anxiety]: time is "HH:MM" or "" (unknown), mood, energy
+    and anxiety are 1-5 or 0 (not given).
     """
 
-    def __init__(self):
-        self.path = os.path.join(data_dir(), "moods.csv")
-        self.days = {}  # date -> [[time, mood, note], ...] sorted by time
+    def __init__(self, path=None):
+        self.path = path or os.path.join(data_dir(), "moods.csv")
+        self.mtime = None
+        self.days = {}  # date -> [[time, mood, note, energy, anxiety], ...] sorted by time
         self.load()
 
     def load(self):
+        self.days = {}
+        self.mtime = file_mtime(self.path)
         if not os.path.exists(self.path):
             return
-        with open(self.path, newline="", encoding="utf-8") as f:
+        with open(self.path, newline="", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f):
                 try:
                     day = dt.date.fromisoformat((row.get("date") or "").strip())
@@ -90,8 +139,15 @@ class Store:
                 if not TIME_RE.match(time):
                     time = ""
                 note = row.get("note") or ""
-                if mood or note.strip():
-                    self.days.setdefault(day, []).append([time, mood, note])
+                scales = []
+                for key in ("energy", "anxiety"):
+                    try:
+                        value = int((row.get(key) or "0").strip() or 0)
+                    except ValueError:
+                        value = 0
+                    scales.append(value if 1 <= value <= 5 else 0)
+                if mood or note.strip() or any(scales):
+                    self.days.setdefault(day, []).append([time, mood, note] + scales)
         for items in self.days.values():
             items.sort(key=lambda e: e[0])
 
@@ -99,17 +155,22 @@ class Store:
         tmp = self.path + ".tmp"
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["date", "time", "mood", "note"])
+            w.writerow(["date", "time", "mood", "energy", "anxiety", "note"])
             for day in sorted(self.days):
-                for time, mood, note in self.days[day]:
-                    w.writerow([day.isoformat(), time, mood or "", note])
+                for time, mood, note, energy, anxiety in self.days[day]:
+                    w.writerow([day.isoformat(), time, mood or "", energy or "", anxiety or "",
+                                note])
         os.replace(tmp, self.path)
+        self.mtime = file_mtime(self.path)
+
+    def changed_on_disk(self):
+        return file_mtime(self.path) != self.mtime
 
     def entries(self, day):
         return self.days.get(day, [])
 
-    def add(self, day, time, mood, note):
-        entry = [time if TIME_RE.match(time or "") else "", mood, note]
+    def add(self, day, time, mood, note, energy=0, anxiety=0):
+        entry = [time if TIME_RE.match(time or "") else "", mood, note, energy, anxiety]
         items = self.days.setdefault(day, [])
         items.append(entry)
         items.sort(key=lambda e: e[0])
@@ -134,6 +195,22 @@ class Store:
         avg = self.day_avg(day)
         return to_level(avg) if avg else 0
 
+    def day_scale(self, day, index):
+        """Average of one of the extra scales (3 = energy, 4 = anxiety) for a day; 0 if none."""
+        vals = [e[index] for e in self.entries(day) if e[index]]
+        return sum(vals) / len(vals) if vals else 0.0
+
+    def scale_series(self, index, start=None, end=None):
+        """(date, average) for each day where that scale was given, within [start, end]."""
+        out = []
+        for day in sorted(self.days):
+            if (start and day < start) or (end and day > end):
+                continue
+            value = self.day_scale(day, index)
+            if value:
+                out.append((day, value))
+        return out
+
     def latest_mood(self, day):
         for entry in reversed(self.entries(day)):
             if entry[1]:
@@ -156,10 +233,12 @@ class Store:
             head = "%s — %s (average %.1f of %d entries)" % (
                 title, MOOD_NAMES[to_level(avg)], avg, len(moods))
         lines = [head]
-        for time, mood, note in items:
-            if len(items) == 1 and not note.strip():
+        for time, mood, note, energy, anxiety in items:
+            extra = ", ".join("%s %d" % (name.lower(), value) for value, name in
+                              ((energy, "Energy"), (anxiety, "Anxiety")) if value)
+            if len(items) == 1 and not note.strip() and not extra:
                 break
-            parts = [p for p in (time, MOOD_NAMES.get(mood, ""), note.strip()) if p]
+            parts = [p for p in (time, MOOD_NAMES.get(mood, ""), extra, note.strip()) if p]
             lines.append(" · ".join(parts))
         return "\n".join(lines)
 
@@ -195,13 +274,15 @@ AROUND_DAYS = 14
 class EventStore:
     """Important events (a medication change, a move...): events.csv (date,kind,title,note)."""
 
-    def __init__(self):
-        self.path = os.path.join(data_dir(), "events.csv")
+    def __init__(self, path=None):
+        self.path = path or os.path.join(data_dir(), "events.csv")
+        self.mtime = None
         self.items = []  # [date, kind, title, note]
         self.load()
 
     def load(self):
         self.items = []
+        self.mtime = file_mtime(self.path)
         if not os.path.exists(self.path):
             return
         with open(self.path, newline="", encoding="utf-8") as f:
@@ -227,6 +308,10 @@ class EventStore:
             for day, kind, title, note in self.items:
                 w.writerow([day.isoformat(), kind, title, note])
         os.replace(tmp, self.path)
+        self.mtime = file_mtime(self.path)
+
+    def changed_on_disk(self):
+        return file_mtime(self.path) != self.mtime
 
     def sort(self):
         self.items.sort(key=lambda e: e[0])
@@ -355,7 +440,7 @@ def export_csv(path, store, events, health):
         days.update(health.values.get(metric, {}))
 
     header = ["Date", "Weekday", "Mood", "Mood score (1–5)", "Moods during the day",
-              "Notes", "Events"]
+              "Notes", "Events", "Energy (1–5)", "Anxiety (1–5)"]
     for metric in metrics:
         title, unit, _dec, _how = metric_info(metric)
         unit = {"h": "hours"}.get(unit, unit)
@@ -366,11 +451,11 @@ def export_csv(path, store, events, health):
         items = store.entries(day)
         avg = store.day_avg(day)
         moods = []
-        for time, mood, _note in items:
+        for time, mood, _note, *_ in items:
             if mood:
                 moods.append("%s %s" % (time, MOOD_NAMES[mood]) if time else MOOD_NAMES[mood])
         notes = []
-        for time, _mood, note in items:
+        for time, _mood, note, *_ in items:
             if note.strip():
                 notes.append("%s: %s" % (time, _clean(note)) if time else _clean(note))
         evs = []
@@ -383,6 +468,9 @@ def export_csv(path, store, events, health):
                MOOD_NAMES[to_level(avg)] if avg else "",
                ("%.1f" % avg).replace(".0", "") if avg else "",
                ", ".join(moods), " | ".join(notes), " | ".join(evs)]
+        for index, _key, _name, _hint in SCALES:
+            value = store.day_scale(day, index)
+            row.append(("%.1f" % value).replace(".0", "") if value else "")
         for metric in metrics:
             value = health.values.get(metric, {}).get(day)
             row.append("" if value is None else format_value(metric, value, with_unit=False)
@@ -477,6 +565,8 @@ def export_xlsx(path, store, events, health):
     headers = ["Date", "Weekday", "Mood", "Score (1–5)", "Moods during the day", "Notes",
                "Events"]
     widths = [13, 12, 10, 9, 30, 50, 36]
+    headers += ["Energy (1–5)", "Anxiety (1–5)"]
+    widths += [9, 9]
     formats = {}
     for metric in metrics:
         title, unit, decimals, _how = metric_info(metric)
@@ -488,8 +578,8 @@ def export_xlsx(path, store, events, health):
     for r, day in enumerate(all_days, start=2):
         items = store.entries(day)
         avg = store.day_avg(day)
-        moods = ["%s %s" % (t, MOOD_NAMES[m]) if t else MOOD_NAMES[m] for t, m, _n in items if m]
-        notes = ["%s  %s" % (t, n.strip()) if t else n.strip() for t, _m, n in items if n.strip()]
+        moods = ["%s %s" % (t, MOOD_NAMES[m]) if t else MOOD_NAMES[m] for t, m, _n, *_ in items if m]
+        notes = ["%s  %s" % (t, n.strip()) if t else n.strip() for t, _m, n, *_ in items if n.strip()]
         evs = []
         for _d, kind, title, note in events.on(day):
             evs.append("%s: %s%s" % (EVENT_LABELS[kind], title,
@@ -497,6 +587,9 @@ def export_xlsx(path, store, events, health):
         values = [day, WEEKDAYS_LONG[day.weekday()], MOOD_NAMES[to_level(avg)] if avg else None,
                   round(avg, 1) if avg else None, "\n".join(moods) or None,
                   "\n".join(notes) or None, "\n".join(evs) or None]
+        for index, _key, _name, _hint in SCALES:
+            value = store.day_scale(day, index)
+            values.append(round(value, 1) if value else None)
         for metric in metrics:
             values.append(health.values.get(metric, {}).get(day))
         for c, value in enumerate(values, start=1):
@@ -505,6 +598,9 @@ def export_xlsx(path, store, events, health):
                 cell.number_format = "d mmm yyyy"
             elif c in (5, 6, 7):
                 cell.alignment = wrap
+            elif c in (8, 9):
+                cell.number_format = "0.0"
+                cell.alignment = centre
             elif c in formats:
                 cell.number_format = formats[c]
             elif c == 4:
@@ -523,10 +619,13 @@ def export_xlsx(path, store, events, health):
 
     # ---- Entries
     ent_ws = wb.create_sheet("Entries")
-    table(ent_ws, ["Date", "Time", "Mood", "Score", "Note"], [13, 8, 10, 7, 70])
+    table(ent_ws, ["Date", "Time", "Mood", "Score", "Note", "Energy", "Anxiety"],
+          [13, 8, 10, 7, 70, 9, 9])
     r = 1
     for day in sorted(store.days):
-        for time, mood, note in store.entries(day):
+        for time, mood, note, energy, anxiety in store.entries(day):
+            ent_ws.cell(row=r + 1, column=6, value=energy or None).alignment = centre
+            ent_ws.cell(row=r + 1, column=7, value=anxiety or None).alignment = centre
             r += 1
             ent_ws.cell(row=r, column=1, value=day).number_format = "d mmm yyyy"
             ent_ws.cell(row=r, column=2, value=time or None).alignment = centre
@@ -537,7 +636,7 @@ def export_xlsx(path, store, events, health):
                 mood_style(ent_ws.cell(row=r, column=3), mood)
                 mood_style(ent_ws.cell(row=r, column=4), mood)
                 ent_ws.cell(row=r, column=4).alignment = centre
-    finish(ent_ws, 5, r - 1)
+    finish(ent_ws, 7, r - 1)
 
     # ---- Events
     ev_ws = wb.create_sheet("Events")
@@ -706,6 +805,613 @@ def export_xlsx(path, store, events, health):
     return len(all_days)
 
 
+# ----------------------------------------------------------------- doctor report (PDF)
+
+REPORT_INK = {"ink": "#1b1b1b", "ink2": "#4a4945", "muted": "#6d6b66", "grid": "#e3e2dc",
+              "axis": "#c3c2b7", "tile": "#f4f3ef", "surface": "#ffffff", "health": "#1baf7a",
+              "energy": "#b87c10", "anxiety": "#7b5ad6", "moods": MOOD_COLORS_LIGHT}
+
+
+class _Pdf:
+    """A4 pages drawn with cairo, text laid out by Pango at print resolution."""
+
+    W, H, M = 595.28, 841.89, 42.0
+
+    def __init__(self, path):
+        import cairo
+        self.surface = cairo.PDFSurface(path, self.W, self.H)
+        try:
+            self.surface.set_metadata(cairo.PDF_METADATA_TITLE, "Mood report")
+            self.surface.set_metadata(cairo.PDF_METADATA_CREATOR, "Moodlog " + VERSION)
+        except (AttributeError, Exception):
+            pass
+        self.cr = cairo.Context(self.surface)
+        self.ctx = PangoCairo.create_context(self.cr)
+        PangoCairo.context_set_resolution(self.ctx, 72)
+        self.page = 1
+        self.y = self.M
+        self.bottom = self.H - self.M - 18
+
+    def text(self, s, x, y, size=9, color="#1b1b1b", bold=False, width=None, align=0,
+             measure=False, italic=False):
+        layout = Pango.Layout.new(self.ctx)
+        desc = Pango.FontDescription.from_string("Sans")
+        desc.set_size(int(size * Pango.SCALE))
+        if bold:
+            desc.set_weight(Pango.Weight.BOLD)
+        if italic:
+            desc.set_style(Pango.Style.ITALIC)
+        layout.set_font_description(desc)
+        if width:
+            layout.set_width(int(width * Pango.SCALE))
+            layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+            layout.set_alignment((Pango.Alignment.LEFT, Pango.Alignment.CENTER,
+                                  Pango.Alignment.RIGHT)[align])
+        layout.set_text(s, -1)
+        w, h = layout.get_pixel_size()
+        if not measure:
+            if not width and align:
+                x -= w * (0.5 if align == 1 else 1.0)
+            src(self.cr, color)
+            self.cr.move_to(x, y)
+            PangoCairo.show_layout(self.cr, layout)
+        return w, h
+
+    def footer(self):
+        y = self.H - self.M + 4
+        self.text("Made with Moodlog · self-reported data, not a medical record", self.M, y,
+                  7.5, REPORT_INK["muted"])
+        self.text("Page %d" % self.page, self.W - self.M, y, 7.5, REPORT_INK["muted"], align=2)
+
+    def new_page(self):
+        self.footer()
+        self.cr.show_page()
+        self.page += 1
+        self.y = self.M
+
+    def ensure(self, height):
+        if self.y + height > self.bottom:
+            self.new_page()
+            return True
+        return False
+
+    def finish(self):
+        self.footer()
+        self.surface.finish()
+
+
+def _avg(values):
+    values = [v for v in values if v]
+    return sum(values) / len(values) if values else 0.0
+
+
+def export_report(path, store, events, health, start, end, include_notes=False,
+                  include_health=True):
+    """A printable summary for a doctor or therapist. Returns the number of pages."""
+    ink = REPORT_INK
+    pdf = _Pdf(path)
+    cr, M, W = pdf.cr, pdf.M, pdf.W
+    span = (end - start).days + 1
+    days = [start + dt.timedelta(days=i) for i in range(span)]
+    mood_days = [d for d in days if store.day_avg(d)]
+    entries = [m for d, _t, m in store.timed(start, end)]
+    evs = events.between(start, end)
+    number = {id(e): i + 1 for i, e in enumerate(evs)}
+    sleep = health.values.get("sleep_hours", {}) if include_health else {}
+    rhr = health.values.get("resting_hr", {}) if include_health else {}
+    steps = health.values.get("steps", {}) if include_health else {}
+    sleep_days = [d for d in days if d in sleep]
+
+    # ---- title
+    pdf.text("Mood report", M, pdf.y, 20, ink["ink"], bold=True)
+    pdf.y += 30
+    sub = "%s – %s · %d days · made with Moodlog on %s" % (
+        start.strftime("%-d %B %Y"), end.strftime("%-d %B %Y"), span,
+        dt.date.today().strftime("%-d %B %Y"))
+    pdf.text(sub, M, pdf.y, 9, ink["muted"])
+    pdf.y += 24
+
+    # ---- key numbers
+    avg_mood = _avg(store.day_avg(d) for d in mood_days)
+    tiles = [("Days with a mood", "%d of %d" % (len(mood_days), span), None),
+             ("Average mood (1–5)", ("%.1f  %s" % (avg_mood, MOOD_NAMES[to_level(avg_mood)]))
+              if avg_mood else "–", to_level(avg_mood) if avg_mood else None),
+             ("Moods logged", str(len(entries)), None)]
+    for index, key, name, _hint in SCALES:
+        value = _avg(store.day_scale(d, index) for d in days)
+        tiles.append(("Average %s (1–5)" % name.lower(),
+                      ("%.1f  %s" % (value, SCALE_WORDS[key][to_level(value)])) if value else "–",
+                      None))
+    if sleep_days:
+        tiles.append(("Average sleep", "%.1f h  (%d nights)" % (_avg(sleep[d] for d in sleep_days),
+                                                             len(sleep_days)), None))
+    elif rhr:
+        vals = [rhr[d] for d in days if d in rhr]
+        if vals:
+            tiles.append(("Resting heart rate", "%.0f bpm" % _avg(vals), None))
+    cols, gap, th = 3, 10, 50
+    tw = (W - 2 * M - gap * (cols - 1)) / cols
+    for i, (label, value, level) in enumerate(tiles):
+        r, c = divmod(i, cols)
+        x, y = M + c * (tw + gap), pdf.y + r * (th + gap)
+        rounded_rect(cr, x, y, tw, th, 6)
+        src(cr, ink["tile"])
+        cr.fill()
+        if level:
+            rounded_rect(cr, x, y, 5, th, 2)
+            src(cr, ink["moods"][level])
+            cr.fill()
+        pdf.text(label, x + 12, y + 8, 8, ink["muted"])
+        pdf.text(value, x + 12, y + 22, 13, ink["ink"], bold=True)
+    pdf.y += ((len(tiles) + cols - 1) // cols) * (th + gap) + 8
+
+    # ---- mood mix (one stacked bar)
+    if entries:
+        pdf.text("How often each mood was logged", M, pdf.y, 10, ink["ink"], bold=True)
+        pdf.y += 17
+        total, x, bw, bh = len(entries), M, W - 2 * M, 14
+        for level in range(1, 6):
+            n = entries.count(level)
+            if not n:
+                continue
+            seg = bw * n / total
+            cr.rectangle(x, pdf.y, max(seg - 2, 1), bh)
+            src(cr, ink["moods"][level])
+            cr.fill()
+            x += seg
+        pdf.y += bh + 6
+        x = M
+        for level in range(1, 6):
+            n = entries.count(level)
+            cr.rectangle(x, pdf.y + 2, 8, 8)
+            src(cr, ink["moods"][level])
+            cr.fill()
+            w, _h = pdf.text("%s %d%%" % (MOOD_NAMES[level], round(100 * n / total)), x + 12, pdf.y,
+                             8.5, ink["ink2"])
+            x += w + 26
+        pdf.y += 22
+
+    # ---- time charts
+    weekly = span > 120
+
+    def buckets(values):
+        """{day: value} -> [(x position 0..1, value, label)] daily, or weekly averages."""
+        out = []
+        if not weekly:
+            for i, d in enumerate(days):
+                if d in values:
+                    out.append((i, values[d], d.strftime("%-d %b")))
+            return out, span
+        weeks = {}
+        for d, v in values.items():
+            if start <= d <= end:
+                weeks.setdefault((d - start).days // 7, []).append(v)
+        return [(w, sum(v) / len(v), "") for w, v in sorted(weeks.items())], (span + 6) // 7
+
+    def xpos(i, n, left, width):
+        return left + (width / 2 if n <= 1 else 6 + i / (n - 1) * (width - 12))
+
+    def axis_ticks(n, left, width, top, height):
+        """Month or week tick labels under a chart, and the event lines with numbers."""
+        cr.set_line_width(0.6)
+        for i, d in enumerate(days):
+            first = d.day == 1 or i == 0
+            if span <= 45:
+                show = d.weekday() == 0 or i == 0
+                label = d.strftime("%-d %b")
+            else:
+                show = first
+                label = d.strftime("%b %Y" if d.month == 1 or i == 0 else "%b")
+            if show:
+                slot = i if not weekly else i // 7
+                x = xpos(slot, n, left, width)
+                pdf.text(label, x, top + height + 4, 7.5, ink["muted"], align=1)
+        for e in evs:
+            i = (e[0] - start).days
+            slot = i if not weekly else i // 7
+            x = round(xpos(slot, n, left, width)) + 0.5
+            src(cr, ink["ink2"], 0.7)
+            cr.set_line_width(0.8)
+            cr.set_dash([2.5, 2.5])
+            cr.move_to(x, top)
+            cr.line_to(x, top + height)
+            cr.stroke()
+            cr.set_dash([])
+            src(cr, ink["ink"])
+            cr.arc(x, top - 6, 5.5, 0, 2 * math.pi)
+            cr.fill()
+            pdf.text(str(number[id(e)]), x, top - 11, 6.5, "#ffffff", bold=True, align=1)
+
+    def chart_frame(title, legend=None, height=118, note=None):
+        need = height + 52
+        pdf.ensure(need)
+        pdf.text(title, M, pdf.y, 10, ink["ink"], bold=True)
+        if legend:
+            x = W - M
+            for name, color in reversed(legend):
+                w, _h = pdf.text(name, x, pdf.y + 1, 8, ink["ink2"], align=2)
+                src(cr, color)
+                cr.set_line_width(2)
+                cr.move_to(x - w - 18, pdf.y + 6)
+                cr.line_to(x - w - 5, pdf.y + 6)
+                cr.stroke()
+                x -= w + 30
+        top = pdf.y + 26
+        pdf.y = top + height + 20
+        if note:
+            pdf.text(note, M, pdf.y - 4, 7.5, ink["muted"], italic=True)
+            pdf.y += 10
+        pdf.y += 10
+        return top, height
+
+    left, width = M + 44, W - 2 * M - 44
+    if mood_days:
+        top, height = chart_frame("Mood, %s" % ("weekly average" if weekly else "daily average"),
+                                  note=("Numbered marks are the events listed below."
+                                        if evs else None))
+        for level in range(1, 6):
+            y = round(top + height - (level - 1) / 4 * height) + 0.5
+            src(cr, ink["grid"])
+            cr.set_line_width(0.6)
+            cr.move_to(left, y)
+            cr.line_to(left + width, y)
+            cr.stroke()
+            pdf.text(MOOD_NAMES[level], left - 8, y - 5, 7.5, ink["muted"], align=2)
+        pts, n = buckets({d: store.day_avg(d) for d in mood_days})
+        src(cr, ink["ink2"])
+        cr.set_line_width(1.3)
+        prev = None
+        for i, v, _l in pts:
+            x, y = xpos(i, n, left, width), top + height - (v - 1) / 4 * height
+            if prev is not None and i - prev == 1:
+                cr.line_to(x, y)
+            else:
+                cr.stroke()
+                cr.move_to(x, y)
+            prev = i
+        cr.stroke()
+        for i, v, _l in pts:
+            x, y = xpos(i, n, left, width), top + height - (v - 1) / 4 * height
+            src(cr, ink["surface"])
+            cr.arc(x, y, 3.2, 0, 2 * math.pi)
+            cr.fill()
+            src(cr, ink["moods"][to_level(v)])
+            cr.arc(x, y, 2.3, 0, 2 * math.pi)
+            cr.fill()
+        axis_ticks(n, left, width, top, height)
+
+    scale_values = {key: {d: store.day_scale(d, index) for d in days if store.day_scale(d, index)}
+                    for index, key, _n, _h in SCALES}
+    if any(scale_values.values()):
+        top, height = chart_frame(
+            "Energy and anxiety (1–5)", legend=[(name, ink[key]) for _i, key, name, _h in SCALES],
+            height=96, note="Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious.")
+        for level in range(1, 6):
+            y = round(top + height - (level - 1) / 4 * height) + 0.5
+            src(cr, ink["grid"])
+            cr.set_line_width(0.6)
+            cr.move_to(left, y)
+            cr.line_to(left + width, y)
+            cr.stroke()
+            pdf.text(str(level), left - 8, y - 5, 7.5, ink["muted"], align=2)
+        for _index, key, _name, _hint in SCALES:
+            pts, n = buckets(scale_values[key])
+            src(cr, ink[key])
+            cr.set_line_width(1.4)
+            prev = None
+            for i, v, _l in pts:
+                x, y = xpos(i, n, left, width), top + height - (v - 1) / 4 * height
+                if prev is not None and i - prev == 1:
+                    cr.line_to(x, y)
+                else:
+                    cr.stroke()
+                    cr.move_to(x, y)
+                prev = i
+            cr.stroke()
+            for i, v, _l in pts:
+                cr.arc(xpos(i, n, left, width), top + height - (v - 1) / 4 * height, 1.8, 0, 2 * math.pi)
+                cr.fill()
+        n = span if not weekly else (span + 6) // 7
+        axis_ticks(n, left, width, top, height)
+
+    if sleep_days:
+        top, height = chart_frame("Sleep (hours a night%s)" % (", weekly average" if weekly else ""),
+                                  height=86)
+        pts, n = buckets({d: sleep[d] for d in sleep_days})
+        hi = max(10, math.ceil(max(v for _i, v, _l in pts) / 2) * 2)
+        for tick in range(0, hi + 1, 2 if hi <= 12 else 4):
+            y = round(top + height - tick / hi * height) + 0.5
+            src(cr, ink["axis"] if tick == 0 else ink["grid"])
+            cr.set_line_width(0.6)
+            cr.move_to(left, y)
+            cr.line_to(left + width, y)
+            cr.stroke()
+            pdf.text(str(tick), left - 8, y - 5, 7.5, ink["muted"], align=2)
+        bw = max(1.5, min(10, (width - 12) / max(n, 1) - 1.5))
+        for i, v, _l in pts:
+            x, bh = xpos(i, n, left, width), v / hi * height
+            bar_up(cr, x - bw / 2, top + height - bh, bw, bh, r=min(2, bw / 2))
+            src(cr, ink["health"])
+            cr.fill()
+        axis_ticks(n, left, width, top, height)
+
+    # ---- events
+    if evs:
+        pdf.ensure(70)
+        pdf.text("Events", M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 22
+        weeks = AROUND_DAYS // 7
+        colx = [M, M + 22, M + 92, M + 190, M + 410, M + 466]
+        heads = ["#", "Date", "Type", "What happened",
+                 "Mood %dw before" % weeks, "Mood %dw after" % weeks]
+
+        def event_head():
+            for x, h in zip(colx, heads):
+                pdf.text(h, x, pdf.y, 7.5, ink["muted"], bold=True,
+                         width=50 if x >= colx[4] else None)
+            pdf.y += 22
+            src(cr, ink["axis"])
+            cr.set_line_width(0.6)
+            cr.move_to(M, pdf.y - 4)
+            cr.line_to(W - M, pdf.y - 4)
+            cr.stroke()
+        event_head()
+        for e in evs:
+            day, kind, title, note = e
+            what = title + (("\n" + note.strip()) if note.strip() else "")
+            _w, h = pdf.text(what, colx[3], 0, 8.5, measure=True, width=210)
+            if pdf.ensure(h + 10):
+                event_head()
+            y = pdf.y
+            pdf.text(str(number[id(e)]), colx[0], y, 8.5, ink["ink"], bold=True)
+            pdf.text(day.strftime("%-d %b %Y"), colx[1], y, 8.5, ink["ink"])
+            pdf.text(EVENT_LABELS[kind], colx[2], y, 8.5, ink["ink"], width=95)
+            pdf.text(what, colx[3], y, 8.5, ink["ink"], width=210)
+            if day <= dt.date.today():
+                (b, nb), (a, na), complete = mood_around(store, day)
+                for x, (v, cnt) in ((colx[4], (b, nb)), (colx[5], (a, na))):
+                    if cnt >= 3:
+                        cr.rectangle(x, y + 2, 7, 7)
+                        src(cr, ink["moods"][to_level(v)])
+                        cr.fill()
+                        pdf.text("%.1f (%d d)" % (v, cnt), x + 10, y, 8.5, ink["ink"])
+                    else:
+                        pdf.text("–", x + 10, y, 8.5, ink["muted"])
+                if not complete:
+                    pdf.text("so far", colx[5] + 10, y + 11, 7, ink["muted"], italic=True)
+            pdf.y += max(h, 22) + 6
+            src(cr, ink["grid"])
+            cr.set_line_width(0.5)
+            cr.move_to(M, pdf.y - 3)
+            cr.line_to(W - M, pdf.y - 3)
+            cr.stroke()
+        pdf.y += 12
+
+    # ---- day by day
+    rows = [d for d in days if store.entries(d) or events.on(d) or (include_health and d in sleep)]
+    if rows:
+        pdf.ensure(80)
+        pdf.text("Day by day", M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 22
+        has_sleep = bool(sleep_days)
+        cols = [("Date", 74), ("Mood", 92), ("Energy", 40), ("Anxiety", 44)]
+        if has_sleep:
+            cols.append(("Sleep", 38))
+        cols.append(("Event", 34))
+        if include_notes:
+            cols.append(("Notes", W - 2 * M - sum(c[1] for c in cols)))
+        xs, x = [], M
+        for _name, w in cols:
+            xs.append(x)
+            x += w
+
+        def day_head():
+            for (name, _w), x in zip(cols, xs):
+                pdf.text(name, x, pdf.y, 7.5, ink["muted"], bold=True)
+            pdf.y += 14
+            src(cr, ink["axis"])
+            cr.set_line_width(0.6)
+            cr.move_to(M, pdf.y - 3)
+            cr.line_to(W - M, pdf.y - 3)
+            cr.stroke()
+        day_head()
+        for d in rows:
+            items = store.entries(d)
+            notes = ""
+            if include_notes:
+                notes = "\n".join(("%s  %s" % (e[0], " ".join(e[2].split()))).strip()
+                                  for e in items if e[2].strip())
+            h = 12
+            if notes:
+                _w, h = pdf.text(notes, xs[-1], 0, 7.5, measure=True, width=cols[-1][1] - 4)
+                h = max(h, 12)
+            if pdf.ensure(h + 6):
+                day_head()
+            y = pdf.y
+            if d.weekday() >= 5:
+                cr.rectangle(M, y - 2, W - 2 * M, h + 4)
+                src(cr, ink["tile"])
+                cr.fill()
+            pdf.text(d.strftime("%a %-d %b"), xs[0], y, 8, ink["ink"])
+            avg = store.day_avg(d)
+            if avg:
+                cr.rectangle(xs[1], y + 1.5, 7, 7)
+                src(cr, ink["moods"][to_level(avg)])
+                cr.fill()
+                count = len([e for e in items if e[1]])
+                label = "%s %.1f" % (MOOD_NAMES[to_level(avg)], avg)
+                if count > 1:
+                    label += " (%d)" % count
+                pdf.text(label, xs[1] + 11, y, 8, ink["ink"])
+            for k, (index, _key, _name, _hint) in enumerate(SCALES):
+                v = store.day_scale(d, index)
+                pdf.text(("%.1f" % v).replace(".0", "") if v else "", xs[2 + k], y, 8, ink["ink"])
+            col = 4
+            if has_sleep:
+                pdf.text("%.1f" % sleep[d] if d in sleep else "", xs[col], y, 8, ink["ink"])
+                col += 1
+            marks = ", ".join(str(number[id(e)]) for e in evs if e[0] == d)
+            pdf.text(marks, xs[col], y, 8, ink["ink"], bold=True)
+            if notes:
+                pdf.text(notes, xs[-1], y, 7.5, ink["ink2"], width=cols[-1][1] - 4)
+            pdf.y += h + 5
+        pdf.y += 6
+    if steps and include_health:
+        pass  # steps stay in the spreadsheet export; the report keeps to what matters most
+    pages = pdf.page
+    pdf.finish()
+    return pages
+
+
+# ----------------------------------------------------------------- backup, restore, merging
+
+DATA_FILES = ["moods.csv", "events.csv", "health.csv", "sync.json", "sync-last.txt"]
+CONTENT_FILES = ["moods.csv", "events.csv", "health.csv"]
+MANIFEST = "moodlog-backup.json"
+
+
+class BackupError(Exception):
+    pass
+
+
+def make_backup(path, folder=None):
+    """Zip the data files of `folder` (default: the data folder) into `path`."""
+    import zipfile
+    folder = folder or data_dir()
+    names = [n for n in DATA_FILES if os.path.exists(os.path.join(folder, n))]
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    tmp = path + ".tmp"
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(MANIFEST, json.dumps({
+            "app": "Moodlog", "version": VERSION,
+            "created": dt.datetime.now().strftime("%Y-%m-%d %H:%M"), "files": names}, indent=2))
+        for name in names:
+            z.write(os.path.join(folder, name), name)
+    os.replace(tmp, path)
+    return names
+
+
+def read_backup(path):
+    """Check a backup and return ({file name: bytes}, info). Only known data files are taken."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(path) as z:
+            names = set(z.namelist())
+            info = {}
+            if MANIFEST in names:
+                try:
+                    info = json.loads(z.read(MANIFEST).decode("utf-8"))
+                except ValueError:
+                    info = {}
+            files = {n: z.read(n) for n in DATA_FILES if n in names}
+    except (zipfile.BadZipFile, OSError) as err:
+        raise BackupError("This file is not a Moodlog backup (%s)." % err)
+    if not any(n in files for n in CONTENT_FILES):
+        raise BackupError("This file is not a Moodlog backup: it has no moods, events or "
+                          "health data in it.")
+    if "moods.csv" in files and not files["moods.csv"].lstrip(b"\xef\xbb\xbf").startswith(b"date"):
+        raise BackupError("The moods file in this backup is damaged.")
+    return files, info
+
+
+def restore_backup(path):
+    """Replace the data with a backup. A copy of the current data is saved first.
+    Returns the path of that safety copy."""
+    files, _info = read_backup(path)
+    folder = data_dir()
+    safety = os.path.join(folder, "backups",
+                          dt.datetime.now().strftime("before-restore-%Y%m%d-%H%M%S.zip"))
+    make_backup(safety)
+    for name in CONTENT_FILES + ["sync.json"]:
+        target = os.path.join(folder, name)
+        if name in files:
+            tmp = target + ".tmp"
+            with open(tmp, "wb") as f:
+                f.write(files[name])
+            os.replace(tmp, target)
+        elif name in CONTENT_FILES and os.path.exists(target):
+            os.remove(target)  # the backup had none of this: restore that state too
+    return safety
+
+
+def merge_folder_into(src, dst_store, dst_events, dst_health):
+    """Add everything from the data files in folder `src` that the destination lacks."""
+    added = 0
+    other = Store(os.path.join(src, "moods.csv"))
+    for day, items in other.days.items():
+        mine = dst_store.entries(day)
+        for entry in items:
+            if entry not in mine:
+                dst_store.add(day, *([entry[0], entry[1], entry[2], entry[3], entry[4]]))
+                mine = dst_store.entries(day)
+                added += 1
+    events = EventStore(os.path.join(src, "events.csv"))
+    for event in events.items:
+        if event not in dst_events.items:
+            dst_events.add(*event)
+            added += 1
+    health = HealthStore(os.path.join(src, "health.csv"))
+    for metric, days in health.values.items():
+        mine = dst_health.values.setdefault(metric, {})
+        for day, value in days.items():
+            if day not in mine:
+                mine[day] = value
+                added += 1
+    return added
+
+
+CONFLICT_RE = re.compile(r"^(moods|events|health)\b.*conflict.*\.csv$", re.IGNORECASE)
+
+
+def conflict_files(folder=None):
+    """Copies a sync app made when both computers changed a file at once.
+    Syncthing: moods.sync-conflict-20261118-...csv; Nextcloud: moods (conflicted copy ...).csv"""
+    folder = folder or data_dir()
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return []
+    return sorted((m.group(1).lower(), os.path.join(folder, n)) for n in names
+                  for m in [CONFLICT_RE.match(n)] if m and n.lower() not in
+                  ("moods.csv", "events.csv", "health.csv"))
+
+
+def merge_conflicts(store, events, health):
+    """Fold every conflict copy into the main files, then move the copies aside."""
+    found = conflict_files()
+    if not found:
+        return 0, 0
+    added = 0
+    parked = os.path.join(data_dir(), "backups", "merged-conflicts")
+    os.makedirs(parked, exist_ok=True)
+    for kind, path in found:
+        if kind == "moods":
+            other = Store(path)
+            for day, items in other.days.items():
+                for entry in items:
+                    if entry not in store.entries(day):
+                        store.add(day, *entry)
+                        added += 1
+        elif kind == "events":
+            for event in EventStore(path).items:
+                if event not in events.items:
+                    events.add(*event)
+                    added += 1
+        else:
+            for metric, days in HealthStore(path).values.items():
+                mine = health.values.setdefault(metric, {})
+                for day, value in days.items():
+                    if day not in mine:
+                        mine[day] = value
+                        added += 1
+    store.save()
+    events.save()
+    health.save()
+    for _kind, path in found:
+        os.replace(path, os.path.join(parked, os.path.basename(path)))
+    return len(found), added
+
+
 # ----------------------------------------------------------------- health data
 
 # key: (title, unit, decimals, how a new value replaces an old one)
@@ -746,8 +1452,8 @@ def format_value(key, value, with_unit=True):
 class HealthStore:
     """Daily health numbers received from the phone: health.csv (date,metric,value)."""
 
-    def __init__(self):
-        self.path = os.path.join(data_dir(), "health.csv")
+    def __init__(self, path=None):
+        self.path = path or os.path.join(data_dir(), "health.csv")
         self.values = {}  # metric -> {date: value}
         self.mtime = 0
         self.load()
@@ -1170,7 +1876,14 @@ class GridgetsLink:
 
     def __init__(self, store):
         self.store = store
-        self.state_path = os.path.join(data_dir(), "gridgets-link.json")
+        self.state_path = os.path.join(config_dir(), "gridgets-link.json")
+        old_state = os.path.join(data_dir(), "gridgets-link.json")
+        if old_state != self.state_path and os.path.exists(old_state) \
+                and not os.path.exists(self.state_path):
+            try:
+                os.replace(old_state, self.state_path)  # moved here in version 1.8
+            except OSError:
+                pass
         self.enabled = True
         self.written = {}     # "YYYY-MM" -> {date: level} as Moodlog last left the file
         self.cleared = set()  # dates emptied in Moodlog; never refilled from a stale file
@@ -1322,10 +2035,12 @@ def theme():
     if is_dark():
         return {"ink": "#f0efec", "ink2": "#c3c2b7", "muted": "#9a9892",
                 "grid": "#4a4a48", "axis": "#5c5c59", "surface": "#363636",
-                "moods": MOOD_COLORS_DARK, "health": "#199e70"}
+                "moods": MOOD_COLORS_DARK, "health": "#199e70",
+                "energy": "#c08418", "anxiety": "#9a7ef0"}
     return {"ink": "#0b0b0b", "ink2": "#52514e", "muted": "#77756f",
             "grid": "#e1e0d9", "axis": "#c3c2b7", "surface": "#ffffff",
-            "moods": MOOD_COLORS_LIGHT, "health": "#1baf7a"}
+            "moods": MOOD_COLORS_LIGHT, "health": "#1baf7a",
+            "energy": "#b87c10", "anxiety": "#7b5ad6"}
 
 
 def src(cr, hex_color, alpha=1.0):
@@ -1843,6 +2558,99 @@ class HealthChart(Canvas):
             self.hits.append((x - 10, y - 10, 20, 20, tip(i, v, count)))
 
 
+class ScaleChart(Canvas):
+    """Energy and anxiety over time, on the same axis as the mood chart."""
+
+    def __init__(self, win):
+        super().__init__(-1, 210)
+        self.win = win
+        self.set_hexpand(True)
+
+    def draw(self, cr, w, h, th):
+        win = self.win
+        n, labels, slot, describe = time_axis(win)
+        start, end = win.period()
+        daily = win.range_mode == "month"
+        series = []
+        for index, key, name, _hint in SCALES:
+            buckets = {}
+            for day, value in win.store.scale_series(index, start, end):
+                i = slot(day)
+                if i is not None:
+                    buckets.setdefault(i, []).append(value)
+            pts = [(i, sum(v) / len(v), len(v)) for i, v in sorted(buckets.items())]
+            series.append((key, name, pts))
+        top, bottom = 24, 28
+        ph = h - top - bottom
+
+        def ypos(v):
+            return top + ph - (v - 1) / 4 * ph
+
+        cr.set_line_width(1)
+        for level in range(1, 6):
+            y = round(ypos(level)) + 0.5
+            src(cr, th["grid"])
+            cr.move_to(PLOT_LEFT, y)
+            cr.line_to(w - PLOT_RIGHT, y)
+            cr.stroke()
+            text(cr, self, str(level), PLOT_LEFT - 10, y, 9, th["muted"], ax=1, ay=0.5)
+        if not any(pts for _k, _n, pts in series):
+            text(cr, self, "No energy or anxiety logged in this period yet",
+                 (w + PLOT_LEFT - PLOT_RIGHT) / 2, top + ph / 2, 10.5, th["muted"], ax=0.5, ay=0.5)
+            return
+        for i, label in labels:
+            text(cr, self, label, slot_x(i, n, w), h - bottom + 8, 9, th["muted"], ax=0.5)
+        draw_event_lines(self, cr, w, top, top + ph, th, n, slot)
+
+        # legend, top right: a short line in the series colour + its name
+        lx = w - PLOT_RIGHT
+        for key, name, pts in reversed(series):
+            tw, _th = text(cr, self, name, lx, 4, 9.5, th["ink2"], ax=1)
+            src(cr, th[key])
+            cr.set_line_width(2.5)
+            cr.move_to(lx - tw - 22, 11)
+            cr.line_to(lx - tw - 6, 11)
+            cr.stroke()
+            lx -= tw + 36
+
+        for key, name, pts in series:
+            color = th[key]
+            src(cr, color)
+            cr.set_line_width(2)
+            cr.set_line_join(1)
+            cr.set_line_cap(1)
+            prev = None
+            for i, v, _c in pts:
+                if prev is not None and i - prev == 1:
+                    cr.line_to(slot_x(i, n, w), ypos(v))
+                else:
+                    cr.stroke()
+                    cr.move_to(slot_x(i, n, w), ypos(v))
+                prev = i
+            cr.stroke()
+            for i, v, count in pts:
+                x, y = slot_x(i, n, w), ypos(v)
+                src(cr, th["surface"])
+                cr.arc(x, y, 5.5, 0, 2 * math.pi)
+                cr.fill()
+                src(cr, color)
+                cr.arc(x, y, 3.5, 0, 2 * math.pi)
+                cr.fill()
+                word = SCALE_WORDS[key][to_level(v)]
+                if daily:
+                    tip = "%s — %s %.1f (%s)" % (describe(i), name.lower(), v, word)
+                else:
+                    tip = "%s — average %s %.1f (%s) over %d day%s" % (
+                        describe(i), name.lower(), v, word, count, "" if count == 1 else "s")
+                self.hits.append((x - 9, y - 9, 18, 18, tip))
+            if pts:  # direct label at the newest point
+                i, v, _c = pts[-1]
+                x, y = slot_x(i, n, w), ypos(v)
+                right = x + 10 + 50 < w
+                text(cr, self, name, x + 9 if right else x - 9, y, 9, th["ink2"],
+                     ax=0 if right else 1, ay=0.5)
+
+
 class CountChart(Canvas):
     """How many days of each mood."""
 
@@ -2154,6 +2962,293 @@ class EventWindow(Gtk.Window):
             self.fail("Could not save the change to events.csv.")
 
 
+class ReportWindow(Gtk.Window):
+    """Choose a period and what to include, then save the doctor report."""
+
+    PRESETS = [("Last 30 days", 30), ("Last 3 months", 91), ("Last 6 months", 182),
+               ("This year", "year"), ("Everything", "all")]
+
+    def __init__(self, win):
+        super().__init__(title="Report for your doctor", transient_for=win, modal=True)
+        self.set_default_size(500, -1)
+        self.win = win
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        intro = Gtk.Label(xalign=0, wrap=True, label=(
+            "A printable PDF with your mood over a period, energy and anxiety, sleep, your "
+            "events (such as medication changes) and a day-by-day table."))
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        presets = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=5)
+        for label, span in self.PRESETS:
+            btn = Gtk.Button(label=label)
+            btn.connect("clicked", lambda _b, s=span: self.preset(s))
+            presets.append(btn)
+        col.append(presets)
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        self.start_entry = Gtk.Entry(hexpand=True, placeholder_text="YYYY-MM-DD")
+        self.end_entry = Gtk.Entry(hexpand=True, placeholder_text="YYYY-MM-DD")
+        for r, (name, entry) in enumerate((("From", self.start_entry), ("To", self.end_entry))):
+            label = Gtk.Label(label=name, xalign=0)
+            label.add_css_class("dim-label")
+            grid.attach(label, 0, r, 1, 1)
+            grid.attach(entry, 1, r, 1, 1)
+        col.append(grid)
+        self.notes_check = Gtk.CheckButton(label="Include my notes")
+        notes_hint = Gtk.Label(xalign=0, wrap=True, label=(
+            "Notes can be private. Leave this off to share only the numbers and events."))
+        notes_hint.add_css_class("dim-label")
+        notes_hint.add_css_class("caption")
+        notes_hint.set_margin_start(28)
+        self.health_check = Gtk.CheckButton(label="Include sleep from my phone", active=True)
+        self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
+        for wdg in (self.notes_check, notes_hint, self.health_check):
+            col.append(wdg)
+        self.error = Gtk.Label(xalign=0, wrap=True)
+        self.error.add_css_class("error")
+        self.error.set_visible(False)
+        col.append(self.error)
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        cancel = Gtk.Button(label="Cancel")
+        cancel.connect("clicked", lambda *_: self.close())
+        save = Gtk.Button(label="Save PDF…")
+        save.add_css_class("suggested-action")
+        save.connect("clicked", self.on_save)
+        buttons.append(cancel)
+        buttons.append(save)
+        col.append(buttons)
+        self.set_child(col)
+        self.preset(91)
+
+    def preset(self, span):
+        today = dt.date.today()
+        if span == "year":
+            start = dt.date(today.year, 1, 1)
+        elif span == "all":
+            known = list(self.win.store.days) + [e[0] for e in self.win.events.items]
+            start = min(known) if known else today
+        else:
+            start = today - dt.timedelta(days=span - 1)
+        self.start_entry.set_text(start.isoformat())
+        self.end_entry.set_text(today.isoformat())
+        self.error.set_visible(False)
+
+    def dates(self):
+        try:
+            start = dt.date.fromisoformat(self.start_entry.get_text().strip())
+            end = dt.date.fromisoformat(self.end_entry.get_text().strip())
+        except ValueError:
+            self.error.set_text("Write both dates as year-month-day, for example %s."
+                                % dt.date.today().isoformat())
+            self.error.set_visible(True)
+            return None
+        if end < start:
+            self.error.set_text("The end date is before the start date.")
+            self.error.set_visible(True)
+            return None
+        if (end - start).days > 3 * 366:
+            self.error.set_text("Choose at most three years.")
+            self.error.set_visible(True)
+            return None
+        self.error.set_visible(False)
+        return start, end
+
+    def on_save(self, *_):
+        period = self.dates()
+        if not period:
+            return
+        start, end = period
+        name = "moodlog-report-%s-to-%s.pdf" % (start.isoformat(), end.isoformat())
+        self.win._pick("Save the report", "save", lambda path: self.write(path, start, end), name)
+
+    def write(self, path, start, end):
+        if not path.lower().endswith(".pdf"):
+            path += ".pdf"
+        win = self.win
+        win.flush()
+        try:
+            pages = export_report(path, win.store, win.events, win.health, start, end,
+                                  include_notes=self.notes_check.get_active(),
+                                  include_health=self.health_check.get_active())
+        except (OSError, Exception) as err:
+            self.error.set_text("Could not make the report: %s" % err)
+            self.error.set_visible(True)
+            return
+        self.close()
+        try:
+            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+        except GLib.Error:
+            pass
+        win.notify("Saved the report (%d page%s) as %s" % (pages, "" if pages == 1 else "s",
+                                                           os.path.basename(path)))
+
+
+class ConfirmWindow(Gtk.Window):
+    """A small question with up to three buttons. `choices` = [(label, callback, style)]."""
+
+    def __init__(self, parent, title, body, choices):
+        super().__init__(title=title, transient_for=parent, modal=True)
+        self.set_default_size(460, -1)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        head = Gtk.Label(label=title, xalign=0, wrap=True)
+        head.add_css_class("title-3")
+        text_ = Gtk.Label(label=body, xalign=0, wrap=True)
+        col.append(head)
+        col.append(text_)
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        cancel = Gtk.Button(label="Cancel")
+        cancel.connect("clicked", lambda *_: self.close())
+        buttons.append(cancel)
+        for label, callback, style in choices:
+            btn = Gtk.Button(label=label)
+            if style:
+                btn.add_css_class(style)
+            btn.connect("clicked", self._choose, callback)
+            buttons.append(btn)
+        col.append(buttons)
+        self.set_child(col)
+
+    def _choose(self, _btn, callback):
+        self.close()
+        callback()
+
+
+class DataWindow(Gtk.Window):
+    """Where the data lives, two-computer use through a sync folder, conflict copies."""
+
+    def __init__(self, win):
+        super().__init__(title="Data folder and sync", transient_for=win, modal=True)
+        self.set_default_size(560, -1)
+        self.win = win
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+
+        head = Gtk.Label(label="Your data is stored in", xalign=0)
+        head.add_css_class("heading")
+        col.append(head)
+        self.path_label = Gtk.Label(xalign=0, selectable=True, wrap=True, hexpand=True)
+        self.path_label.set_wrap_mode(Pango.WrapMode.CHAR)
+        open_btn = Gtk.Button(label="Open")
+        open_btn.connect("clicked", lambda *_: win.open_data_folder(None))
+        row = Gtk.Box(spacing=10)
+        row.append(self.path_label)
+        row.append(open_btn)
+        col.append(card(row))
+
+        sync_head = Gtk.Label(label="Use Moodlog on two computers", xalign=0)
+        sync_head.add_css_class("heading")
+        col.append(sync_head)
+        explain = Gtk.Label(xalign=0, wrap=True, label=(
+            "Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do "
+            "the same on the other computer. Moodlog saves its files there and picks up "
+            "changes from the other computer within a few seconds. If both computers change "
+            "something at the very same time, the sync app may make a conflict copy; Moodlog "
+            "then offers to merge it, so nothing is lost."))
+        explain.add_css_class("dim-label")
+        col.append(explain)
+        buttons = Gtk.Box(spacing=8)
+        choose = Gtk.Button(label="Choose another folder…")
+        choose.add_css_class("suggested-action")
+        choose.connect("clicked", lambda *_: win.ask_folder("Choose the folder for your data",
+                                                            self.on_folder))
+        self.default_btn = Gtk.Button(label="Go back to the default folder")
+        self.default_btn.connect("clicked", lambda *_: self.on_folder(default_data_dir()))
+        buttons.append(choose)
+        buttons.append(self.default_btn)
+        col.append(buttons)
+
+        self.conflict_box = Gtk.Box(spacing=10)
+        self.conflict_label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
+        merge = Gtk.Button(label="Merge them")
+        merge.connect("clicked", lambda *_: (win.merge_conflict_copies(), self.update()))
+        self.conflict_box.append(self.conflict_label)
+        self.conflict_box.append(merge)
+        col.append(self.conflict_box)
+
+        note = Gtk.Label(xalign=0, wrap=True, label=(
+            "Settings such as the Gridgets link stay on each computer. Back up from the folder "
+            "button menu whenever you like: a backup is a single .zip file."))
+        note.add_css_class("dim-label")
+        note.add_css_class("caption")
+        col.append(note)
+        self.set_child(col)
+        self.update()
+
+    def update(self):
+        current = data_dir()
+        self.path_label.set_text(current)
+        self.default_btn.set_visible(os.path.abspath(current) != os.path.abspath(default_data_dir()))
+        found = conflict_files()
+        self.conflict_box.set_visible(bool(found))
+        if found:
+            self.conflict_label.set_text(
+                "%d conflict cop%s found from your sync app." % (len(found), "y" if len(found) == 1 else "ies"))
+
+    def on_folder(self, folder):
+        win = self.win
+        win.flush()
+        current = os.path.abspath(data_dir())
+        folder = os.path.abspath(folder)
+        if folder == current:
+            return
+        has_data = any(os.path.exists(os.path.join(folder, n)) for n in CONTENT_FILES)
+        short = folder.replace(os.path.expanduser("~"), "~", 1)
+        if not has_data:
+            ConfirmWindow(self, "Move your data to %s?" % short, (
+                "Your moods, events and health data are copied there, and Moodlog uses that "
+                "folder from now on. The old folder keeps its copy."),
+                [("Move here", lambda: self.switch(folder, copy=True), "suggested-action")]
+            ).present()
+            return
+        ConfirmWindow(self, "%s already has Moodlog data" % short, (
+            "Merge puts what is on this computer together with what is already there, which is "
+            "what you want when setting up a second computer. Use that data switches to the "
+            "folder as it is; the data here stays in the old folder."),
+            [("Use that data", lambda: self.switch(folder), None),
+             ("Merge", lambda: self.switch(folder, merge=True), "suggested-action")]).present()
+
+    def switch(self, folder, copy=False, merge=False):
+        import shutil
+        win = self.win
+        old = data_dir()
+        try:
+            os.makedirs(folder, exist_ok=True)
+            if copy:
+                for name in DATA_FILES:
+                    src_path = os.path.join(old, name)
+                    if os.path.exists(src_path):
+                        shutil.copy2(src_path, os.path.join(folder, name))
+            if merge:
+                make_backup(os.path.join(folder, "backups", dt.datetime.now().strftime(
+                    "before-merge-%Y%m%d-%H%M%S.zip")), folder)
+                there = (Store(os.path.join(folder, "moods.csv")),
+                         EventStore(os.path.join(folder, "events.csv")),
+                         HealthStore(os.path.join(folder, "health.csv")))
+                merge_folder_into(old, *there)
+                for store in there:
+                    store.save()
+                if not os.path.exists(os.path.join(folder, "sync.json")) and \
+                        os.path.exists(os.path.join(old, "sync.json")):
+                    shutil.copy2(os.path.join(old, "sync.json"), os.path.join(folder, "sync.json"))
+            cfg = load_config()
+            if os.path.abspath(folder) == os.path.abspath(default_data_dir()):
+                cfg.pop("data_dir", None)
+            else:
+                cfg["data_dir"] = folder
+            save_config(cfg)
+        except OSError as err:
+            win.notify("Could not use that folder: %s" % (err.strerror or err))
+            return
+        systemctl("try-restart", SERVICE)  # the phone receiver reads the folder when it starts
+        win.reload_data()
+        self.update()
+        win.notify("Moodlog now uses %s" % folder)
+
+
 class SyncWindow(Gtk.Window):
     def __init__(self, parent):
         super().__init__(title="Phone sync", transient_for=parent, modal=True)
@@ -2306,15 +3401,29 @@ class Window(Adw.ApplicationWindow):
         switcher = Gtk.StackSwitcher(stack=self.stack)
         header = Adw.HeaderBar()
         header.set_title_widget(switcher)
-        folder = Gtk.Button.new_from_icon_name("folder-open-symbolic")
-        folder.set_tooltip_text("Open the folder with your data (moods.csv, events.csv)")
-        folder.connect("clicked", self.open_data_folder)
+        for name, handler in (("open-folder", lambda: self.open_data_folder(None)),
+                              ("backup", self.on_backup), ("restore", self.on_restore),
+                              ("data-folder", lambda: DataWindow(self).present())):
+            action = Gio.SimpleAction.new(name, None)
+            action.connect("activate", lambda _a, _p, h=handler: h())
+            self.add_action(action)
+        data_menu = Gio.Menu()
+        data_menu.append("Open data folder", "win.open-folder")
+        data_menu.append("Back up\u2026", "win.backup")
+        data_menu.append("Restore from a backup\u2026", "win.restore")
+        data_menu.append("Data folder and sync\u2026", "win.data-folder")
+        folder = Gtk.MenuButton(icon_name="folder-open-symbolic", menu_model=data_menu)
+        folder.set_tooltip_text("Your data: open the folder, back up, restore, sync")
         header.pack_end(folder)
+        report_action = Gio.SimpleAction.new("report", None)
+        report_action.connect("activate", lambda *_: ReportWindow(self).present())
+        self.add_action(report_action)
         for name, kind in (("export-xlsx", "xlsx"), ("export-csv", "csv")):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", lambda _a, _p, k=kind: self.on_export(k))
             self.add_action(action)
         menu = Gio.Menu()
+        menu.append("Report for your doctor (.pdf)\u2026", "win.report")
         menu.append("Spreadsheet with colours and charts (.xlsx)", "win.export-xlsx")
         menu.append("Plain CSV file (.csv)", "win.export-csv")
         export = Gtk.MenuButton(label="Export", menu_model=menu)
@@ -2331,8 +3440,21 @@ class Window(Adw.ApplicationWindow):
         self.stack.add_titled(self.build_events_page(), "events", "Events")
         self.stack.connect("notify::visible-child", lambda *_: self.refresh())
 
+        self.banner = Gtk.Box(spacing=12)
+        for side in ("top", "bottom"):
+            getattr(self.banner, "set_margin_" + side)(8)
+        for side in ("start", "end"):
+            getattr(self.banner, "set_margin_" + side)(16)
+        self.banner_label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
+        banner_btn = Gtk.Button(label="Merge them")
+        banner_btn.add_css_class("suggested-action")
+        banner_btn.connect("clicked", lambda *_: self.merge_conflict_copies())
+        self.banner.append(self.banner_label)
+        self.banner.append(banner_btn)
+        self.banner.set_visible(False)
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         root.append(header)
+        root.append(self.banner)
         root.append(self.stack)
         self.set_content(root)
 
@@ -2436,6 +3558,29 @@ class Window(Adw.ApplicationWindow):
             btn.connect("toggled", self.on_face_toggled, mood)
             self.face_buttons[mood] = btn
             faces.append(btn)
+        self.scale_buttons = {}
+        self.scales_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        for index, key, name, hint in SCALES:
+            row = Gtk.Box(spacing=8)
+            label = Gtk.Label(label=name, xalign=0)
+            label.set_size_request(64, -1)
+            label.set_tooltip_text(hint)
+            row.append(label)
+            buttons = Gtk.Box(spacing=4, homogeneous=True, hexpand=True)
+            self.scale_buttons[index] = {}
+            for value in range(1, 6):
+                btn = Gtk.ToggleButton(label=str(value))
+                btn.set_tooltip_text("%s %d: %s (optional)" % (name, value, SCALE_WORDS[key][value]))
+                btn.connect("toggled", self.on_scale_toggled, index, value)
+                self.scale_buttons[index][value] = btn
+                buttons.append(btn)
+            row.append(buttons)
+            self.scales_box.append(row)
+        scale_hint = Gtk.Label(xalign=0, wrap=True, label=(
+            "Optional. Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious."))
+        scale_hint.add_css_class("dim-label")
+        scale_hint.add_css_class("caption")
+        self.scales_box.append(scale_hint)
         note_label = Gtk.Label(label="Note", xalign=0)
         note_label.add_css_class("heading")
         self.note_view = Gtk.TextView()
@@ -2461,8 +3606,8 @@ class Window(Adw.ApplicationWindow):
         for wdg in (self.saved_label, self.delete_btn, self.new_btn):
             bottom.append(wdg)
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
-        for wdg in (day_row, self.day_events, self.entry_scroll, mode_row, faces, note_label,
-                    frame, bottom):
+        for wdg in (day_row, self.day_events, self.entry_scroll, mode_row, faces,
+                    self.scales_box, note_label, frame, bottom):
             right.append(wdg)
         right_card = card(right)
         right_card.set_size_request(350, -1)
@@ -2537,7 +3682,17 @@ class Window(Adw.ApplicationWindow):
         health_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         for wdg in (health_head, self.health_chart, self.health_text):
             health_box.append(wdg)
-        for wdg in (bar, tiles, card(trend_box), card(health_box), pair,
+        self.scales = ScaleChart(self)
+        scales_note = Gtk.Label(xalign=0, wrap=True, label=(
+            "Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious. "
+            "Days without these show as gaps."))
+        scales_note.add_css_class("dim-label")
+        scales_note.add_css_class("caption")
+        scales_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        scales_box.append(self.scales)
+        scales_box.append(scales_note)
+        for wdg in (bar, tiles, card(trend_box), card(health_box),
+                    card(scales_box, "Energy and anxiety (1\u20135)"), pair,
                     card(self.hours, "Average mood by time of day (1\u20135)")):
             col.append(wdg)
         clamp = Adw.Clamp(maximum_size=1000)
@@ -2750,6 +3905,9 @@ class Window(Adw.ApplicationWindow):
         for m, btn in self.face_buttons.items():
             btn.set_active(bool(entry) and m == entry[1])
         self.note_view.get_buffer().set_text(entry[2] if entry else "")
+        for index, buttons in self.scale_buttons.items():
+            for value, btn in buttons.items():
+                btn.set_active(bool(entry) and entry[index] == value)
         if entry:
             self.time_entry.set_text(entry[0])
         elif self.selected == dt.date.today():
@@ -2830,6 +3988,25 @@ class Window(Adw.ApplicationWindow):
         self.rebuild_entries()
         self.refresh()
 
+    def current_scale(self, index):
+        for value, btn in self.scale_buttons[index].items():
+            if btn.get_active():
+                return value
+        return 0
+
+    def on_scale_toggled(self, btn, index, value):
+        if self._loading:
+            return
+        if btn.get_active():
+            self._loading = True
+            for other_value, other in self.scale_buttons[index].items():
+                if other_value != value:
+                    other.set_active(False)
+            self._loading = False
+        self.commit()
+        self.rebuild_entries()
+        self.refresh()
+
     def on_note_changed(self, _buf):
         if self._loading:
             return
@@ -2861,21 +4038,23 @@ class Window(Adw.ApplicationWindow):
     def commit(self):
         """Write the editor into the store: creates the entry on first input."""
         mood, note, day = self.current_mood(), self.current_note(), self.selected
+        energy, anxiety = self.current_scale(3), self.current_scale(4)
+        empty = not mood and not note.strip() and not energy and not anxiety
         if self.current is None:
-            if not mood and not note.strip():
+            if empty:
                 return
             value = self.read_time() or ""
             if day == dt.date.today() and not self._time_touched:
                 value = dt.datetime.now().strftime("%H:%M")
-            self.current = self.store.add(day, value, mood, note)
+            self.current = self.store.add(day, value, mood, note, energy, anxiety)
             self._loading = True
             self.time_entry.set_text(self.current[0])
             self.time_entry.remove_css_class("error")
             self._loading = False
             self.update_mode()
         else:
-            self.current[1], self.current[2] = mood, note
-            if not mood and not note.strip():
+            self.current[1:5] = [mood, note, energy, anxiety]
+            if empty:
                 self.store.remove(day, self.current)
                 self.current = None
                 self.update_mode()
@@ -2889,7 +4068,7 @@ class Window(Adw.ApplicationWindow):
             child = self.entry_list.get_first_child()
         items = self.store.entries(self.selected)
         for entry in items:
-            time, mood, note = entry
+            time, mood, note, energy, anxiety = entry
             row = Gtk.ListBoxRow()
             row.entry = entry
             row.set_tooltip_text("Click to edit this entry")
@@ -2906,6 +4085,14 @@ class Window(Adw.ApplicationWindow):
                 box.append(FaceIcon(mood, 26, badge=True))
                 name = Gtk.Label(label=MOOD_NAMES[mood], xalign=0)
                 box.append(name)
+            if energy or anxiety:
+                extra = Gtk.Label(label=" ".join(
+                    "%s%d" % (letter, value) for letter, value in (("E", energy), ("A", anxiety))
+                    if value), xalign=0)
+                extra.set_tooltip_text(", ".join("%s %d" % (word, value) for word, value in
+                                                 (("energy", energy), ("anxiety", anxiety)) if value))
+                extra.add_css_class("caption")
+                box.append(extra)
             snippet = Gtk.Label(label=" ".join(note.split()), xalign=0, hexpand=True)
             snippet.set_ellipsize(Pango.EllipsizeMode.END)
             snippet.add_css_class("dim-label")
@@ -2977,6 +4164,15 @@ class Window(Adw.ApplicationWindow):
         self.rebuild_entries()
 
     def poll_health(self):
+        if not self._save_id and (self.store.changed_on_disk() or self.events.changed_on_disk()):
+            self.reload_data()  # changed by another computer through the sync folder
+        found = conflict_files()
+        if found:
+            self.banner_label.set_text(
+                "Your sync app made %d conflict cop%s of your Moodlog data (both computers "
+                "changed it at the same time). Merge them to keep everything."
+                % (len(found), "y" if len(found) == 1 else "ies"))
+        self.banner.set_visible(bool(found))
         if not self._save_id and self.link.active() and self.link.changed_on_disk():
             if self.sync_widget():
                 self.show_selected_mood()
@@ -3087,6 +4283,120 @@ class Window(Adw.ApplicationWindow):
         if hasattr(Gtk, "AlertDialog"):  # GTK 4.10 and newer
             Gtk.AlertDialog(message=message).show(self)
 
+    # -- data: messages, file pickers, backup, restore, reload
+
+    def notify(self, message):
+        self.saved_label.set_text(message)
+        if hasattr(Gtk, "AlertDialog"):  # GTK 4.10 and newer
+            Gtk.AlertDialog(message=message).show(self)
+
+    def _pick(self, title, mode, callback, name=None):
+        """File or folder picker that works on old and new GTK 4. mode: save, open, folder."""
+        if hasattr(Gtk, "FileDialog"):
+            dialog = Gtk.FileDialog(title=title)
+            if name:
+                dialog.set_initial_name(name)
+            start = {"save": dialog.save, "open": dialog.open, "folder": dialog.select_folder}[mode]
+            finish = {"save": dialog.save_finish, "open": dialog.open_finish,
+                      "folder": dialog.select_folder_finish}[mode]
+
+            def done(_d, result):
+                try:
+                    gfile = finish(result)
+                except GLib.Error:
+                    return
+                if gfile and gfile.get_path():
+                    callback(gfile.get_path())
+            start(self, None, done)
+            return
+        action = {"save": Gtk.FileChooserAction.SAVE, "open": Gtk.FileChooserAction.OPEN,
+                  "folder": Gtk.FileChooserAction.SELECT_FOLDER}[mode]
+        chooser = Gtk.FileChooserNative.new(title, self, action, None, None)
+        if name:
+            chooser.set_current_name(name)
+
+        def response(dialog, code):
+            if code == Gtk.ResponseType.ACCEPT and dialog.get_file():
+                callback(dialog.get_file().get_path())
+            self._chooser = None
+        chooser.connect("response", response)
+        self._chooser = chooser
+        chooser.show()
+
+    def ask_folder(self, title, callback):
+        self._pick(title, "folder", callback)
+
+    def on_backup(self):
+        self.flush()
+
+        def write(path):
+            if not path.lower().endswith(".zip"):
+                path += ".zip"
+            try:
+                names = make_backup(path)
+                self.notify("Backed up %d file%s to %s" % (len(names), "" if len(names) == 1 else "s",
+                                                          os.path.basename(path)))
+            except OSError as err:
+                self.notify("Could not back up: %s" % (err.strerror or err))
+        self._pick("Back up Moodlog", "save", write,
+                   "moodlog-backup-%s.zip" % dt.date.today().isoformat())
+
+    def on_restore(self):
+        self.flush()
+
+        def chosen(path):
+            try:
+                _files, info = read_backup(path)
+            except BackupError as err:
+                self.notify(str(err))
+                return
+            made = info.get("created") or "an unknown date"
+            ConfirmWindow(self, "Restore this backup?", (
+                "Your current moods, events and health data will be replaced by the ones in "
+                "the backup from %s. A copy of your current data is saved first, in the "
+                "backups folder inside your data folder." % made),
+                [("Restore", lambda: self.do_restore(path), "destructive-action")]).present()
+        self._pick("Restore from a backup", "open", chosen)
+
+    def do_restore(self, path):
+        try:
+            safety = restore_backup(path)
+        except (BackupError, OSError) as err:
+            self.notify("Could not restore: %s" % err)
+            return
+        self.reload_data()
+        self.notify("Backup restored. Your previous data was saved as %s" % os.path.basename(safety))
+
+    def merge_conflict_copies(self):
+        self.flush()
+        try:
+            files, added = merge_conflicts(self.store, self.events, self.health)
+        except OSError as err:
+            self.notify("Could not merge: %s" % (err.strerror or err))
+            return
+        self.reload_data()
+        self.banner.set_visible(False)
+        if files:
+            self.notify("Merged %d conflict cop%s: %d item%s added. The copies were moved to "
+                        "backups/merged-conflicts." % (files, "y" if files == 1 else "ies",
+                                                      added, "" if added == 1 else "s"))
+
+    def reload_data(self):
+        """Read every data file again (after a restore, a folder change or a sync)."""
+        index = None
+        if self.current is not None:
+            items = self.store.entries(self.selected)
+            index = next((i for i, e in enumerate(items) if e is self.current), None)
+        self.store = Store()
+        self.events = EventStore()
+        self.health = HealthStore()
+        self.link.store = self.store
+        items = self.store.entries(self.selected)
+        self.current = items[index] if index is not None and index < len(items) else None
+        self.load_selected(self.current)
+        self.redraw_all()
+        self.refresh()
+
     def open_data_folder(self, _btn):
         self.flush()
         Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(data_dir(), None), None)
@@ -3186,7 +4496,7 @@ class Window(Adw.ApplicationWindow):
         streak = self.streak()
         value.set_text("%d day%s" % (streak, "" if streak == 1 else "s"))
         sub.set_text("logged in a row, up to today")
-        for chart in (self.trend, self.counts, self.weekdays, self.hours):
+        for chart in (self.trend, self.counts, self.weekdays, self.hours, self.scales):
             chart.queue_draw()
         self.refresh_health()
 
@@ -3199,7 +4509,7 @@ class Window(Adw.ApplicationWindow):
         shown = 0
         for day in sorted(self.store.days, reverse=True):
             for entry in reversed(self.store.entries(day)):
-                time, mood, note = entry
+                time, mood, note = entry[:3]
                 if not note.strip() or (query and query not in note.lower()):
                     continue
                 row = Gtk.ListBoxRow()
@@ -3259,6 +4569,15 @@ def main(argv):
         return 0
     if "--sync-server" in argv:
         return run_sync_server()
+    if "--report" in argv:
+        i = argv.index("--report")
+        opts = dict(zip(argv[1::1], argv[2::1]))
+        end = dt.date.fromisoformat(opts["--to"]) if "--to" in opts else dt.date.today()
+        start = dt.date.fromisoformat(opts["--from"]) if "--from" in opts else end - dt.timedelta(days=90)
+        pages = export_report(argv[i + 1], Store(), EventStore(), HealthStore(), start, end,
+                              include_notes="--notes" in argv)
+        print("Saved a %d-page report to %s" % (pages, argv[i + 1]))
+        return 0
     if "--export" in argv:
         i = argv.index("--export")
         if i + 1 >= len(argv):
