@@ -29,7 +29,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "1.8.0"
+VERSION = "1.9.0"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
 # Two optional 1-5 scales next to the mood. Index = position in an entry.
@@ -2025,6 +2025,206 @@ class GridgetsLink:
         return changed
 
 
+# ----------------------------------------------------------------- styles
+
+STYLES = [("default", "Default (GNOME)"), ("tahoe", "Tahoe (macOS-like)")]
+STYLE = {"name": "default"}
+
+# Tahoe: frosted translucent cards on a soft colour wash, pill controls, macOS blue.
+# GTK cannot blur what is behind a window, so the "glass" is drawn inside it.
+_TAHOE_COMMON = """
+window, popover, tooltip {
+  font-family: "SF Pro Text", "Inter", "Cantarell", "Fira Sans", sans-serif;
+}
+headerbar {
+  background: transparent; box-shadow: none; border: none;
+  min-height: 52px; padding: 0 10px;
+}
+headerbar button, headerbar menubutton > button {
+  border-radius: 999px; min-height: 30px; padding: 0 12px;
+}
+stackswitcher {
+  border-radius: 999px; padding: 3px;
+}
+stackswitcher > button {
+  border-radius: 999px; border: none; box-shadow: none; background: transparent;
+  min-width: 78px; min-height: 28px; font-weight: 600;
+}
+.card {
+  border-radius: 24px;
+}
+button { border-radius: 999px; }
+button.flat { border-radius: 14px; }
+button.suggested-action {
+  background-color: #0a84ff; color: #ffffff; font-weight: 600;
+}
+button.suggested-action:hover { background-color: #2b95ff; }
+button.suggested-action:active { background-color: #0071e3; }
+button.destructive-action { background-color: #ff453a; color: #ffffff; }
+togglebutton:checked, button:checked { font-weight: 700; }
+entry, spinbutton, dropdown > button, searchentry {
+  border-radius: 12px; min-height: 32px;
+}
+.boxed-list { border-radius: 18px; }
+.boxed-list > row:first-child { border-top-left-radius: 18px; border-top-right-radius: 18px; }
+.boxed-list > row:last-child { border-bottom-left-radius: 18px; border-bottom-right-radius: 18px; }
+frame { border-radius: 14px; }
+frame > border { border-radius: 14px; }
+popover > contents { border-radius: 18px; padding: 6px; }
+popover modelbutton { border-radius: 10px; min-height: 32px; }
+switch { border-radius: 999px; }
+switch slider { border-radius: 999px; }
+checkbutton check { border-radius: 7px; }
+.title-1, .title-2, .title-3 { font-weight: 700; }
+/* tabs: one glass pill holding the pages; the open page is a raised pill */
+headerbar stackswitcher > button:not(.flat):not(.suggested-action):not(.destructive-action),
+stackswitcher > button:not(.flat):not(.suggested-action):not(.destructive-action) {
+  background: transparent; background-image: none; border: none; box-shadow: none;
+}
+/* macOS-style window buttons: red, yellow, green dots */
+windowcontrols { margin: 0 2px; }
+windowcontrols > button:not(.flat):not(.suggested-action):not(.destructive-action), windowcontrols > button {
+  min-width: 14px; min-height: 14px; padding: 0; margin: 0 4px;
+  border-radius: 999px; border: none; box-shadow: none; background-image: none;
+}
+windowcontrols > button.close:not(.flat):not(.suggested-action):not(.destructive-action), windowcontrols > button.close { background-color: #ff5f57; }
+windowcontrols > button.minimize:not(.flat):not(.suggested-action):not(.destructive-action), windowcontrols > button.minimize { background-color: #febc2e; }
+windowcontrols > button.maximize:not(.flat):not(.suggested-action):not(.destructive-action), windowcontrols > button.maximize { background-color: #28c840; }
+windowcontrols > button image { color: transparent; -gtk-icon-size: 8px; }
+windowcontrols:hover > button image { color: rgba(0,0,0,0.55); }
+windowcontrols > button:backdrop { background-color: rgba(128,128,128,0.35); }
+"""
+
+_TAHOE_LIGHT = _TAHOE_COMMON + """
+window.background {
+  background-color: #eef1f8;
+  background-image: linear-gradient(135deg, #dde7fb 0%, #f2e7f4 45%, #e3f2ef 100%);
+  color: #1d1d1f;
+}
+stackswitcher {
+  background-color: rgba(255,255,255,0.45);
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+stackswitcher > button { color: #3a3a3c; }
+headerbar stackswitcher > button:checked:not(.flat):not(.suggested-action):not(.destructive-action), stackswitcher > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
+  background-color: rgba(255,255,255,0.96); color: #1d1d1f; border: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.14);
+}
+.card {
+  background-color: rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.85);
+  box-shadow: 0 10px 30px rgba(31,38,69,0.10), inset 0 1px rgba(255,255,255,0.9);
+  color: #1d1d1f;
+}
+button:not(.flat):not(.suggested-action):not(.destructive-action) {
+  background-color: rgba(255,255,255,0.62);
+  border: 1px solid rgba(255,255,255,0.85);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  color: #1d1d1f;
+}
+button:not(.flat):not(.suggested-action):not(.destructive-action):hover {
+  background-color: rgba(255,255,255,0.85);
+}
+togglebutton:checked:not(.flat), box > button:checked:not(.flat) {
+  background-color: #0a84ff; color: #ffffff; border-color: #0a84ff;
+}
+button.flat:checked { background-color: rgba(10,132,255,0.16); color: #0a64d6; }
+button.flat:hover { background-color: rgba(255,255,255,0.55); }
+entry, searchentry, dropdown > button {
+  background-color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(0,0,0,0.06);
+}
+textview, textview > text { background-color: transparent; }
+frame { background-color: rgba(255,255,255,0.6); border-color: rgba(0,0,0,0.06); }
+.boxed-list { background-color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.8); }
+.boxed-list > row { background-color: transparent; }
+.boxed-list > row:hover { background-color: rgba(255,255,255,0.5); }
+popover > contents {
+  background-color: rgba(250,250,253,0.94);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.18);
+}
+switch:checked { background-color: #34c759; }
+.dim-label { color: rgba(60,60,67,0.62); }
+"""
+
+_TAHOE_DARK = _TAHOE_COMMON + """
+window.background {
+  background-color: #17181f;
+  background-image: linear-gradient(135deg, #1b2233 0%, #261d31 50%, #142629 100%);
+  color: #f5f5f7;
+}
+stackswitcher {
+  background-color: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+stackswitcher > button { color: #d1d1d6; }
+headerbar stackswitcher > button:checked:not(.flat):not(.suggested-action):not(.destructive-action), stackswitcher > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
+  background-color: rgba(255,255,255,0.18); color: #ffffff; border: none;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.card {
+  background-color: rgba(44,44,54,0.55);
+  border: 1px solid rgba(255,255,255,0.09);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.35), inset 0 1px rgba(255,255,255,0.07);
+  color: #f5f5f7;
+}
+button:not(.flat):not(.suggested-action):not(.destructive-action) {
+  background-color: rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: #f5f5f7;
+}
+button:not(.flat):not(.suggested-action):not(.destructive-action):hover {
+  background-color: rgba(255,255,255,0.15);
+}
+togglebutton:checked:not(.flat), box > button:checked:not(.flat) {
+  background-color: #0a84ff; color: #ffffff; border-color: #0a84ff;
+}
+button.flat:checked { background-color: rgba(10,132,255,0.28); color: #ffffff; }
+button.flat:hover { background-color: rgba(255,255,255,0.07); }
+entry, searchentry, dropdown > button {
+  background-color: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+textview, textview > text { background-color: transparent; }
+frame { background-color: rgba(0,0,0,0.18); border-color: rgba(255,255,255,0.08); }
+.boxed-list { background-color: rgba(44,44,54,0.5); border: 1px solid rgba(255,255,255,0.08); }
+.boxed-list > row { background-color: transparent; }
+.boxed-list > row:hover { background-color: rgba(255,255,255,0.05); }
+popover > contents {
+  background-color: rgba(40,40,48,0.96);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+}
+switch:checked { background-color: #30d158; }
+.dim-label { color: rgba(235,235,245,0.6); }
+"""
+
+_style_provider = {"css": None}
+
+
+def apply_style(name):
+    """Switch the look of every Moodlog window. 'default' removes the extra CSS."""
+    STYLE["name"] = name if name in dict(STYLES) else "default"
+    display = Gdk.Display.get_default()
+    if display is None:
+        return
+    if _style_provider["css"] is not None:
+        Gtk.StyleContext.remove_provider_for_display(display, _style_provider["css"])
+        _style_provider["css"] = None
+    if STYLE["name"] == "tahoe":
+        provider = Gtk.CssProvider()
+        css = _TAHOE_DARK if is_dark() else _TAHOE_LIGHT
+        try:
+            provider.load_from_string(css)  # GTK 4.12 and newer
+        except AttributeError:
+            provider.load_from_data(css.encode("utf-8"), -1)
+        Gtk.StyleContext.add_provider_for_display(display, provider,
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        _style_provider["css"] = provider
+
+
 # ----------------------------------------------------------------- drawing
 
 def is_dark():
@@ -2032,15 +2232,24 @@ def is_dark():
 
 
 def theme():
+    tahoe = STYLE["name"] == "tahoe"
     if is_dark():
-        return {"ink": "#f0efec", "ink2": "#c3c2b7", "muted": "#9a9892",
-                "grid": "#4a4a48", "axis": "#5c5c59", "surface": "#363636",
-                "moods": MOOD_COLORS_DARK, "health": "#199e70",
-                "energy": "#c08418", "anxiety": "#9a7ef0"}
-    return {"ink": "#0b0b0b", "ink2": "#52514e", "muted": "#77756f",
-            "grid": "#e1e0d9", "axis": "#c3c2b7", "surface": "#ffffff",
-            "moods": MOOD_COLORS_LIGHT, "health": "#1baf7a",
-            "energy": "#b87c10", "anxiety": "#7b5ad6"}
+        th = {"ink": "#f0efec", "ink2": "#c3c2b7", "muted": "#9a9892",
+              "grid": "#4a4a48", "axis": "#5c5c59", "surface": "#363636",
+              "moods": MOOD_COLORS_DARK, "health": "#199e70",
+              "energy": "#c08418", "anxiety": "#9a7ef0", "radius": 10}
+        if tahoe:  # rings and lines blend with the frosted cards
+            th.update(surface="#2a2b36", grid="#3d3e4a", axis="#50515e", ink="#f5f5f7",
+                      radius=14)
+        return th
+    th = {"ink": "#0b0b0b", "ink2": "#52514e", "muted": "#77756f",
+          "grid": "#e1e0d9", "axis": "#c3c2b7", "surface": "#ffffff",
+          "moods": MOOD_COLORS_LIGHT, "health": "#1baf7a",
+          "energy": "#b87c10", "anxiety": "#7b5ad6", "radius": 10}
+    if tahoe:
+        th.update(surface="#f4f5fa", grid="#dcdfe8", axis="#c4c7d2", ink="#1d1d1f",
+                  ink2="#48484d", muted="#6e6e73", radius=14)
+    return th
 
 
 def src(cr, hex_color, alpha=1.0):
@@ -2240,7 +2449,7 @@ class CalendarView(Canvas):
                     self.draw_grid(cr, x, y, size, day, moods, th)
                     self.draw_marks(cr, x, y, size, day, today, th)
                     continue
-                rounded_rect(cr, x, y, size, size, 10)
+                rounded_rect(cr, x, y, size, size, th["radius"])
                 if mood:
                     src(cr, th["moods"][mood])
                     cr.fill()
@@ -2265,7 +2474,7 @@ class CalendarView(Canvas):
     def draw_grid(self, cr, x, y, size, day, moods, th):
         """A day with several entries: a strip with the date, then one tile per entry."""
         cr.save()
-        rounded_rect(cr, x, y, size, size, 10)
+        rounded_rect(cr, x, y, size, size, th["radius"])
         cr.clip()
         src(cr, th["ink"], 0.05)
         cr.rectangle(x, y, size, size)
@@ -2311,12 +2520,12 @@ class CalendarView(Canvas):
         if events:
             draw_event_badge(cr, x + 10, y + size - 10, 7.5, th)
         if day == today and day != win.selected:
-            rounded_rect(cr, x + 0.75, y + 0.75, size - 1.5, size - 1.5, 10)
+            rounded_rect(cr, x + 0.75, y + 0.75, size - 1.5, size - 1.5, th["radius"])
             src(cr, th["ink"], 0.45)
             cr.set_line_width(1.5)
             cr.stroke()
         if day == win.selected:
-            rounded_rect(cr, x - 2.5, y - 2.5, size + 5, size + 5, 12)
+            rounded_rect(cr, x - 2.5, y - 2.5, size + 5, size + 5, th["radius"] + 2)
             src(cr, th["ink"])
             cr.set_line_width(2)
             cr.stroke()
@@ -3415,6 +3624,22 @@ class Window(Adw.ApplicationWindow):
         folder = Gtk.MenuButton(icon_name="folder-open-symbolic", menu_model=data_menu)
         folder.set_tooltip_text("Your data: open the folder, back up, restore, sync")
         header.pack_end(folder)
+        current = load_config().get("style", "default")
+        style_action = Gio.SimpleAction.new_stateful(
+            "style", GLib.VariantType.new("s"),
+            GLib.Variant.new_string(current if current in dict(STYLES) else "default"))
+        style_action.connect("change-state", self.on_style)
+        self.add_action(style_action)
+        style_menu = Gio.Menu()
+        for key, label in STYLES:
+            item = Gio.MenuItem.new(label, None)
+            item.set_action_and_target_value("win.style", GLib.Variant.new_string(key))
+            style_menu.append_item(item)
+        main_menu = Gio.Menu()
+        main_menu.append_section("Style", style_menu)
+        menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
+        menu_btn.set_tooltip_text("Style")
+        header.pack_end(menu_btn)
         report_action = Gio.SimpleAction.new("report", None)
         report_action.connect("activate", lambda *_: ReportWindow(self).present())
         self.add_action(report_action)
@@ -3458,7 +3683,7 @@ class Window(Adw.ApplicationWindow):
         root.append(self.stack)
         self.set_content(root)
 
-        Adw.StyleManager.get_default().connect("notify::dark", lambda *_: self.redraw_all())
+        Adw.StyleManager.get_default().connect("notify::dark", self.on_dark_changed)
         self.connect("close-request", self.on_close)
         self.load_selected()
         self.refresh()
@@ -4285,6 +4510,23 @@ class Window(Adw.ApplicationWindow):
 
     # -- data: messages, file pickers, backup, restore, reload
 
+    def on_style(self, action, value):
+        action.set_state(value)
+        name = value.get_string()
+        apply_style(name)
+        cfg = load_config()
+        cfg["style"] = name
+        try:
+            save_config(cfg)
+        except OSError:
+            pass
+        self.redraw_all()
+
+    def on_dark_changed(self, *_):
+        if STYLE["name"] != "default":
+            apply_style(STYLE["name"])  # light and dark Tahoe use different glass
+        self.redraw_all()
+
     def notify(self, message):
         self.saved_label.set_text(message)
         if hasattr(Gtk, "AlertDialog"):  # GTK 4.10 and newer
@@ -4559,6 +4801,8 @@ class App(Adw.Application):
         self.page = page
 
     def do_activate(self):
+        if not self.get_active_window():
+            apply_style(load_config().get("style", "default"))
         win = self.get_active_window() or Window(self, self.page)
         win.present()
 

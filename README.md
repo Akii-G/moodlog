@@ -84,6 +84,17 @@ It sends the last 7 days of steps, resting heart rate and sleep to Moodlog.
 The iPhone and the PC must be on the same Wi-Fi, and the PC must be on when the
 shortcut runs. Days that were missed are filled in on the next run.
 
+## Styles
+
+The menu button (☰) in the title bar switches between two styles, and Moodlog
+remembers your choice:
+
+- **Default (GNOME)**: the standard libadwaita look, matching other GNOME apps.
+- **Tahoe (macOS-like)**: frosted, translucent cards on a soft colour wash, pill
+  buttons and tabs, macOS blue, rounder corners and red/yellow/green window
+  buttons. GTK cannot blur what is behind a window, so the glass effect is drawn
+  inside the app. Both follow your light or dark setting.
+
 ## Report for your doctor
 
 **Export → Report for your doctor (.pdf)** makes a printable A4 report for a period
@@ -117,7 +128,7 @@ computer. The folder button in the title bar opens that folder and makes backups
 
 ## Install
 
-    sudo apt install ./moodlog_1.8.0_all.deb
+    sudo apt install ./moodlog_1.9.0_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 
