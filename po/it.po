@@ -1645,7 +1645,7 @@ msgid "That's all, really"
 msgstr "È tutto, davvero"
 
 msgid "Everything stays on your computer, private. Log a mood whenever you feel like it; even once a day is plenty. You've got this."
-msgstr "Tutto resta sul tuo computer, in privato. Registra un umore quando ti va; anche una volta al giorno è più che sufficiente. Ce la fai benissimo."
+msgstr "Tutto resta sul tuo computer, in privato. Registra un umore quando ti va; anche una volta al giorno è più che sufficiente. Ci puoi riuscire!"
 
 msgid "Skip tour"
 msgstr "Salta la guida"
