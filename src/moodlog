@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.3.2"
+VERSION = "2.4.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -2920,7 +2920,9 @@ def apply_style(name):
         # Tabs only as wide as their label (libadwaita makes each one 100px or more), so
         # all five tabs and the buttons fit when the window has half a screen.
         base = Gtk.CssProvider()
-        css = "headerbar stackswitcher > button { min-width: 0; padding-left: 14px; padding-right: 14px; }"
+        css = ("headerbar stackswitcher > button { min-width: 0; padding-left: 14px; padding-right: 14px; }\n"
+               ".tour-card { background-color: @window_bg_color; color: @window_fg_color; "
+               "border-radius: 18px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }")
         try:
             base.load_from_string(css)
         except AttributeError:
@@ -4178,6 +4180,11 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.4.0", "2026-11-19", [
+        "A welcome tour for new users: a few friendly, animated steps that point at each part of "
+        "the window and explain it. It opens by itself on a new install; see it any time from the "
+        "\u2630 menu \u2192 Show the tour.",
+    ]),
     ("2.3.2", "2026-11-19", [
         "Doctor report: \u201cAlso what the dreams were about\u201d can always be ticked, and ticking it "
         "includes dreams too. Before, it stayed greyed out until \u201cInclude dreams\u201d was ticked, "
@@ -4671,6 +4678,329 @@ def card(child, title=None):
     return box
 
 
+# ----------------------------------------------------------------- welcome tour
+
+TOUR_STEPS = [
+    # (what to highlight, title, text)
+    (None, tr("Welcome to Moodlog"),
+     tr("Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, "
+        "it's quite simple, I'll take care of you.")),
+    ("tabs", tr("Five tabs, one at a time"),
+     tr("Up here are the tabs. You'll spend most of your time in Log; the others are there "
+        "whenever you want them. No need to explore them all today.")),
+    ("calendar", tr("Your month at a glance"),
+     tr("Each day takes the colour of your mood. Over a few weeks you'll start to see how things "
+        "go, without doing anything special. Click a day to look at it or fill it in.")),
+    ("faces", tr("Logging is one click"),
+     tr("To log how you feel, pick a face. That's it, that's the whole job. You can log more "
+        "than once a day, or skip days: both are fine.")),
+    ("scales", tr("Extras, only if you feel like it"),
+     tr("Energy, anxiety and a note are all optional. Leave them empty whenever you want: a "
+        "face on its own is already useful.")),
+    ("add_event", tr("Mark what matters"),
+     tr("Started a new medication, or something big happened? Add it as an event, and Moodlog "
+        "will show how you felt in the weeks before and after.")),
+    ("tab:charts", tr("Charts fill in on their own"),
+     tr("Charts turns your days into graphs. Nothing to set up: the more you log, the more "
+        "they show.")),
+    ("tab:dreams", tr("Dreams, if you remember them"),
+     tr("Dreams is a small dream journal, for the mornings you remember something. Totally "
+        "optional.")),
+    ("export", tr("For your appointments"),
+     tr("Export makes a tidy PDF report for your doctor. You choose the period and what goes in; "
+        "your notes and dreams stay out unless you say so.")),
+    ("sync", tr("Your iPhone can help"),
+     tr("Phone sync brings in your sleep and steps, and syncs with Moodlog for iPhone. Optional "
+        "too: Moodlog works fine without it.")),
+    ("menu", tr("If you ever need me again"),
+     tr("Style, language and this tour live in this menu. You can watch the tour again "
+        "whenever you like.")),
+    (None, tr("That's all, really"),
+     tr("Everything stays on your computer, private. Log a mood whenever you feel like it; even "
+        "once a day is plenty. You've got this.")),
+]
+
+
+def ease_in_out(x):
+    x = max(0.0, min(1.0, x))
+    return 4 * x ** 3 if x < 0.5 else 1 - (-2 * x + 2) ** 3 / 2
+
+
+class TourFace(Gtk.DrawingArea):
+    """A face that bobs gently and smiles more and more: the tour's friendly mascot."""
+
+    def __init__(self, size=84):
+        super().__init__()
+        self.set_content_width(size)
+        self.set_content_height(size)
+        self.set_halign(Gtk.Align.CENTER)
+        self.start = None
+        self.set_draw_func(self._draw)
+        self.add_tick_callback(self._tick)
+
+    def _tick(self, _w, clock):
+        if self.start is None:
+            self.start = clock.get_frame_time()
+        self.queue_draw()
+        return True
+
+    def _draw(self, _a, cr, w, h):
+        th = theme()
+        clock = self.get_frame_clock()
+        t = 0.0 if self.start is None or clock is None else (clock.get_frame_time() - self.start) / 1e6
+        mood = 3 if t < 0.6 else 4 if t < 1.3 else 5        # okay -> good -> great
+        bob = math.sin(t * 2.4) * 3
+        r = min(w, h) / 2 - 6
+        cx, cy = w / 2, h / 2 + bob
+        grow = 0.85 + 0.15 * ease_in_out(t / 0.5)          # a small pop when it appears
+        src(cr, th["moods"][mood], 0.95)
+        cr.arc(cx, cy, r * grow, 0, 2 * math.pi)
+        cr.fill()
+        draw_face(cr, cx, cy, r * grow, mood, "#1b1b1b" if mood in (3, 4) else "#ffffff", outline=False)
+
+
+class TourOverlay(Gtk.Overlay):
+    """Dims the window, cuts a spotlight around one part of it and explains that part."""
+
+    CARD_WIDTH = 380
+
+    def __init__(self, win, on_close):
+        super().__init__(hexpand=True, vexpand=True)
+        self.win, self.on_close = win, on_close
+        self.step, self.t0 = 0, None
+        self.hole_from = self.hole_to = None       # (x, y, w, h) or None for "no spotlight"
+        self.card_from = self.card_to = None
+        self.shade = Gtk.DrawingArea(hexpand=True, vexpand=True)
+        self.shade.set_draw_func(self._draw)
+        self.shade.add_controller(Gtk.GestureClick())     # clicks stop here, not on the app
+        self.set_child(self.shade)
+
+        self.card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12,
+                            halign=Gtk.Align.START, valign=Gtk.Align.START)
+        self.card.add_css_class("tour-card")
+        self.card.set_size_request(self.CARD_WIDTH, -1)
+        self.face = TourFace()
+        self.title = Gtk.Label(xalign=0, wrap=True)
+        self.title.add_css_class("title-3")
+        self.body = Gtk.Label(xalign=0, wrap=True, max_width_chars=40)
+        self.body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        self.dots = Gtk.Label(xalign=0)
+        self.dots.add_css_class("dim-label")
+        self.skip = Gtk.Button(label=tr("Skip tour"))
+        self.skip.add_css_class("flat")
+        self.skip.connect("clicked", lambda *_: self.close())
+        self.back = Gtk.Button(label=tr("Back"))
+        self.back.connect("clicked", lambda *_: self.go(self.step - 1))
+        self.next = Gtk.Button(label=tr("Next"))
+        self.next.add_css_class("suggested-action")
+        self.next.connect("clicked", lambda *_: self.go(self.step + 1))
+        row = Gtk.Box(spacing=8)
+        row.append(self.skip)
+        row.append(Gtk.Box(hexpand=True))
+        for b in (self.back, self.next):
+            row.append(b)
+        for wdg in (self.face, self.title, self.body, self.dots, row):
+            self.card.append(wdg)
+        self.add_overlay(self.card)
+
+        keys = Gtk.EventControllerKey()
+        keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        keys.connect("key-pressed", self._key)
+        self.add_controller(keys)
+        self.add_tick_callback(self._tick)
+        self.go(0)
+
+    # -- steps
+
+    def target(self, key):
+        """The widget a step points at, and its spotlight rectangle in overlay coordinates."""
+        if key is None:
+            return None
+        if key.startswith("tab:"):
+            name = key[4:]
+            child = self.win.tour_refs["tabs"].get_first_child()
+            pages = [p.get_name() for p in self.win.stack.get_pages()]
+            for i, page in enumerate(pages):
+                if child is None:
+                    break
+                if page == name:
+                    widget = child
+                    break
+                child = child.get_next_sibling()
+            else:
+                return None
+        else:
+            widget = self.win.tour_refs.get(key)
+        widgets = widget if isinstance(widget, tuple) else (widget,)
+        boxes = []
+        for wdg in widgets:     # several widgets: one spotlight around all of them
+            if wdg is None or not wdg.get_mapped():
+                continue
+            ok, rect = wdg.compute_bounds(self)
+            if ok:
+                boxes.append((rect.get_x(), rect.get_y(), rect.get_x() + rect.get_width(),
+                              rect.get_y() + rect.get_height()))
+        if not boxes:
+            return None
+        x0, y0 = min(b[0] for b in boxes), min(b[1] for b in boxes)
+        x1, y1 = max(b[2] for b in boxes), max(b[3] for b in boxes)
+        pad = 6
+        return (x0 - pad, y0 - pad, x1 - x0 + 2 * pad, y1 - y0 + 2 * pad)
+
+    def go(self, step):
+        if step < 0:
+            return
+        if step >= len(TOUR_STEPS):
+            self.close()
+            return
+        self.win.stack.set_visible_child_name("log")
+        self.hole_from = self.current_hole()
+        self.card_from = self.current_card()
+        self.step, self.t0 = step, None
+        key, title, body = TOUR_STEPS[step]
+        self.face.set_visible(key is None)
+        self.title.set_text(title)
+        self.body.set_text(body)
+        self.dots.set_text(" ".join("●" if i == step else "○" for i in range(len(TOUR_STEPS))))
+        self.back.set_visible(step > 0)
+        self.skip.set_visible(step < len(TOUR_STEPS) - 1)
+        self.next.set_label(tr("Let's start") if step == len(TOUR_STEPS) - 1 else tr("Next"))
+        self.card.set_opacity(0.0)
+        self.next.grab_focus()
+
+    def close(self):
+        self.on_close()
+
+    def _key(self, _c, keyval, _code, _state):
+        name = Gdk.keyval_name(keyval) or ""
+        if name == "Escape":
+            self.close()
+        elif name in ("Right", "Return", "KP_Enter", "space"):
+            self.go(self.step + 1)
+        elif name == "Left":
+            self.go(self.step - 1)
+        else:
+            return False
+        return True
+
+    # -- layout and animation
+
+    def progress(self):
+        clock = self.get_frame_clock()
+        if self.t0 is None or clock is None:
+            return 0.0
+        return ease_in_out((clock.get_frame_time() - self.t0) / 450000)
+
+    def current_hole(self):
+        return self.lerp_rect(self.hole_from, self.hole_to, self.progress())
+
+    @staticmethod
+    def lerp_rect(a, b, p):
+        if a is None and b is None:
+            return None
+        if a is None:   # grow out of the centre of b
+            a = (b[0] + b[2] / 2, b[1] + b[3] / 2, 0, 0)
+        if b is None:
+            b = (a[0] + a[2] / 2, a[1] + a[3] / 2, 0, 0)
+        return tuple(x + (y - x) * p for x, y in zip(a, b))
+
+    def card_place(self, hole):
+        """Where the card goes: under the spotlight, else above, else beside, else centred."""
+        W, H = self.get_width(), self.get_height()
+        cw, ch = self.card_size()
+        if hole is None:
+            return ((W - cw) / 2 + 20, max(20, (H - ch) / 2))
+        x, y, w, h = hole
+        gap = 26
+        left = min(max(16, x + w / 2 - cw / 2), W - cw - 16)
+        if y + h + gap + ch < H - 12:
+            return (left, y + h + gap)
+        if y - gap - ch > 12:
+            return (left, y - gap - ch)
+        top = min(max(16, y + h / 2 - ch / 2), H - ch - 16)
+        if x + w + gap + cw < W:
+            return (x + w + gap, top)
+        return (max(16, x - gap - cw), top)
+
+    def card_size(self):
+        cw = max(self.card.get_width(), self.card.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
+        ch = max(self.card.get_height(), self.card.measure(Gtk.Orientation.VERTICAL, cw)[0])
+        return cw, ch
+
+    def current_card(self):
+        if self.card_to is None:
+            return None
+        return self.lerp_point(self.card_from, self.card_to, self.progress())
+
+    @staticmethod
+    def lerp_point(a, b, p):
+        if a is None:
+            return b
+        return (a[0] + (b[0] - a[0]) * p, a[1] + (b[1] - a[1]) * p)
+
+    def _tick(self, _w, clock):
+        now = clock.get_frame_time()
+        if self.t0 is None:
+            self.t0 = now
+        self.hole_to = self.target(TOUR_STEPS[self.step][0])
+        self.card_to = self.card_place(self.hole_to)
+        x, y = self.current_card()
+        self.card.set_margin_start(int(x))
+        self.card.set_margin_top(int(y))
+        fade = (now - self.t0) / 1e6
+        self.card.set_opacity(max(0.0, min(1.0, (fade - 0.15) / 0.3)))
+        self.shade.queue_draw()
+        return True
+
+    def _draw(self, _a, cr, w, h):
+        th = theme()
+        p = self.progress()
+        hole = self.lerp_rect(self.hole_from, self.hole_to, p)
+        cr.set_fill_rule(1)  # even-odd: the spotlight stays clear
+        cr.rectangle(0, 0, w, h)
+        if hole and hole[2] > 1 and hole[3] > 1:
+            rounded_rect(cr, *hole, min(16, hole[3] / 2))
+        cr.set_source_rgba(0.04, 0.04, 0.06, 0.62)
+        cr.fill()
+        if not hole or hole[2] < 2:
+            return
+        clock = self.get_frame_clock()
+        t = clock.get_frame_time() / 1e6 if clock else 0.0
+        pulse = 0.55 + 0.45 * (0.5 + 0.5 * math.sin(t * 3.2))
+        cr.set_line_width(3)
+        rounded_rect(cr, *hole, min(16, hole[3] / 2))
+        src(cr, "#3584e4", pulse)
+        cr.stroke()
+        # a line from the card to the spotlight
+        card = self.current_card()
+        if card is None or p < 0.6:
+            return
+        cw, ch = self.card_size()
+        left, top, right, bottom = card[0], card[1], card[0] + cw, card[1] + ch
+        hx, hy = hole[0] + hole[2] / 2, hole[1] + hole[3] / 2
+        if top >= hole[1] + hole[3]:          # card below the spotlight
+            sx, sy, ex, ey = min(max(hx, left + 30), right - 30), top, hx, hole[1] + hole[3] + 3
+        elif bottom <= hole[1]:               # card above
+            sx, sy, ex, ey = min(max(hx, left + 30), right - 30), bottom, hx, hole[1] - 3
+        elif left >= hole[0] + hole[2] / 2:   # card on the right
+            sx, sy, ex, ey = left, min(max(hy, top + 30), bottom - 30), hole[0] + hole[2] + 3, hy
+        else:                                 # card on the left
+            sx, sy, ex, ey = right, min(max(hy, top + 30), bottom - 30), hole[0] - 3, hy
+        if hole[0] <= sx <= hole[0] + hole[2] and hole[1] <= sy <= hole[1] + hole[3]:
+            return                            # the card sits on the spotlight: no line
+        alpha = min(1.0, (p - 0.6) / 0.3)
+        src(cr, "#3584e4", 0.9 * alpha)
+        cr.set_line_width(2.5)
+        cr.set_line_cap(1)
+        mx = (sx + ex) / 2
+        cr.move_to(sx, sy)
+        cr.curve_to(sx, (sy + ey) / 2, ex, (sy + ey) / 2, ex, ey) if abs(sx - ex) < abs(sy - ey) * 3 \
+            else cr.curve_to(mx, sy, mx, ey, ex, ey)
+        cr.stroke()
+        cr.arc(ex, ey, 4.5, 0, 2 * math.pi)
+        cr.fill()
+
+
 class Window(Adw.ApplicationWindow):
     def __init__(self, app, page=None):
         super().__init__(application=app, title="Moodlog")
@@ -4741,7 +5071,11 @@ class Window(Adw.ApplicationWindow):
         news_action = Gio.SimpleAction.new("changelog", None)
         news_action.connect("activate", lambda *_: ChangelogWindow(self).present())
         self.add_action(news_action)
+        tour_action = Gio.SimpleAction.new("tour", None)
+        tour_action.connect("activate", lambda *_: self.start_tour())
+        self.add_action(tour_action)
         news_menu = Gio.Menu()
+        news_menu.append(tr("Show the tour"), "win.tour")
         news_menu.append(tr("What's new"), "win.changelog")
         main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
@@ -4789,7 +5123,15 @@ class Window(Adw.ApplicationWindow):
         root.append(header)
         root.append(self.banner)
         root.append(self.stack)
-        self.set_content(root)
+        self.tour_root = Gtk.Overlay()     # the welcome tour is shown on top of everything
+        self.tour_root.set_child(root)
+        self.tour = None
+        self.set_content(self.tour_root)
+        self.tour_refs = {"tabs": switcher, "calendar": self.calendar, "faces": self.faces_box,
+                          "scales": (self.scales_box, self.note_view.get_ancestor(Gtk.ScrolledWindow)
+                                     or self.note_view),
+                          "add_event": self.add_event_btn,
+                          "export": export, "sync": sync, "menu": menu_btn}
 
         Adw.StyleManager.get_default().connect("notify::dark", self.on_dark_changed)
         self.connect("close-request", self.on_close)
@@ -4816,7 +5158,28 @@ class Window(Adw.ApplicationWindow):
             pass
         if seen is not None or has_data:  # an update, also from versions before 2.1
             ChangelogWindow(self, since=seen).present()
+        elif not cfg.get("tour_done"):    # a brand-new install: show the welcome tour
+            self.start_tour()
         return False
+
+    def start_tour(self):
+        if self.tour is not None:
+            return
+        self.stack.set_visible_child_name("log")
+        self.tour = TourOverlay(self, self.end_tour)
+        self.tour_root.add_overlay(self.tour)
+
+    def end_tour(self):
+        if self.tour is None:
+            return
+        self.tour_root.remove_overlay(self.tour)
+        self.tour = None
+        cfg = load_config()
+        cfg["tour_done"] = True
+        try:
+            save_config(cfg)
+        except OSError:
+            pass
 
     # -- log page
 
@@ -4866,6 +5229,7 @@ class Window(Adw.ApplicationWindow):
         add_event = Gtk.Button(label=tr("Add event"))
         add_event.set_tooltip_text(tr("Log an important event on this day, e.g. a medication change"))
         add_event.connect("clicked", lambda *_: self.open_event(day=self.selected))
+        self.add_event_btn = add_event
         day_row = Gtk.Box(spacing=8)
         day_row.append(self.day_label)
         day_row.append(add_event)
@@ -4896,6 +5260,7 @@ class Window(Adw.ApplicationWindow):
         mode_row.append(self.mode_label)
         mode_row.append(self.time_entry)
         faces = Gtk.Box(spacing=4, homogeneous=True)
+        self.faces_box = faces
         self.face_buttons = {}
         for mood in range(1, 6):
             inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)

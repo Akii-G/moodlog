@@ -198,13 +198,20 @@ lines (any gettext editor such as Poedit works), add the code to `LANGUAGES` in
 `tools/extract_strings.py --check` and `tools/extract_ios_strings.py --check` list
 anything still missing.
 
+## Welcome tour
+
+The first time you open Moodlog, a short tour walks you through the window: it dims
+everything except the part it is talking about, highlights it, and explains it in a
+few calm sentences. Skip it whenever you like (Escape), or use the arrow keys. See it
+again from the ☰ menu → **Show the tour**.
+
 ## What's new
 
 After each update Moodlog shows what changed, once. You can open the full list again from the ☰ menu → **What's new**, or read [CHANGELOG.md](CHANGELOG.md).
 
 ## Install
 
-    sudo apt install ./moodlog_2.3.2_all.deb
+    sudo apt install ./moodlog_2.4.0_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 

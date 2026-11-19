@@ -4,6 +4,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 
 ## Moodlog for the PC
 
+### 2.4.0 (2026-11-19)
+
+- A welcome tour for new users: a few friendly, animated steps that point at each part of the window and explain it. It opens by itself on a new install; see it any time from the ☰ menu → Show the tour.
+
 ### 2.3.2 (2026-11-19)
 
 - Doctor report: “Also what the dreams were about” can always be ticked, and ticking it includes dreams too. Before, it stayed greyed out until “Include dreams” was ticked, so it was easy to miss.

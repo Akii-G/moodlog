@@ -1574,3 +1574,93 @@ msgstr "Dopo un aggiornamento, il ricevitore della sincronizzazione col telefono
 
 msgid "Doctor report: “Also what the dreams were about” can always be ticked, and ticking it includes dreams too. Before, it stayed greyed out until “Include dreams” was ticked, so it was easy to miss."
 msgstr "Resoconto per il medico: “Anche di cosa parlavano i sogni” si può spuntare sempre, e spuntarlo include anche i sogni. Prima restava grigio finché non si spuntava “Includi i sogni”, quindi era facile non accorgersene."
+
+msgid "Welcome to Moodlog"
+msgstr "Ti do il benvenuto in Moodlog"
+
+msgid "Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you."
+msgstr "Ciao! Nessuna fretta, ti aiuto a capire come funziona l'interfaccia. Non farti spaventare, è piuttosto semplice: ci penso io a te."
+
+msgid "Five tabs, one at a time"
+msgstr "Cinque schede, una alla volta"
+
+msgid "Up here are the tabs. You'll spend most of your time in Log; the others are there whenever you want them. No need to explore them all today."
+msgstr "Qui in alto ci sono le schede. Passerai quasi tutto il tempo in Diario; le altre sono lì quando ti servono. Non c'è bisogno di esplorarle tutte oggi."
+
+msgid "Your month at a glance"
+msgstr "Il tuo mese a colpo d'occhio"
+
+msgid "Each day takes the colour of your mood. Over a few weeks you'll start to see how things go, without doing anything special. Click a day to look at it or fill it in."
+msgstr "Ogni giorno prende il colore del tuo umore. In qualche settimana inizierai a vedere come vanno le cose, senza fare niente di speciale. Clicca su un giorno per guardarlo o compilarlo."
+
+msgid "Logging is one click"
+msgstr "Registrare è un clic"
+
+msgid "To log how you feel, pick a face. That's it, that's the whole job. You can log more than once a day, or skip days: both are fine."
+msgstr "Per registrare come ti senti, scegli una faccina. Tutto qui, è l'unica cosa da fare. Puoi registrare più volte al giorno, o saltare dei giorni: va bene in entrambi i casi."
+
+msgid "Extras, only if you feel like it"
+msgstr "Extra, solo se ti va"
+
+msgid "Energy, anxiety and a note are all optional. Leave them empty whenever you want: a face on its own is already useful."
+msgstr "Energia, ansia e una nota sono tutte facoltative. Lasciale vuote quando vuoi: una faccina da sola è già utile."
+
+msgid "Mark what matters"
+msgstr "Segna ciò che conta"
+
+msgid "Started a new medication, or something big happened? Add it as an event, and Moodlog will show how you felt in the weeks before and after."
+msgstr "Hai iniziato una nuova terapia, o è successo qualcosa di importante? Aggiungilo come evento, e Moodlog ti mostrerà come ti sentivi nelle settimane prima e dopo."
+
+msgid "Charts fill in on their own"
+msgstr "I grafici si riempiono da soli"
+
+msgid "Charts turns your days into graphs. Nothing to set up: the more you log, the more they show."
+msgstr "Grafici trasforma i tuoi giorni in grafici. Niente da impostare: più registri, più mostrano."
+
+msgid "Dreams, if you remember them"
+msgstr "I sogni, se li ricordi"
+
+msgid "Dreams is a small dream journal, for the mornings you remember something. Totally optional."
+msgstr "Sogni è un piccolo diario dei sogni, per le mattine in cui ricordi qualcosa. Del tutto facoltativo."
+
+msgid "For your appointments"
+msgstr "Per le tue visite"
+
+msgid "Export makes a tidy PDF report for your doctor. You choose the period and what goes in; your notes and dreams stay out unless you say so."
+msgstr "Esporta crea un resoconto in PDF ordinato per il medico. Scegli tu il periodo e cosa includere; le note e i sogni restano fuori se non lo chiedi."
+
+msgid "Your iPhone can help"
+msgstr "Il tuo iPhone può aiutarti"
+
+msgid "Phone sync brings in your sleep and steps, and syncs with Moodlog for iPhone. Optional too: Moodlog works fine without it."
+msgstr "Sincronizza telefono porta qui sonno e passi, e si sincronizza con Moodlog per iPhone. Anche questo è facoltativo: Moodlog funziona benissimo senza."
+
+msgid "If you ever need me again"
+msgstr "Se mai avessi di nuovo bisogno di me"
+
+msgid "Style, language and this tour live in this menu. You can watch the tour again whenever you like."
+msgstr "Stile, lingua e questa guida si trovano in questo menu. Puoi rivedere la guida quando vuoi."
+
+msgid "That's all, really"
+msgstr "È tutto, davvero"
+
+msgid "Everything stays on your computer, private. Log a mood whenever you feel like it; even once a day is plenty. You've got this."
+msgstr "Tutto resta sul tuo computer, in privato. Registra un umore quando ti va; anche una volta al giorno è più che sufficiente. Ce la fai benissimo."
+
+msgid "Skip tour"
+msgstr "Salta la guida"
+
+msgid "Back"
+msgstr "Indietro"
+
+msgid "Next"
+msgstr "Avanti"
+
+msgid "Let's start"
+msgstr "Iniziamo"
+
+msgid "Show the tour"
+msgstr "Mostra la guida"
+
+msgid "A welcome tour for new users: a few friendly, animated steps that point at each part of the window and explain it. It opens by itself on a new install; see it any time from the ☰ menu → Show the tour."
+msgstr "Una guida di benvenuto per chi inizia: pochi passaggi animati e rassicuranti che indicano ogni parte della finestra e la spiegano. Si apre da sola alla prima installazione; puoi rivederla quando vuoi dal menu ☰ → Mostra la guida."

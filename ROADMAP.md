@@ -21,7 +21,7 @@ starts when the previous one is done.
 
 - **Languages:** Italian first (done in PC 2.2.0 and iPhone 1.1.0), then others. Writing about how you feel should happen
   in your own language.
-- **First-run welcome:** explain what to log and why, instead of an empty calendar.
+- **First-run welcome:** explain what to log and why, instead of an empty calendar (done in 2.4.0: the welcome tour).
 - **Privacy policy:** a short, plain one. The stores require it, and "your data never
   leaves your devices" is Moodlog's strongest promise.
 - **Accessibility:** screen-reader labels and full keyboard use.
