@@ -1,3 +1,4 @@
+import os; os.environ["MOODLOG_NO_WHATS_NEW"] = "1"
 import importlib.machinery, importlib.util, os, csv, subprocess
 loader = importlib.machinery.SourceFileLoader("moodlog", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "moodlog"))
 spec = importlib.util.spec_from_loader("moodlog", loader); m = importlib.util.module_from_spec(spec); loader.exec_module(m)

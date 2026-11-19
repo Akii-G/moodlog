@@ -1,3 +1,4 @@
+import os; os.environ["MOODLOG_NO_WHATS_NEW"] = "1"
 import os, sys, tempfile, shutil, subprocess, datetime as dt, time
 root = tempfile.mkdtemp()
 os.environ["MOODLOG_CONFIG_DIR"] = os.path.join(root, "config"); os.environ.pop("MOODLOG_DATA_DIR", None)

@@ -32,7 +32,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.0.1"
+VERSION = "2.1.0"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
 # Two optional 1-5 scales next to the mood. Index = position in an entry.
@@ -3562,6 +3562,160 @@ class ReportWindow(Gtk.Window):
                                                            os.path.basename(path)))
 
 
+# ----------------------------------------------------------------- changelog
+
+# Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
+CHANGELOG = [
+    ("2.1.0", "2026-11-19", [
+        "A “What's new” window opens once after each update, with the full changelog. "
+        "Open it again any time from the ☰ menu.",
+    ]),
+    ("2.0.1", "2026-11-19", [
+        "Tahoe style: the selected Energy and Anxiety numbers were invisible (white on white). "
+        "They are blue again, in light and dark.",
+        "Screenshots of the app are now in the README.",
+    ]),
+    ("2.0.0", "2026-11-19", [
+        "Moodlog for iPhone: a new app that syncs moods, energy, anxiety, notes and events with "
+        "Moodlog on your PC over your home Wi-Fi.",
+        "Every entry and event now has an ID and a change time: the newest change wins, "
+        "deletions sync too, and nothing is overwritten when two devices save at once.",
+        "Saving merges changes written meanwhile by the phone or another computer.",
+        "Your existing data is upgraded automatically.",
+    ]),
+    ("1.9.1", "2026-11-19", [
+        "Tahoe style: the top bar, tabs and buttons now change too when a system theme is "
+        "installed in ~/.config/gtk-4.0.",
+    ]),
+    ("1.9.0", "2026-11-19", [
+        "Two styles in the new ☰ menu: Default (GNOME) and Tahoe (macOS-like, with frosted "
+        "cards, pill buttons and red/yellow/green window buttons).",
+    ]),
+    ("1.8.0", "2026-11-18", [
+        "Energy and anxiety: two optional 1–5 scales on every entry, with their own chart.",
+        "Report for your doctor: a printable PDF for a chosen period, with charts, events and a "
+        "day-by-day table. Notes are only included if you ask.",
+        "Backup and restore as one .zip file; restoring saves your current data first.",
+        "Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Moodlog "
+        "on two computers, with merging of conflict copies.",
+    ]),
+    ("1.7.1", "2026-11-18", [
+        "Fixed sleep showing 24 hours every night when the shortcut sent dates without a time.",
+    ]),
+    ("1.7.0", "2026-11-18", [
+        "Export to a spreadsheet (.xlsx) with coloured moods, a summary sheet and charts.",
+    ]),
+    ("1.6.0", "2026-11-18", [
+        "Export everything to a CSV file, one row per day.",
+    ]),
+    ("1.5.0", "2026-11-17", [
+        "Events: mark things like a medication change. They show as a flag in the calendar and "
+        "a line on the charts, with your mood in the two weeks before and after.",
+    ]),
+    ("1.4.0", "2026-11-17", [
+        "Days with several moods show a small grid of tiles in the calendar, one per entry.",
+    ]),
+    ("1.3.0", "2026-11-14", [
+        "Several moods a day, each with its own time.",
+        "New chart: average mood by time of day.",
+    ]),
+    ("1.2.0", "2026-11-14", [
+        "Link with the mood widget of the Gridgets GNOME extension.",
+    ]),
+    ("1.1.0", "2026-11-13", [
+        "Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Moodlog.",
+        "New chart comparing your mood with your health data.",
+    ]),
+    ("1.0.0", "2026-11-13", [
+        "First version: a mood and a note each day, a month calendar, charts and a notes list, "
+        "all saved in a plain CSV file.",
+    ]),
+]
+
+
+def version_key(version):
+    try:
+        return tuple(int(part) for part in str(version).split("."))
+    except ValueError:
+        return (0,)
+
+
+def changelog_markdown():
+    lines = ["# Changelog", "", "All versions of Moodlog for the PC, newest first.", ""]
+    for version, day, items in CHANGELOG:
+        lines.append("## %s (%s)" % (version, day))
+        lines.append("")
+        lines.extend("- " + item for item in items)
+        lines.append("")
+    return "\n".join(lines)
+
+
+class ChangelogWindow(Gtk.Window):
+    """The full changelog; versions newer than the one last opened are marked as new."""
+
+    def __init__(self, parent, since=None):
+        super().__init__(title="What's new in Moodlog", transient_for=parent, modal=True)
+        self.set_default_size(560, 640)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        head = Gtk.Label(label="What's new in Moodlog %s" % VERSION, xalign=0, wrap=True)
+        head.add_css_class("title-2")
+        col.append(head)
+        if since and version_key(since) < version_key(VERSION):
+            sub = "You updated from version %s. The changes since then are marked as new." % since
+        else:
+            sub = "The full history of Moodlog, newest first."
+        sub_label = Gtk.Label(label=sub, xalign=0, wrap=True)
+        sub_label.add_css_class("dim-label")
+        col.append(sub_label)
+
+        for version, day, items in CHANGELOG:
+            is_new = (version_key(version) > version_key(since) if since
+                      else version == VERSION)
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+            title_row = Gtk.Box(spacing=8)
+            title = Gtk.Label(label="Version %s" % version, xalign=0)
+            title.add_css_class("heading")
+            title_row.append(title)
+            if is_new:
+                badge = Gtk.Label(label="New")
+                badge.add_css_class("caption")
+                badge.add_css_class("accent")
+                title_row.append(badge)
+            try:
+                when = dt.date.fromisoformat(day).strftime("%-d %B %Y")
+            except ValueError:
+                when = day
+            date_label = Gtk.Label(label=when, xalign=1, hexpand=True)
+            date_label.add_css_class("dim-label")
+            date_label.add_css_class("caption")
+            title_row.append(date_label)
+            box.append(title_row)
+            for item in items:
+                line = Gtk.Label(label="•  " + item, xalign=0, wrap=True)
+                line.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                if not is_new:
+                    line.add_css_class("dim-label")
+                box.append(line)
+            col.append(card(box))
+
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(col)
+        close = Gtk.Button(label="Got it")
+        close.add_css_class("suggested-action")
+        close.connect("clicked", lambda *_: self.close())
+        bottom = Gtk.Box(halign=Gtk.Align.END)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(bottom, "set_margin_" + side)(12)
+        bottom.append(close)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer.append(scroll)
+        outer.append(bottom)
+        self.set_child(outer)
+
+
 class ConfirmWindow(Gtk.Window):
     """A small question with up to three buttons. `choices` = [(label, callback, style)]."""
 
@@ -3907,6 +4061,12 @@ class Window(Adw.ApplicationWindow):
             style_menu.append_item(item)
         main_menu = Gio.Menu()
         main_menu.append_section("Style", style_menu)
+        news_action = Gio.SimpleAction.new("changelog", None)
+        news_action.connect("activate", lambda *_: ChangelogWindow(self).present())
+        self.add_action(news_action)
+        news_menu = Gio.Menu()
+        news_menu.append("What's new", "win.changelog")
+        main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
         menu_btn.set_tooltip_text("Style")
         header.pack_end(menu_btn)
@@ -3960,6 +4120,25 @@ class Window(Adw.ApplicationWindow):
         GLib.timeout_add_seconds(5, self.poll_health)
         if page:
             self.stack.set_visible_child_name(page)
+        GLib.timeout_add(600, self.show_changelog_after_update)
+
+    def show_changelog_after_update(self):
+        """Open "What's new" once after each update (not on a brand-new install)."""
+        if os.environ.get("MOODLOG_NO_WHATS_NEW"):  # used by the tests
+            return False
+        cfg = load_config()
+        seen = cfg.get("last_seen_version")
+        if seen == VERSION:
+            return False
+        has_data = bool(self.store.days or self.events.items)
+        cfg["last_seen_version"] = VERSION
+        try:
+            save_config(cfg)
+        except OSError:
+            pass
+        if seen is not None or has_data:  # an update, also from versions before 2.1
+            ChangelogWindow(self, since=seen).present()
+        return False
 
     # -- log page
 
@@ -5085,6 +5264,9 @@ def main(argv):
         return 0
     if "--sync-server" in argv:
         return run_sync_server()
+    if "--changelog" in argv:
+        print(changelog_markdown())
+        return 0
     if "--report" in argv:
         i = argv.index("--report")
         opts = dict(zip(argv[1::1], argv[2::1]))

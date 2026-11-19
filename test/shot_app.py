@@ -1,3 +1,4 @@
+import os; os.environ["MOODLOG_NO_WHATS_NEW"] = "1"
 """Screenshot the real app: shot_app.py OUT.png PAGE STYLE WIDTH HEIGHT [range]"""
 import os, sys, json, tempfile, subprocess, importlib.machinery, importlib.util, datetime as dt
 out, page, style, W, H = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), int(sys.argv[5])

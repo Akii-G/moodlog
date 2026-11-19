@@ -1,3 +1,4 @@
+import os; os.environ["MOODLOG_NO_WHATS_NEW"] = "1"
 import os, sys, subprocess, tempfile, importlib.machinery, importlib.util
 cfg = tempfile.mkdtemp(); os.environ["MOODLOG_CONFIG_DIR"] = cfg
 import json; json.dump({"style": "tahoe"}, open(os.path.join(cfg, "config.json"), "w"))

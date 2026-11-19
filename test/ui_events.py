@@ -1,3 +1,4 @@
+import os; os.environ["MOODLOG_NO_WHATS_NEW"] = "1"
 import os
 import importlib.machinery, importlib.util, subprocess, datetime as dt, sys
 loader = importlib.machinery.SourceFileLoader("moodlog", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "moodlog"))
