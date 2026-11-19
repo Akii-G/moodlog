@@ -4,6 +4,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 
 ## Moodlog for the PC
 
+### 2.3.2 (2026-11-19)
+
+- Doctor report: “Also what the dreams were about” can always be ticked, and ticking it includes dreams too. Before, it stayed greyed out until “Include dreams” was ticked, so it was easy to miss.
+
 ### 2.3.1 (2026-11-19)
 
 - After an update, the phone sync receiver switches to the new version by itself. Before, it kept running the old one until it was restarted, so new things such as dreams did not sync.

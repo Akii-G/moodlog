@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.3.1"
+VERSION = "2.3.2"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -4081,12 +4081,11 @@ class ReportWindow(Gtk.Window):
         self.health_check = Gtk.CheckButton(label=tr("Include sleep from my phone"), active=True)
         self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
         self.dreams_check = Gtk.CheckButton(label=tr("Include dreams (how many, and nightmare nights)"))
-        self.dream_text_check = Gtk.CheckButton(label=tr("Also what the dreams were about"),
-                                                sensitive=False)
+        self.dream_text_check = Gtk.CheckButton(label=tr("Also what the dreams were about"))
         self.dream_text_check.set_margin_start(28)
-        self.dreams_check.connect("toggled", lambda b: (
-            self.dream_text_check.set_sensitive(b.get_active()),
-            b.get_active() or self.dream_text_check.set_active(False)))
+        # Always clickable: ticking the text also ticks dreams, unticking dreams unticks both.
+        self.dreams_check.connect("toggled", lambda b: b.get_active() or self.dream_text_check.set_active(False))
+        self.dream_text_check.connect("toggled", lambda b: b.get_active() and self.dreams_check.set_active(True))
         has_dreams = bool(win.dreams.items)
         self.dreams_check.set_visible(has_dreams)
         self.dream_text_check.set_visible(has_dreams)
@@ -4179,6 +4178,11 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.3.2", "2026-11-19", [
+        "Doctor report: \u201cAlso what the dreams were about\u201d can always be ticked, and ticking it "
+        "includes dreams too. Before, it stayed greyed out until \u201cInclude dreams\u201d was ticked, "
+        "so it was easy to miss.",
+    ]),
     ("2.3.1", "2026-11-19", [
         "After an update, the phone sync receiver switches to the new version by itself. Before, "
         "it kept running the old one until it was restarted, so new things such as dreams did not "

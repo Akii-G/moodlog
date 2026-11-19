@@ -1571,3 +1571,6 @@ msgstr "Le schede occupano meno spazio, così la finestra entra di nuovo in mezz
 
 msgid "After an update, the phone sync receiver switches to the new version by itself. Before, it kept running the old one until it was restarted, so new things such as dreams did not sync."
 msgstr "Dopo un aggiornamento, il ricevitore della sincronizzazione col telefono passa da solo alla nuova versione. Prima continuava a usare quella vecchia finché non veniva riavviato, quindi le novità come i sogni non si sincronizzavano."
+
+msgid "Doctor report: “Also what the dreams were about” can always be ticked, and ticking it includes dreams too. Before, it stayed greyed out until “Include dreams” was ticked, so it was easy to miss."
+msgstr "Resoconto per il medico: “Anche di cosa parlavano i sogni” si può spuntare sempre, e spuntarlo include anche i sogni. Prima restava grigio finché non si spuntava “Includi i sogni”, quindi era facile non accorgersene."

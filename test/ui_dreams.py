@@ -53,10 +53,18 @@ def s1():
     assert len(w.dreams.items) == 1 and len(m.DreamStore().deleted) == 1
     # the report window offers the dream options only when there are dreams, text only after dreams
     rep = m.ReportWindow(w)
-    assert rep.dreams_check.get_visible() and not rep.dream_text_check.get_sensitive()
-    rep.dreams_check.set_active(True); assert rep.dream_text_check.get_sensitive()
-    rep.dream_text_check.set_active(True); rep.dreams_check.set_active(False)
-    assert not rep.dream_text_check.get_active() and not rep.dream_text_check.get_sensitive()
+    assert rep.dreams_check.get_visible() and rep.dream_text_check.get_sensitive()
+    rep.dream_text_check.set_active(True)          # ticking the text also ticks dreams
+    assert rep.dreams_check.get_active()
+    rep.dreams_check.set_active(False)             # unticking dreams unticks both
+    assert not rep.dream_text_check.get_active()
+    rep.dream_text_check.activate()                # like a click
+    start, end = rep.dates()
+    rep.write(os.path.join(m.data_dir(), "r.pdf"), start, end)
+    import subprocess
+    text = subprocess.run(["pdftotext", "-layout", os.path.join(m.data_dir(), "r.pdf"), "-"],
+                          capture_output=True, text=True).stdout
+    assert "Dream: Lost in a big station" in text, text[-800:]
     rep.close()
     # charts show a Dreams card for the period
     w.stack.set_visible_child_name("charts"); w.refresh()
