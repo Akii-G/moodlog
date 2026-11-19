@@ -32,7 +32,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
 # Two optional 1-5 scales next to the mood. Index = position in an entry.
@@ -2324,7 +2324,7 @@ button.suggested-action:hover { background-color: #2b95ff; }
 button.suggested-action:active { background-color: #0071e3; }
 button.destructive-action { background-color: #ff453a; color: #ffffff; }
 button.suggested-action label, button.destructive-action label,
-togglebutton:checked:not(.flat) label, box > button:checked:not(.flat) label { color: #ffffff; }
+togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action) label, box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) label { color: #ffffff; }
 togglebutton:checked, button:checked { font-weight: 700; }
 entry, spinbutton, dropdown > button, searchentry {
   border-radius: 12px; min-height: 32px;
@@ -2392,7 +2392,7 @@ button:not(.flat):not(.suggested-action):not(.destructive-action) {
 button:not(.flat):not(.suggested-action):not(.destructive-action):hover {
   background-color: rgba(255,255,255,0.85);
 }
-togglebutton:checked:not(.flat), box > button:checked:not(.flat) {
+togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action), box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
   background-color: #0a84ff; color: #ffffff; border-color: #0a84ff;
 }
 button.flat:checked { background-color: rgba(10,132,255,0.16); color: #0a64d6; }
@@ -2446,7 +2446,7 @@ button:not(.flat):not(.suggested-action):not(.destructive-action) {
 button:not(.flat):not(.suggested-action):not(.destructive-action):hover {
   background-color: rgba(255,255,255,0.15);
 }
-togglebutton:checked:not(.flat), box > button:checked:not(.flat) {
+togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action), box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
   background-color: #0a84ff; color: #ffffff; border-color: #0a84ff;
 }
 button.flat:checked { background-color: rgba(10,132,255,0.28); color: #ffffff; }

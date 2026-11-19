@@ -1,6 +1,7 @@
-build/
 *.deb
 __pycache__/
+build/
 patch/
 test/*/
 test/shot.sh
+test/shots/

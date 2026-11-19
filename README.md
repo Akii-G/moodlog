@@ -7,6 +7,34 @@ A small, local mood tracker for Linux (GTK 4 / libadwaita, one Python file).
 - **Notes**: every note, newest first, with search. Click one to jump to that day.
 - **Events**: log important events, such as a medication change. They show as a flag on the calendar day and as a dashed line on the charts, and each one shows your average mood in the two weeks before and after it.
 
+## Screenshots
+
+These are screenshots of the real app, filled with made-up sample data.
+
+**Log**: the month calendar (days with several moods show one tile per entry, flags
+mark events) and the editor for the selected day.
+
+![The Log tab with the month calendar and the day's entries](docs/screenshots/log.png)
+
+**Charts** (dark mode): mood day by day with events marked, sleep from the phone,
+energy and anxiety, and more below.
+
+![The Charts tab in dark mode](docs/screenshots/charts-dark.png)
+
+**Events**: each event with your mood in the two weeks before and after it.
+
+![The Events tab](docs/screenshots/events.png)
+
+**Tahoe style** (☰ menu → Tahoe), in light and dark.
+
+![The Log tab in the Tahoe style, light](docs/screenshots/tahoe-light.png)
+
+![The Charts tab in the Tahoe style, dark](docs/screenshots/tahoe-dark.png)
+
+**Report for your doctor**: the first page of the PDF.
+
+<img src="docs/screenshots/report.png" alt="First page of the doctor report PDF" width="600">
+
 ## Phone sync (Apple Health)
 
 Moodlog can receive daily steps, sleep and heart rate from an iPhone, so you can
@@ -136,7 +164,7 @@ computer. The folder button in the title bar opens that folder and makes backups
 
 ## Install
 
-    sudo apt install ./moodlog_2.0.0_all.deb
+    sudo apt install ./moodlog_2.0.1_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 
