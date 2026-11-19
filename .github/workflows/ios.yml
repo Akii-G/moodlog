@@ -7,6 +7,10 @@ on:
   release:
     types: [published]   # every release gets the iPhone app attached
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Also attach the .ipa to this existing release (tag, e.g. v2.1.0)"
+        required: false
 
 permissions:
   contents: write
@@ -67,8 +71,9 @@ jobs:
           path: ios/build.log
 
       - name: Attach to the release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || inputs.release != ''
         working-directory: ios
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" "$IPA" --clobber --repo "${{ github.repository }}"
+          TAG: ${{ github.event.release.tag_name || inputs.release }}
+        run: gh release upload "$TAG" "$IPA" --clobber --repo "${{ github.repository }}"
