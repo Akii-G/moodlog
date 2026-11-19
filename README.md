@@ -136,6 +136,22 @@ remembers your choice:
   buttons. GTK cannot blur what is behind a window, so the glass effect is drawn
   inside the app. Both follow your light or dark setting.
 
+## Dream journal
+
+The **Dreams** tab (on the PC and on the iPhone) is a dream journal. Each dream
+belongs to the morning you woke up. Write what you remember, pick how it felt
+(pleasant, neutral or disturbing) and tick tags such as nightmare, vivid,
+recurring or lucid; on a night you can't remember, tick "Didn't remember", which
+counts too. Nights with a dream show a moon in the calendar. The tab and Charts
+show how many nights had a dream or a nightmare and, once there is enough data,
+your mood on days after a disturbing dream compared with other days. Dreams sync
+between the iPhone and the PC like moods, and are kept in `dreams.csv`
+(`date,feeling,tags,text,id,updated,deleted`).
+
+Dreams are private: the doctor report leaves them out unless you tick "Include
+dreams" (how many, and the nightmare nights marked in the day-by-day table), and
+"Also what the dreams were about" adds the text.
+
 ## Report for your doctor
 
 **Export → Report for your doctor (.pdf)** makes a printable A4 report for a period
@@ -143,8 +159,10 @@ you choose (last 30 days, 3 or 6 months, this year, everything, or your own date
 key numbers, how often each mood was logged, your mood over time with your events
 (such as medication changes) marked and numbered, energy and anxiety, sleep, a
 table of the events with your mood in the two weeks before and after each one,
-and a day-by-day table. Notes are left out unless you tick "Include my notes".
-From a terminal: `moodlog --report FILE.pdf --from 2026-09-01 --to 2026-11-30`.
+and a day-by-day table. Notes and dreams are left out unless you tick "Include my
+notes" or "Include dreams". From a terminal:
+`moodlog --report FILE.pdf --from 2026-09-01 --to 2026-11-30` (add `--notes`,
+`--dreams` or `--dream-text`).
 
 ## Backup, restore and two computers
 
@@ -186,7 +204,7 @@ After each update Moodlog shows what changed, once. You can open the full list a
 
 ## Install
 
-    sudo apt install ./moodlog_2.2.0_all.deb
+    sudo apt install ./moodlog_2.3.0_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 

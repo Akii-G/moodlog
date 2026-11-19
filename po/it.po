@@ -1436,3 +1436,135 @@ msgstr "Ancora nessuna nota.\nAggiungi qualche parola quando registri un umore e
 #: src/moodlog
 msgid "Moodlog speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too."
 msgstr "Moodlog parla italiano. Segue la lingua del sistema, oppure scegline una dal menu ☰ → Lingua. Anche date, grafici, resoconto per il medico ed esportazioni sono tradotti."
+
+msgid "Pleasant"
+msgstr "Piacevole"
+
+msgid "Neutral"
+msgstr "Neutro"
+
+msgid "Disturbing"
+msgstr "Inquietante"
+
+msgid "Nightmare"
+msgstr "Incubo"
+
+msgid "Vivid"
+msgstr "Vivido"
+
+msgid "Recurring"
+msgstr "Ricorrente"
+
+msgid "Lucid"
+msgstr "Lucido"
+
+msgid "Didn't remember"
+msgstr "Non ricordato"
+
+msgid "Dreams"
+msgstr "Sogni"
+
+msgid "How it felt"
+msgstr "Com'era"
+
+msgid "Tags"
+msgstr "Etichette"
+
+msgid "Dream"
+msgstr "Sogno"
+
+msgid "Mood that day"
+msgstr "Umore quel giorno"
+
+msgid "Notes and dreams"
+msgstr "Note e sogni"
+
+msgid "Dream: %s"
+msgstr "Sogno: %s"
+
+msgid "Forgotten"
+msgstr "Dimenticato"
+
+msgid "Yes"
+msgstr "Sì"
+
+msgid "\nDream — %s"
+msgstr "\nSogno — %s"
+
+msgid "Add a dream"
+msgstr "Aggiungi un sogno"
+
+msgid "Edit dream"
+msgstr "Modifica sogno"
+
+msgid "The morning you woke up"
+msgstr "La mattina del risveglio"
+
+msgid "Not set"
+msgstr "Non impostato"
+
+msgid "Morning of"
+msgstr "Mattina del"
+
+msgid "What did you dream?"
+msgstr "Cosa hai sognato?"
+
+msgid "Write it down soon after waking: dreams fade fast. Didn't remember one? Tick that box, it counts too."
+msgstr "Scrivilo subito dopo il risveglio: i sogni svaniscono in fretta. Non ricordi niente? Spunta quella casella, conta anche quello."
+
+msgid "Write a few words, or pick how it felt or a tag."
+msgstr "Scrivi qualche parola, oppure scegli com'era o un'etichetta."
+
+msgid "Could not save the dream to dreams.csv."
+msgstr "Impossibile salvare il sogno in dreams.csv."
+
+msgid "Could not save the change to dreams.csv."
+msgstr "Impossibile salvare la modifica in dreams.csv."
+
+msgid "%d night with a dream entry"
+msgid_plural "%d nights with a dream entry"
+msgstr[0] "%d notte con un sogno annotato"
+msgstr[1] "%d notti con un sogno annotato"
+
+msgid "%d with a nightmare or a disturbing dream"
+msgid_plural "%d with a nightmare or a disturbing dream"
+msgstr[0] "%d con un incubo o un sogno inquietante"
+msgstr[1] "%d con un incubo o un sogno inquietante"
+
+msgid "%d pleasant one"
+msgid_plural "%d pleasant ones"
+msgstr[0] "%d piacevole"
+msgstr[1] "%d piacevoli"
+
+msgid "Your mood on days after a disturbing dream: %.1f; after other dreams: %.1f. This shows a pattern in your data, not a cause."
+msgstr "Il tuo umore nei giorni dopo un sogno inquietante: %.1f; dopo gli altri sogni: %.1f. Questo mostra una tendenza nei tuoi dati, non una causa."
+
+msgid "Include dreams (how many, and nightmare nights)"
+msgstr "Includi i sogni (quanti, e le notti con incubi)"
+
+msgid "Also what the dreams were about"
+msgstr "Anche di cosa parlavano i sogni"
+
+msgid "Edit this dream"
+msgstr "Modifica questo sogno"
+
+msgid "A dream journal. Each dream belongs to the morning you woke up, shows as a moon in the calendar, and is private: it is only in the doctor report if you choose so."
+msgstr "Un diario dei sogni. Ogni sogno appartiene alla mattina del risveglio, appare come una luna nel calendario ed è privato: è nel resoconto per il medico solo se lo scegli tu."
+
+msgid "Search your dreams"
+msgstr "Cerca nei tuoi sogni"
+
+msgid "No dreams match “%s”."
+msgstr "Nessun sogno contiene “%s”."
+
+msgid "No dreams yet.\nAdd one in the morning, while you still remember it."
+msgstr "Ancora nessun sogno.\nAggiungine uno al mattino, finché lo ricordi ancora."
+
+msgid "Dream journal: a new Dreams tab. Write down a dream with how it felt and tags such as nightmare or vivid, or note that you didn't remember one. Dreams show as a moon in the calendar, with a summary in the tab and in Charts, and sync with the iPhone."
+msgstr "Diario dei sogni: una nuova scheda Sogni. Annota un sogno con com'era ed etichette come incubo o vivido, oppure segna che non ne ricordi nessuno. I sogni appaiono come una luna nel calendario, con un riepilogo nella scheda e nei Grafici, e si sincronizzano con l'iPhone."
+
+msgid "The doctor report can include dreams: off by default, then just how many and the nightmare nights, or also what they were about."
+msgstr "Il resoconto per il medico può includere i sogni: spento di base, poi solo quanti e le notti con incubi, oppure anche di cosa parlavano."
+
+msgid "Tabs take less room, so the window fits in half a screen again."
+msgstr "Le schede occupano meno spazio, così la finestra entra di nuovo in mezzo schermo."

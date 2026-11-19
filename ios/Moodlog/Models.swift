@@ -22,9 +22,62 @@ struct MoodEvent: Codable, Identifiable, Hashable {
     var updated: String
 }
 
+/// A dream journal entry. `date` is the morning you woke up.
+struct Dream: Codable, Identifiable, Hashable {
+    var id: String
+    var date: String
+    var feeling: String   // "", pleasant, neutral, disturbing
+    var tags: [String]    // nightmare, vivid, recurring, lucid, forgotten
+    var text: String
+    var updated: String
+
+    var isNightmare: Bool { return tags.contains("nightmare") || feeling == "disturbing" }
+
+    /// Feeling and tags as one line: "Disturbing · Nightmare, Vivid".
+    var details: String {
+        var parts: [String] = []
+        if let f = DreamFeeling(rawValue: feeling) { parts.append(f.label) }
+        let names = DreamTag.allCases.filter { tags.contains($0.rawValue) }.map { $0.label }
+        if !names.isEmpty { parts.append(names.joined(separator: ", ")) }
+        return parts.joined(separator: " · ")
+    }
+
+    /// A short line for lists: the start of the text, or the details if there is none.
+    var title: String {
+        let words = text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        return words.isEmpty ? details : words
+    }
+}
+
+enum DreamFeeling: String, CaseIterable, Identifiable {
+    case pleasant, neutral, disturbing
+    var id: String { return rawValue }
+    var label: String {
+        switch self {
+        case .pleasant: return tr("Pleasant")
+        case .neutral: return tr("Neutral")
+        case .disturbing: return tr("Disturbing")
+        }
+    }
+}
+
+enum DreamTag: String, CaseIterable, Identifiable {
+    case nightmare, vivid, recurring, lucid, forgotten
+    var id: String { return rawValue }
+    var label: String {
+        switch self {
+        case .nightmare: return tr("Nightmare")
+        case .vivid: return tr("Vivid")
+        case .recurring: return tr("Recurring")
+        case .lucid: return tr("Lucid")
+        case .forgotten: return tr("Didn't remember")
+        }
+    }
+}
+
 struct Tombstone: Codable, Hashable {
     var id: String
-    var type: String      // "entry" or "event"
+    var type: String      // "entry", "event" or "dream"
     var deleted: String   // UTC time of the deletion
     var date: String?
 }
@@ -33,6 +86,7 @@ struct SyncState: Codable {
     var entries: [Entry]
     var events: [MoodEvent]
     var deleted: [Tombstone]
+    var dreams: [Dream]?  // missing when the PC runs Moodlog older than 2.3
     var changed: Int?
 }
 

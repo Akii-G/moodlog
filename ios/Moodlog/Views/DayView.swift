@@ -8,10 +8,13 @@ struct DayView: View {
     @State private var adding = false
     @State private var editingEvent: MoodEvent?
     @State private var addingEvent = false
+    @State private var editingDream: Dream?
+    @State private var addingDream = false
 
     var body: some View {
         let entries = store.entries(on: day)
         let events = store.events(on: day)
+        let dreams = store.dreams(on: day)
         List {
             Section {
                 if entries.isEmpty {
@@ -60,6 +63,24 @@ struct DayView: View {
                     Label("Add an event, e.g. a medication change", systemImage: "flag")
                 }
             }
+            Section("Dreams") {
+                ForEach(dreams) { dream in
+                    Button {
+                        editingDream = dream
+                    } label: {
+                        DreamRow(dream: dream)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .onDelete { offsets in
+                    for i in offsets { store.delete(dreams[i]) }
+                }
+                Button {
+                    addingDream = true
+                } label: {
+                    Label("Add a dream from this night", systemImage: "moon.stars")
+                }
+            }
         }
         .navigationTitle(day == Day.today ? tr("Today") : Day.pretty(day, style: "EEE d MMM"))
         .sheet(isPresented: $adding) {
@@ -73,6 +94,12 @@ struct DayView: View {
         }
         .sheet(item: $editingEvent) { event in
             EventEditor(original: event, day: event.date)
+        }
+        .sheet(isPresented: $addingDream) {
+            DreamEditor(original: nil, day: day)
+        }
+        .sheet(item: $editingDream) { dream in
+            DreamEditor(original: dream, day: dream.date)
         }
     }
 }

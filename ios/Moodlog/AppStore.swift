@@ -10,6 +10,7 @@ import Observation
 final class AppStore {
     var entries: [Entry] = []
     var events: [MoodEvent] = []
+    var dreams: [Dream] = []
     var deleted: [Tombstone] = []
 
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
@@ -19,6 +20,7 @@ final class AppStore {
         var entries: [Entry]
         var events: [MoodEvent]
         var deleted: [Tombstone]
+        var dreams: [Dream]?  // optional: files saved by 1.1 and older have none
     }
 
     init() {
@@ -33,11 +35,12 @@ final class AppStore {
               let saved = try? JSONDecoder().decode(Saved.self, from: data) else { return }
         entries = saved.entries
         events = saved.events
+        dreams = saved.dreams ?? []
         deleted = saved.deleted
     }
 
     func save() {
-        let saved = Saved(entries: entries, events: events, deleted: deleted)
+        let saved = Saved(entries: entries, events: events, deleted: deleted, dreams: dreams)
         if let data = try? JSONEncoder().encode(saved) {
             try? data.write(to: fileURL, options: .atomic)
         }
@@ -77,6 +80,35 @@ final class AppStore {
 
     func events(on day: String) -> [MoodEvent] {
         return events.filter { $0.date == day }
+    }
+
+    func dreams(on day: String) -> [Dream] {
+        return dreams.filter { $0.date == day }
+    }
+
+    /// Dream counts for a period, and the mood on days after a disturbing dream vs other days.
+    func dreamSummary(from start: String, to end: String) -> String? {
+        let items = dreams.filter { $0.date >= start && $0.date <= end }
+        let nights = Set(items.map { $0.date })
+        if nights.isEmpty { return nil }
+        let bad = Set(items.filter { $0.isNightmare }.map { $0.date })
+        let pleasant = Set(items.filter { $0.feeling == "pleasant" }.map { $0.date })
+        var parts = [trn("%@ night with a dream entry", "%@ nights with a dream entry", nights.count)]
+        if !bad.isEmpty {
+            parts.append(trn("%@ with a nightmare or a disturbing dream",
+                             "%@ with a nightmare or a disturbing dream", bad.count))
+        }
+        if !pleasant.isEmpty { parts.append(trn("%@ pleasant one", "%@ pleasant ones", pleasant.count)) }
+        var text = parts.joined(separator: ", ") + "."
+        let afterBad = bad.compactMap { average(on: $0) }
+        let afterOther = nights.subtracting(bad).compactMap { average(on: $0) }
+        if afterBad.count >= 3 && afterOther.count >= 3 {
+            let a = afterBad.reduce(0, +) / Double(afterBad.count)
+            let b = afterOther.reduce(0, +) / Double(afterOther.count)
+            text += " " + tr("Your mood on days after a disturbing dream: %@; after other dreams: %@. This shows a pattern in your data, not a cause.",
+                             String(format: "%.1f", a), String(format: "%.1f", b))
+        }
+        return text
     }
 
     func hasNote(on day: String) -> Bool {
@@ -156,10 +188,31 @@ final class AppStore {
         changed()
     }
 
+    func addDream(date: String, feeling: String, tags: [String], text: String) {
+        dreams.append(Dream(id: AppStore.newID(), date: date, feeling: feeling, tags: tags, text: text,
+                            updated: Stamp.now()))
+        changed()
+    }
+
+    func update(_ dream: Dream) {
+        var copy = dream
+        copy.updated = Stamp.now()
+        if let i = dreams.firstIndex(where: { $0.id == copy.id }) {
+            dreams[i] = copy
+        }
+        changed()
+    }
+
+    func delete(_ dream: Dream) {
+        dreams.removeAll { $0.id == dream.id }
+        deleted.append(Tombstone(id: dream.id, type: "dream", deleted: Stamp.now(), date: dream.date))
+        changed()
+    }
+
     // MARK: - Sync
 
     func state() -> SyncState {
-        return SyncState(entries: entries, events: events, deleted: deleted, changed: nil)
+        return SyncState(entries: entries, events: events, deleted: deleted, dreams: dreams, changed: nil)
     }
 
     /// Merge what the PC sent. Returns how many things changed here.
@@ -229,8 +282,37 @@ final class AppStore {
             }
         }
 
+        var dreamsByID: [String: Dream] = [:]
+        for d in dreams {
+            if let old = dreamsByID[d.id], old.updated >= d.updated { continue }
+            dreamsByID[d.id] = d
+        }
+        for d in other.dreams ?? [] {  // an older PC sends none: keep ours as they are
+            if let t = tombs[d.id], t.deleted >= d.updated { continue }
+            if let mine = dreamsByID[d.id] {
+                if d.updated > mine.updated {
+                    dreamsByID[d.id] = d
+                    changes += 1
+                }
+            } else if dreamsByID.values.contains(where: {
+                $0.date == d.date && $0.feeling == d.feeling && $0.tags == d.tags && $0.text == d.text
+            }) {
+                continue
+            } else {
+                dreamsByID[d.id] = d
+                changes += 1
+            }
+        }
+        for t in tombs.values where t.type == "dream" {
+            if let mine = dreamsByID[t.id], mine.updated <= t.deleted {
+                dreamsByID.removeValue(forKey: t.id)
+                changes += 1
+            }
+        }
+
         entries = Array(byID.values)
         events = Array(eventsByID.values).sorted { $0.date < $1.date }
+        dreams = Array(dreamsByID.values).sorted { $0.date < $1.date }
         deleted = Array(tombs.values)
         save()
         return changes

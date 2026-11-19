@@ -39,6 +39,8 @@ struct ContentView: View {
                 .tabItem { Label("Log", systemImage: "calendar") }
             ChartsView()
                 .tabItem { Label("Charts", systemImage: "chart.xyaxis.line") }
+            DreamsView()
+                .tabItem { Label("Dreams", systemImage: "moon.stars") }
             EventsView()
                 .tabItem { Label("Events", systemImage: "flag") }
             SettingsView()

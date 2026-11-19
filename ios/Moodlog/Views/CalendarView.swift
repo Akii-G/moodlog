@@ -127,6 +127,9 @@ struct DayCell: View {
                 if !store.events(on: day).isEmpty {
                     Image(systemName: "flag.fill").font(.system(size: 7))
                 }
+                if !store.dreams(on: day).isEmpty {
+                    Image(systemName: "moon.fill").font(.system(size: 7))
+                }
             }
             .padding(.horizontal, 5)
             .padding(.top, 3)

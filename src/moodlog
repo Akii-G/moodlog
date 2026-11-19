@@ -6,6 +6,7 @@
 #               (several entries a day; id/updated/deleted let the iPhone app sync)
 #   events.csv  date,kind,title,note   (important events, e.g. a medication change)
 #   health.csv  date,metric,value   (optional, sent by your phone: see Phone sync)
+#   dreams.csv  date,feeling,tags,text   (dream journal; date = the morning you woke up)
 #
 # SPDX-License-Identifier: MIT
 
@@ -32,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -536,7 +537,7 @@ class EventStore:
 
     def save(self):
         if self.changed_on_disk():
-            self.absorb(EventStore(self.path))
+            self.absorb(type(self)(self.path))
         tmp = self.path + ".tmp"
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
@@ -642,6 +643,124 @@ def event_summary(store, event):
     return text_
 
 
+# ----------------------------------------------------------------- dreams
+
+DREAM_FEELINGS = [("pleasant", tr("Pleasant")), ("neutral", tr("Neutral")),
+                  ("disturbing", tr("Disturbing"))]
+DREAM_FEELING_LABELS = dict(DREAM_FEELINGS)
+DREAM_TAGS = [("nightmare", tr("Nightmare")), ("vivid", tr("Vivid")), ("recurring", tr("Recurring")),
+              ("lucid", tr("Lucid")), ("forgotten", tr("Didn't remember"))]
+DREAM_TAG_LABELS = dict(DREAM_TAGS)
+
+
+def clean_tags(tags):
+    """Tags as one text in a fixed order ("nightmare,vivid"); unknown tags are dropped."""
+    if isinstance(tags, str):
+        tags = tags.replace(";", ",").split(",")
+    wanted = {str(t).strip().lower() for t in tags or []}
+    return ",".join(key for key, _label in DREAM_TAGS if key in wanted)
+
+
+def dream_tags(dream):
+    return [t for t in dream[2].split(",") if t]
+
+
+class DreamStore(EventStore):
+    """The dream journal: dreams.csv. A dream belongs to the morning you woke up.
+
+    Each dream is [date, feeling, tags, text, id, updated], laid out like an event so
+    merging, deletions and syncing work the same way. feeling is "" or a DREAM_FEELINGS
+    key, tags a clean_tags() text.
+    """
+
+    def __init__(self, path=None):
+        own = path or os.path.join(data_dir(), "dreams.csv")
+        super().__init__(own if path is None else path)
+        self.path = own   # never events.csv, even for an in-memory store (path "")
+
+    def load(self):
+        self.items = []
+        self.deleted = {}
+        self.mtime = file_mtime(self.path)
+        if not os.path.exists(self.path):
+            return
+        with open(self.path, newline="", encoding="utf-8-sig") as f:
+            for row in csv.DictReader(f):
+                eid = (row.get("id") or "").strip()
+                gone = clean_stamp(row.get("deleted"))
+                if gone and eid:
+                    self.deleted[eid] = gone
+                    continue
+                try:
+                    day = dt.date.fromisoformat((row.get("date") or "").strip())
+                except ValueError:
+                    continue
+                feeling = (row.get("feeling") or "").strip()
+                feeling = feeling if feeling in DREAM_FEELING_LABELS else ""
+                tags, text_ = clean_tags(row.get("tags") or ""), row.get("text") or ""
+                if not (feeling or tags or text_.strip()):
+                    continue
+                if not eid:
+                    eid = legacy_id("dream", day, feeling, tags, text_)
+                self.items.append([day, feeling, tags, text_, eid, clean_stamp(row.get("updated"))])
+        self.sort()
+
+    def save(self):
+        if self.changed_on_disk():
+            self.absorb(DreamStore(self.path))
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(["date", "feeling", "tags", "text", "id", "updated", "deleted"])
+            for day, feeling, tags, text_, eid, updated in self.items:
+                w.writerow([day.isoformat(), feeling, tags, text_, eid, updated, ""])
+            for eid, gone in sorted(self.deleted.items()):
+                w.writerow(["", "", "", "", eid, "", gone])
+        os.replace(tmp, self.path)
+        self.mtime = file_mtime(self.path)
+
+    def is_nightmare(self, dream):
+        return "nightmare" in dream_tags(dream) or dream[1] == "disturbing"
+
+
+def dream_title(dream):
+    """A short line for lists: the start of the text, or the tags if there is none."""
+    words = " ".join(dream[3].split())
+    if words:
+        return words if len(words) <= 90 else words[:88].rsplit(" ", 1)[0] + "\u2026"
+    tags = [DREAM_TAG_LABELS[t] for t in dream_tags(dream)]
+    return ", ".join(tags) if tags else DREAM_FEELING_LABELS.get(dream[1], "")
+
+
+def dream_details(dream):
+    """Feeling and tags as one line: "Disturbing · Nightmare, Vivid"."""
+    parts = []
+    if dream[1]:
+        parts.append(DREAM_FEELING_LABELS[dream[1]])
+    tags = [DREAM_TAG_LABELS[t] for t in dream_tags(dream)]
+    if tags:
+        parts.append(", ".join(tags))
+    return " · ".join(parts)
+
+
+def dream_stats(store, dreams, start=None, end=None):
+    """Counts for a period and the mood on days after a disturbing dream vs other days."""
+    items = dreams.between(start, end)
+    remembered = [d for d in items if "forgotten" not in dream_tags(d) or d[3].strip()]
+    bad_days = {d[0] for d in items if dreams.is_nightmare(d)}
+    nights = {d[0] for d in items}
+    after_bad, after_other = [], []
+    for day in nights:
+        avg = store.day_avg(day)
+        if avg:
+            (after_bad if day in bad_days else after_other).append(avg)
+    mean = (lambda v: sum(v) / len(v) if v else 0.0)
+    return {"nights": len(nights), "dreams": len(remembered), "nightmares": len(bad_days),
+            "pleasant": len({d[0] for d in items if d[1] == "pleasant"}),
+            "after_bad": (mean(after_bad), len(after_bad)),
+            "after_other": (mean(after_other), len(after_other))}
+
+
 def draw_flag(cr, px, top, h, color, alpha=1.0):
     """A small flag: a pole at px from top to top + h, with the cloth to the right."""
     src(cr, color, alpha)
@@ -668,6 +787,31 @@ def draw_event_badge(cr, cx, cy, r, th):
     cr.stroke()
     h = r * 1.15
     draw_flag(cr, cx - h * 0.3, cy - h / 2, h, th["ink"])
+
+
+def draw_moon(cr, cx, cy, r, color, alpha=1.0):
+    """A crescent moon: a disc with a smaller, offset disc cut out of it."""
+    cr.push_group()
+    src(cr, color, alpha)
+    cr.arc(cx, cy, r, 0, 2 * math.pi)
+    cr.fill()
+    cr.set_operator(0)  # CLEAR
+    cr.arc(cx + r * 0.48, cy - r * 0.32, r * 0.82, 0, 2 * math.pi)
+    cr.fill()
+    cr.pop_group_to_source()
+    cr.paint()
+
+
+def draw_dream_badge(cr, cx, cy, r, th):
+    """Round badge with a moon, readable on any mood colour (like the event badge)."""
+    src(cr, th["surface"])
+    cr.arc(cx, cy, r, 0, 2 * math.pi)
+    cr.fill()
+    src(cr, th["ink"], 0.3)
+    cr.set_line_width(1)
+    cr.arc(cx, cy, r - 0.5, 0, 2 * math.pi)
+    cr.stroke()
+    draw_moon(cr, cx - r * 0.08, cy + r * 0.05, r * 0.58, th["ink"])
 
 
 def draw_event_lines(widget, cr, w, top, bottom, th, n, slot):
@@ -700,7 +844,13 @@ def _clean(text_):
     return " / ".join(part.strip() for part in str(text_).splitlines() if part.strip())
 
 
-def export_csv(path, store, events, health):
+def dream_cell(dream):
+    """One dream as text for a spreadsheet cell: "Disturbing · Nightmare: text"."""
+    details, words = dream_details(dream), _clean(dream[3])
+    return "%s: %s" % (details, words) if details and words else (details or words)
+
+
+def export_csv(path, store, events, health, dreams=None):
     """Write everything to one CSV file, one row per day, oldest first.
 
     Made to read well in a spreadsheet: plain-language headers with units, mood names
@@ -710,12 +860,17 @@ def export_csv(path, store, events, health):
     """
     days = set(store.days)
     days.update(e[0] for e in events.items)
+    has_dreams = bool(dreams and dreams.items)
+    if has_dreams:
+        days.update(d[0] for d in dreams.items)
     metrics = health.metrics()
     for metric in metrics:
         days.update(health.values.get(metric, {}))
 
     header = [tr("Date"), tr("Weekday"), tr("Mood"), tr("Mood score (1–5)"), tr("Moods during the day"),
               tr("Notes"), tr("Events"), tr("Energy (1–5)"), tr("Anxiety (1–5)")]
+    if has_dreams:
+        header.append(tr("Dreams"))
     for metric in metrics:
         title, unit, _dec, _how = metric_info(metric)
         unit = {"h": "hours"}.get(unit, unit)
@@ -746,6 +901,8 @@ def export_csv(path, store, events, health):
         for index, _key, _name, _hint in SCALES:
             value = store.day_scale(day, index)
             row.append(("%.1f" % value).replace(".0", "") if value else "")
+        if has_dreams:
+            row.append(" | ".join(dream_cell(d) for d in dreams.on(day)))
         for metric in metrics:
             value = health.values.get(metric, {}).get(day)
             row.append("" if value is None else format_value(metric, value, with_unit=False)
@@ -765,7 +922,7 @@ class ExportError(Exception):
     pass
 
 
-def export_xlsx(path, store, events, health):
+def export_xlsx(path, store, events, health, dreams=None):
     """Write everything to a formatted spreadsheet (.xlsx) with a summary and charts.
 
     Sheets: Summary (key figures, mood counts and monthly averages with charts),
@@ -936,6 +1093,27 @@ def export_xlsx(path, store, events, health):
                     mood_style(cell, to_level(avg))
                     cell.alignment = centre
     finish(ev_ws, 6, r - 1)
+
+    # ---- Dreams (only when the journal is used)
+    if dreams and dreams.items:
+        dr_ws = wb.create_sheet(tr("Dreams"))
+        table(dr_ws, [tr("Date"), tr("How it felt"), tr("Tags"), tr("Dream"), tr("Mood that day")],
+              [13, 14, 26, 70, 13])
+        r = 1
+        for dream in dreams.items:
+            r += 1
+            dr_ws.cell(row=r, column=1, value=dream[0]).number_format = "d mmm yyyy"
+            dr_ws.cell(row=r, column=2, value=DREAM_FEELING_LABELS.get(dream[1]) or None)
+            tags = ", ".join(DREAM_TAG_LABELS[t] for t in dream_tags(dream))
+            dr_ws.cell(row=r, column=3, value=tags or None)
+            dr_ws.cell(row=r, column=4, value=dream[3].strip() or None).alignment = wrap
+            avg = store.day_avg(dream[0])
+            if avg:
+                cell = dr_ws.cell(row=r, column=5, value=round(avg, 1))
+                cell.number_format = "0.0"
+                mood_style(cell, to_level(avg))
+                cell.alignment = centre
+        finish(dr_ws, 5, r - 1)
 
     # ---- Summary (first sheet)
     sm = wb.create_sheet(tr("Summary"), 0)
@@ -1161,8 +1339,13 @@ def _avg(values):
 
 
 def export_report(path, store, events, health, start, end, include_notes=False,
-                  include_health=True):
-    """A printable summary for a doctor or therapist. Returns the number of pages."""
+                  include_health=True, dreams=None, dream_mode="off"):
+    """A printable summary for a doctor or therapist. Returns the number of pages.
+
+    dream_mode: "off" (default: dreams are private), "summary" (counts, nightmare nights
+    marked in the day-by-day table) or "text" (also what each dream was about)."""
+    if not dreams or dream_mode not in ("summary", "text"):
+        dreams, dream_mode = DreamStore(""), "off"
     ink = REPORT_INK
     pdf = _Pdf(path)
     cr, M, W = pdf.cr, pdf.M, pdf.W
@@ -1463,8 +1646,20 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             cr.stroke()
         pdf.y += 12
 
+    # ---- dreams
+    dream_text = dream_summary_text(store, dreams, start, end) if dream_mode != "off" else None
+    if dream_text:
+        pdf.ensure(70)
+        pdf.text(tr("Dreams"), M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 22
+        _w, h = pdf.text(dream_text, M, 0, 9, measure=True, width=W - 2 * M)
+        pdf.text(dream_text, M, pdf.y, 9, ink["ink2"], width=W - 2 * M)
+        pdf.y += h + 18
+
     # ---- day by day
-    rows = [d for d in days if store.entries(d) or events.on(d) or (include_health and d in sleep)]
+    show_dreams = dream_mode != "off" and bool(dreams.between(start, end))
+    rows = [d for d in days if store.entries(d) or events.on(d) or (include_health and d in sleep)
+            or (show_dreams and dreams.on(d))]
     if rows:
         pdf.ensure(80)
         pdf.text(tr("Day by day"), M, pdf.y, 12, ink["ink"], bold=True)
@@ -1474,8 +1669,13 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         if has_sleep:
             cols.append((tr("Sleep"), 38))
         cols.append((tr("Event"), 34))
-        if include_notes:
-            cols.append((tr("Notes"), W - 2 * M - sum(c[1] for c in cols)))
+        if show_dreams:
+            cols.append((tr("Dream"), 52))
+        with_text = include_notes or (show_dreams and dream_mode == "text")
+        if with_text:
+            heading = (tr("Notes and dreams") if include_notes and dream_mode == "text" and show_dreams
+                       else tr("Notes") if include_notes else tr("Dreams"))
+            cols.append((heading, W - 2 * M - sum(c[1] for c in cols)))
         xs, x = [], M
         for _name, w in cols:
             xs.append(x)
@@ -1494,9 +1694,14 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         for d in rows:
             items = store.entries(d)
             notes = ""
+            lines = []
             if include_notes:
-                notes = "\n".join(("%s  %s" % (e[0], " ".join(e[2].split()))).strip()
-                                  for e in items if e[2].strip())
+                lines += [("%s  %s" % (e[0], " ".join(e[2].split()))).strip()
+                          for e in items if e[2].strip()]
+            day_dreams = dreams.on(d) if show_dreams else []
+            if dream_mode == "text":
+                lines += [tr("Dream: %s") % " ".join(x[3].split()) for x in day_dreams if x[3].strip()]
+            notes = "\n".join(lines)
             h = 12
             if notes:
                 _w, h = pdf.text(notes, xs[-1], 0, 7.5, measure=True, width=cols[-1][1] - 4)
@@ -1528,6 +1733,17 @@ def export_report(path, store, events, health, start, end, include_notes=False,
                 col += 1
             marks = ", ".join(str(number[id(e)]) for e in evs if e[0] == d)
             pdf.text(marks, xs[col], y, 8, ink["ink"], bold=True)
+            col += 1
+            if show_dreams and day_dreams:
+                if any(dreams.is_nightmare(x) for x in day_dreams):
+                    mark = tr("Nightmare")
+                elif any(x[1] == "pleasant" for x in day_dreams):
+                    mark = tr("Pleasant")
+                elif all("forgotten" in dream_tags(x) and not x[3].strip() for x in day_dreams):
+                    mark = tr("Forgotten")
+                else:
+                    mark = tr("Yes")
+                pdf.text(mark, xs[col], y, 7.5, ink["ink"], bold=mark == tr("Nightmare"))
             if notes:
                 pdf.text(notes, xs[-1], y, 7.5, ink["ink2"], width=cols[-1][1] - 4)
             pdf.y += h + 5
@@ -1541,8 +1757,8 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 
 # ----------------------------------------------------------------- backup, restore, merging
 
-DATA_FILES = ["moods.csv", "events.csv", "health.csv", "sync.json", "sync-last.txt"]
-CONTENT_FILES = ["moods.csv", "events.csv", "health.csv"]
+DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "sync.json", "sync-last.txt"]
+CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv"]
 MANIFEST = "moodlog-backup.json"
 
 
@@ -1610,10 +1826,12 @@ def restore_backup(path):
     return safety
 
 
-def merge_folder_into(src, dst_store, dst_events, dst_health):
+def merge_folder_into(src, dst_store, dst_events, dst_health, dst_dreams=None):
     """Add everything from the data files in folder `src` that the destination lacks."""
     added = dst_store.absorb(Store(os.path.join(src, "moods.csv")))
     added += dst_events.absorb(EventStore(os.path.join(src, "events.csv")))
+    if dst_dreams is not None:
+        added += dst_dreams.absorb(DreamStore(os.path.join(src, "dreams.csv")))
     health = HealthStore(os.path.join(src, "health.csv"))
     for metric, days in health.values.items():
         mine = dst_health.values.setdefault(metric, {})
@@ -1624,7 +1842,7 @@ def merge_folder_into(src, dst_store, dst_events, dst_health):
     return added
 
 
-CONFLICT_RE = re.compile(r"^(moods|events|health)\b.*conflict.*\.csv$", re.IGNORECASE)
+CONFLICT_RE = re.compile(r"^(moods|events|health|dreams)\b.*conflict.*\.csv$", re.IGNORECASE)
 
 
 def conflict_files(folder=None):
@@ -1637,11 +1855,12 @@ def conflict_files(folder=None):
         return []
     return sorted((m.group(1).lower(), os.path.join(folder, n)) for n in names
                   for m in [CONFLICT_RE.match(n)] if m and n.lower() not in
-                  ("moods.csv", "events.csv", "health.csv"))
+                  ("moods.csv", "events.csv", "health.csv", "dreams.csv"))
 
 
-def merge_conflicts(store, events, health):
+def merge_conflicts(store, events, health, dreams=None):
     """Fold every conflict copy into the main files, then move the copies aside."""
+    dreams = dreams if dreams is not None else DreamStore()
     found = conflict_files()
     if not found:
         return 0, 0
@@ -1653,6 +1872,8 @@ def merge_conflicts(store, events, health):
             added += store.absorb(Store(path))
         elif kind == "events":
             added += events.absorb(EventStore(path))
+        elif kind == "dreams":
+            added += dreams.absorb(DreamStore(path))
         else:
             for metric, days in HealthStore(path).values.items():
                 mine = health.values.setdefault(metric, {})
@@ -1663,6 +1884,8 @@ def merge_conflicts(store, events, health):
     store.save()
     events.save()
     health.save()
+    if dreams.items or dreams.deleted or os.path.exists(dreams.path):
+        dreams.save()
     for _kind, path in found:
         os.replace(path, os.path.join(parked, os.path.basename(path)))
     return len(found), added
@@ -2042,12 +2265,40 @@ def stores_from_json(doc):
             continue
         if item.get("type") == "event":
             events.deleted[eid] = max(gone, events.deleted.get(eid, ""))
+        elif item.get("type") == "dream":
+            continue  # read by dreams_from_json
         else:
             store.deleted[eid] = (gone, day_of(item.get("date")))
     return store, events
 
 
-def stores_to_json(store, events):
+def dreams_from_json(doc):
+    """Dreams sent by the iPhone app (1.2 and newer) -> DreamStore, checked field by field."""
+    dreams = DreamStore("")
+    if not isinstance(doc, dict):
+        return dreams
+    for item in (doc.get("dreams") or [])[:50000]:
+        if not isinstance(item, dict):
+            continue
+        try:
+            day = dt.date.fromisoformat(str(item.get("date")))
+        except ValueError:
+            continue
+        eid, stamp = str(item.get("id") or "")[:64], clean_stamp(item.get("updated"))
+        feeling = item.get("feeling") if item.get("feeling") in DREAM_FEELING_LABELS else ""
+        tags = clean_tags(item.get("tags") if isinstance(item.get("tags"), (list, str)) else "")
+        text_ = str(item.get("text") or "")[:50000]
+        if eid and stamp and (feeling or tags or text_.strip()):
+            dreams.add(day, feeling, tags, text_, eid=eid, updated=stamp)
+    for item in (doc.get("deleted") or [])[:200000]:
+        if isinstance(item, dict) and item.get("type") == "dream":
+            eid, gone = str(item.get("id") or "")[:64], clean_stamp(item.get("deleted"))
+            if eid and gone:
+                dreams.deleted[eid] = max(gone, dreams.deleted.get(eid, ""))
+    return dreams
+
+
+def stores_to_json(store, events, dreams=None):
     entries = [{"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
                 "anxiety": e[4], "note": e[2], "updated": e[6]}
                for day in sorted(store.days) for e in store.days[day]]
@@ -2057,8 +2308,13 @@ def stores_to_json(store, events):
                 "date": day.isoformat() if day else None}
                for eid, (gone, day) in store.deleted.items()]
     deleted += [{"id": eid, "type": "event", "deleted": gone} for eid, gone in events.deleted.items()]
-    return {"app": "Moodlog", "version": VERSION, "server_time": now_stamp(),
-            "entries": entries, "events": evs, "deleted": deleted}
+    doc = {"app": "Moodlog", "version": VERSION, "server_time": now_stamp(),
+           "entries": entries, "events": evs, "deleted": deleted}
+    if dreams is not None:
+        doc["dreams"] = [{"id": d[4], "date": d[0].isoformat(), "feeling": d[1],
+                          "tags": dream_tags(d), "text": d[3], "updated": d[5]} for d in dreams.items]
+        deleted += [{"id": eid, "type": "dream", "deleted": gone} for eid, gone in dreams.deleted.items()]
+    return doc
 
 
 def sync_with_phone(body):
@@ -2068,12 +2324,17 @@ def sync_with_phone(body):
     except (ValueError, UnicodeDecodeError):
         raise ValueError(tr("The request is not valid JSON."))
     remote_store, remote_events = stores_from_json(doc)
-    store, events = Store(), EventStore()
+    remote_dreams = dreams_from_json(doc)
+    store, events, dreams = Store(), EventStore(), DreamStore()
     changed = store.absorb(remote_store) + events.absorb(remote_events)
+    dream_changes = dreams.absorb(remote_dreams)
     if changed:
         store.save()
         events.save()
-    state = stores_to_json(store, events)
+    if dream_changes:
+        dreams.save()
+    changed += dream_changes
+    state = stores_to_json(store, events, dreams)
     state["changed"] = changed
     return state
 
@@ -2426,7 +2687,7 @@ stackswitcher {
 }
 stackswitcher > button {
   border-radius: 999px; border: none; box-shadow: none; background: transparent;
-  min-width: 78px; min-height: 28px; font-weight: 600;
+  min-width: 52px; min-height: 28px; font-weight: 600; padding-left: 14px; padding-right: 14px;
 }
 .card {
   border-radius: 24px; background-image: none;
@@ -2602,6 +2863,17 @@ def apply_style(name):
     if _style_provider["css"] is not None:
         Gtk.StyleContext.remove_provider_for_display(display, _style_provider["css"])
         _style_provider["css"] = None
+    if _style_provider.get("base") is None:
+        # Tabs only as wide as their label (libadwaita makes each one 100px or more), so
+        # all five tabs and the buttons fit when the window has half a screen.
+        base = Gtk.CssProvider()
+        css = "headerbar stackswitcher > button { min-width: 0; padding-left: 14px; padding-right: 14px; }"
+        try:
+            base.load_from_string(css)
+        except AttributeError:
+            base.load_from_data(css.encode("utf-8"), -1)
+        Gtk.StyleContext.add_provider_for_display(display, base, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        _style_provider["base"] = base
     if STYLE["name"] == "tahoe":
         provider = Gtk.CssProvider()
         css = _TAHOE_DARK if is_dark() else _TAHOE_LIGHT
@@ -2910,6 +3182,9 @@ class CalendarView(Canvas):
         events = win.events.on(day)
         if events:
             draw_event_badge(cr, x + 10, y + size - 10, 7.5, th)
+        dreams = win.dreams.on(day)
+        if dreams:
+            draw_dream_badge(cr, x + size - 10, y + size - 10, 7.5, th)
         if day == today and day != win.selected:
             rounded_rect(cr, x + 0.75, y + 0.75, size - 1.5, size - 1.5, th["radius"])
             src(cr, th["ink"], 0.45)
@@ -2925,6 +3200,8 @@ class CalendarView(Canvas):
             tip = win.store.describe_day(day, title) if day <= today else title
             for event in events:
                 tip += tr("\nEvent \u2014 %s: %s") % (EVENT_LABELS[event[1]], event[2])
+            for dream in dreams:
+                tip += tr("\nDream \u2014 %s") % dream_title(dream)
             self.hits.append((x, y, size, size, tip))
 
 
@@ -3460,6 +3737,152 @@ class EventIcon(Gtk.DrawingArea):
         draw_event_badge(cr, w / 2, h / 2, min(w, h) / 2 - 1, theme())
 
 
+class DreamIcon(Gtk.DrawingArea):
+    def __init__(self, size=30):
+        super().__init__()
+        self.set_content_width(size)
+        self.set_content_height(size)
+        self.set_valign(Gtk.Align.CENTER)
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _a, cr, w, h):
+        draw_dream_badge(cr, w / 2, h / 2, min(w, h) / 2 - 1, theme())
+
+
+class DreamWindow(Gtk.Window):
+    """Add or edit one dream."""
+
+    def __init__(self, win, dream=None, day=None):
+        super().__init__(title=tr("Edit dream") if dream else tr("Add a dream"), transient_for=win,
+                         modal=True)
+        self.set_default_size(520, -1)
+        self.win, self.dream = win, dream
+        day = dream[0] if dream else (day or dt.date.today())
+
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(18)
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        self.date_entry = Gtk.Entry(text=day.isoformat(), hexpand=True)
+        self.date_entry.set_placeholder_text("YYYY-MM-DD")
+        self.date_entry.set_tooltip_text(tr("The morning you woke up"))
+        feelings = [tr("Not set")] + [label for _k, label in DREAM_FEELINGS]
+        self.feeling_drop = Gtk.DropDown.new_from_strings(feelings)
+        keys = [""] + [k for k, _label in DREAM_FEELINGS]
+        self.feeling_drop.set_selected(keys.index(dream[1]) if dream else 0)
+        for r, (name, widget) in enumerate(((tr("Morning of"), self.date_entry),
+                                            (tr("How it felt"), self.feeling_drop))):
+            label = Gtk.Label(label=name, xalign=0)
+            label.add_css_class("dim-label")
+            grid.attach(label, 0, r, 1, 1)
+            grid.attach(widget, 1, r, 1, 1)
+        col.append(grid)
+
+        tags = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=6, row_spacing=6,
+                           max_children_per_line=5, homogeneous=False)
+        have = dream_tags(dream) if dream else []
+        self.tag_buttons = {}
+        for key, label in DREAM_TAGS:
+            btn = Gtk.CheckButton(label=label, active=key in have)
+            self.tag_buttons[key] = btn
+            tags.append(btn)
+        col.append(tags)
+
+        about = Gtk.Label(label=tr("What did you dream?"), xalign=0)
+        about.add_css_class("dim-label")
+        col.append(about)
+        self.text_view = Gtk.TextView()
+        self.text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        for side in ("top", "bottom", "left", "right"):
+            getattr(self.text_view, "set_%s_margin" % side)(8)
+        self.text_view.get_buffer().set_text(dream[3] if dream else "")
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_min_content_height(170)
+        scroll.set_child(self.text_view)
+        frame = Gtk.Frame()
+        frame.set_child(scroll)
+        col.append(frame)
+        hint = Gtk.Label(label=tr("Write it down soon after waking: dreams fade fast. Didn't remember "
+                                  "one? Tick that box, it counts too."), xalign=0, wrap=True)
+        hint.add_css_class("dim-label")
+        hint.add_css_class("caption")
+        col.append(hint)
+        self.error = Gtk.Label(xalign=0, wrap=True)
+        self.error.add_css_class("error")
+        self.error.set_visible(False)
+        col.append(self.error)
+
+        buttons = Gtk.Box(spacing=8)
+        if dream:
+            delete = Gtk.Button(label=tr("Delete"))
+            delete.add_css_class("destructive-action")
+            delete.connect("clicked", self.on_delete)
+            buttons.append(delete)
+        buttons.append(Gtk.Box(hexpand=True))
+        cancel = Gtk.Button(label=tr("Cancel"))
+        cancel.connect("clicked", lambda *_: self.close())
+        save = Gtk.Button(label=tr("Save"))
+        save.add_css_class("suggested-action")
+        save.connect("clicked", self.on_save)
+        buttons.append(cancel)
+        buttons.append(save)
+        col.append(buttons)
+        self.set_child(col)
+        self.text_view.grab_focus()
+
+    def fail(self, message):
+        self.error.set_text(message)
+        self.error.set_visible(True)
+
+    def on_save(self, *_):
+        try:
+            day = dt.date.fromisoformat(self.date_entry.get_text().strip())
+        except ValueError:
+            self.fail(tr("Write the date as year-month-day, for example %s.") % dt.date.today().isoformat())
+            return
+        feeling = ([""] + [k for k, _label in DREAM_FEELINGS])[self.feeling_drop.get_selected()]
+        tags = clean_tags([k for k, btn in self.tag_buttons.items() if btn.get_active()])
+        buf = self.text_view.get_buffer()
+        text_ = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
+        if not (feeling or tags or text_):
+            self.fail(tr("Write a few words, or pick how it felt or a tag."))
+            return
+        if self.dream:
+            self.win.dreams.update(self.dream, day, feeling, tags, text_)
+        else:
+            self.win.dreams.add(day, feeling, tags, text_)
+        if self.win.save_dreams():
+            self.close()
+        else:
+            self.fail(tr("Could not save the dream to dreams.csv."))
+
+    def on_delete(self, *_):
+        self.win.dreams.remove(self.dream)
+        if self.win.save_dreams():
+            self.close()
+        else:
+            self.fail(tr("Could not save the change to dreams.csv."))
+
+
+def dream_summary_text(store, dreams, start=None, end=None):
+    """Plain-language summary of the dreams in a period (None if there are none)."""
+    st = dream_stats(store, dreams, start, end)
+    if not st["nights"]:
+        return None
+    parts = [trn("%d night with a dream entry", "%d nights with a dream entry", st["nights"]) % st["nights"]]
+    if st["nightmares"]:
+        parts.append(trn("%d with a nightmare or a disturbing dream",
+                         "%d with a nightmare or a disturbing dream", st["nightmares"]) % st["nightmares"])
+    if st["pleasant"]:
+        parts.append(trn("%d pleasant one", "%d pleasant ones", st["pleasant"]) % st["pleasant"])
+    out = ", ".join(parts) + "."
+    (bad, nbad), (other, nother) = st["after_bad"], st["after_other"]
+    if nbad >= 3 and nother >= 3:
+        out += " " + tr("Your mood on days after a disturbing dream: %.1f; after other dreams: %.1f. "
+                        "This shows a pattern in your data, not a cause.") % (bad, other)
+    return out
+
+
 class EventWindow(Gtk.Window):
     """Add or edit one event."""
 
@@ -3604,7 +4027,18 @@ class ReportWindow(Gtk.Window):
         notes_hint.set_margin_start(28)
         self.health_check = Gtk.CheckButton(label=tr("Include sleep from my phone"), active=True)
         self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
-        for wdg in (self.notes_check, notes_hint, self.health_check):
+        self.dreams_check = Gtk.CheckButton(label=tr("Include dreams (how many, and nightmare nights)"))
+        self.dream_text_check = Gtk.CheckButton(label=tr("Also what the dreams were about"),
+                                                sensitive=False)
+        self.dream_text_check.set_margin_start(28)
+        self.dreams_check.connect("toggled", lambda b: (
+            self.dream_text_check.set_sensitive(b.get_active()),
+            b.get_active() or self.dream_text_check.set_active(False)))
+        has_dreams = bool(win.dreams.items)
+        self.dreams_check.set_visible(has_dreams)
+        self.dream_text_check.set_visible(has_dreams)
+        for wdg in (self.notes_check, notes_hint, self.health_check, self.dreams_check,
+                    self.dream_text_check):
             col.append(wdg)
         self.error = Gtk.Label(xalign=0, wrap=True)
         self.error.add_css_class("error")
@@ -3671,7 +4105,10 @@ class ReportWindow(Gtk.Window):
         try:
             pages = export_report(path, win.store, win.events, win.health, start, end,
                                   include_notes=self.notes_check.get_active(),
-                                  include_health=self.health_check.get_active())
+                                  include_health=self.health_check.get_active(),
+                                  dreams=win.dreams, dream_mode=(
+                                      "off" if not self.dreams_check.get_active() else
+                                      "text" if self.dream_text_check.get_active() else "summary"))
         except (OSError, Exception) as err:
             self.error.set_text(tr("Could not make the report: %s") % err)
             self.error.set_visible(True)
@@ -3689,6 +4126,14 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.3.0", "2026-11-19", [
+        "Dream journal: a new Dreams tab. Write down a dream with how it felt and tags such as "
+        "nightmare or vivid, or note that you didn't remember one. Dreams show as a moon in the "
+        "calendar, with a summary in the tab and in Charts, and sync with the iPhone.",
+        "The doctor report can include dreams: off by default, then just how many and the "
+        "nightmare nights, or also what they were about.",
+        "Tabs take less room, so the window fits in half a screen again.",
+    ]),
     ("2.2.0", "2026-11-19", [
         "Moodlog speaks Italian. It follows your system language, or choose one in the \u2630 "
         "menu \u2192 Language. Dates, charts, the doctor report and exports are translated too.",
@@ -3763,6 +4208,10 @@ CHANGELOG = [
 # Moodlog for iPhone (ios/) has its own version numbers. Only used for CHANGELOG.md,
 # never shown in the PC app's "What's new" window.
 IPHONE_CHANGELOG = [
+    ("1.2.0", "2026-11-19", [
+        "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and "
+        "the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC.",
+    ]),
     ("1.1.0", "2026-11-19", [
         "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in "
         "Settings \u2192 Moodlog \u2192 Language.",
@@ -4010,7 +4459,8 @@ class DataWindow(Gtk.Window):
                     "before-merge-%Y%m%d-%H%M%S.zip")), folder)
                 there = (Store(os.path.join(folder, "moods.csv")),
                          EventStore(os.path.join(folder, "events.csv")),
-                         HealthStore(os.path.join(folder, "health.csv")))
+                         HealthStore(os.path.join(folder, "health.csv")),
+                         DreamStore(os.path.join(folder, "dreams.csv")))
                 merge_folder_into(old, *there)
                 for store in there:
                     store.save()
@@ -4166,6 +4616,7 @@ class Window(Adw.ApplicationWindow):
         self.store = Store()
         self.health = HealthStore()
         self.events = EventStore()
+        self.dreams = DreamStore()
         self.link = GridgetsLink(self.store)
         if self.link.reconcile_all():
             self.store.save()
@@ -4183,6 +4634,9 @@ class Window(Adw.ApplicationWindow):
         self.stack = Gtk.Stack()
         self.stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         switcher = Gtk.StackSwitcher(stack=self.stack)
+        layout = switcher.get_layout_manager()
+        if isinstance(layout, Gtk.BoxLayout):
+            layout.set_homogeneous(False)   # each tab as wide as its label: five tabs still fit
         header = Adw.HeaderBar()
         header.set_title_widget(switcher)
         for name, handler in (("open-folder", lambda: self.open_data_folder(None)),
@@ -4253,6 +4707,7 @@ class Window(Adw.ApplicationWindow):
         self.stack.add_titled(self.build_log_page(), "log", tr("Log"))
         self.stack.add_titled(self.build_charts_page(), "charts", tr("Charts"))
         self.stack.add_titled(self.build_notes_page(), "notes", tr("Notes"))
+        self.stack.add_titled(self.build_dreams_page(), "dreams", tr("Dreams"))
         self.stack.add_titled(self.build_events_page(), "events", tr("Events"))
         self.stack.connect("notify::visible-child", lambda *_: self.refresh())
 
@@ -4526,9 +4981,12 @@ class Window(Adw.ApplicationWindow):
         scales_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         scales_box.append(self.scales)
         scales_box.append(scales_note)
+        self.chart_dreams = Gtk.Label(xalign=0, wrap=True)
+        self.chart_dreams_card = card(self.chart_dreams, tr("Dreams"))
         for wdg in (bar, tiles, card(trend_box), card(health_box),
                     card(scales_box, tr("Energy and anxiety (1\u20135)")), pair,
-                    card(self.hours, tr("Average mood by time of day (1\u20135)"))):
+                    card(self.hours, tr("Average mood by time of day (1\u20135)")),
+                    self.chart_dreams_card):
             col.append(wdg)
         clamp = Adw.Clamp(maximum_size=1000)
         clamp.set_child(col)
@@ -4573,7 +5031,115 @@ class Window(Adw.ApplicationWindow):
             btn.set_child(box)
             btn.connect("clicked", lambda _b, e=event: self.open_event(e))
             self.day_events.append(btn)
-        self.day_events.set_visible(bool(events))
+        dreams = self.dreams.on(self.selected)
+        for dream in dreams:
+            btn = Gtk.Button()
+            btn.add_css_class("flat")
+            btn.set_tooltip_text(tr("Edit this dream"))
+            box = Gtk.Box(spacing=8)
+            box.append(DreamIcon(22))
+            label = Gtk.Label(label=tr("Dream: %s") % dream_title(dream), xalign=0, hexpand=True)
+            label.set_ellipsize(Pango.EllipsizeMode.END)
+            box.append(label)
+            btn.set_child(box)
+            btn.connect("clicked", lambda _b, d=dream: self.open_dream(d))
+            self.day_events.append(btn)
+        self.day_events.set_visible(bool(events or dreams))
+
+    # -- dreams
+
+    def save_dreams(self):
+        try:
+            self.dreams.save()
+        except OSError:
+            return False
+        self.rebuild_day_events()
+        self.redraw_all()
+        self.refresh()
+        return True
+
+    def open_dream(self, dream=None, day=None):
+        DreamWindow(self, dream=dream, day=day).present()
+
+    def build_dreams_page(self):
+        intro = Gtk.Label(wrap=True, xalign=0, hexpand=True, label=tr(
+            "A dream journal. Each dream belongs to the morning you woke up, shows as a moon in "
+            "the calendar, and is private: it is only in the doctor report if you choose so."))
+        intro.add_css_class("dim-label")
+        add = Gtk.Button(label=tr("Add a dream"), valign=Gtk.Align.START)
+        add.add_css_class("suggested-action")
+        add.connect("clicked", lambda *_: self.open_dream(day=dt.date.today()))
+        top = Gtk.Box(spacing=16)
+        top.append(intro)
+        top.append(add)
+        self.dream_search = Gtk.SearchEntry(placeholder_text=tr("Search your dreams"))
+        self.dream_search.connect("search-changed", lambda *_: self.refresh_dreams())
+        self.dream_summary = Gtk.Label(xalign=0, wrap=True)
+        self.dream_summary_card = card(self.dream_summary, tr("Last 30 days"))
+        self.dreams_list = Gtk.ListBox()
+        self.dreams_list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.dreams_list.add_css_class("boxed-list")
+        self.dreams_list.connect("row-activated", lambda _l, row: self.open_dream(row.dream))
+        self.dreams_empty = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER)
+        self.dreams_empty.add_css_class("dim-label")
+        self.dreams_empty.set_margin_top(48)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(16)
+        for wdg in (top, self.dream_summary_card, self.dream_search, self.dreams_list, self.dreams_empty):
+            col.append(wdg)
+        clamp = Adw.Clamp(maximum_size=760)
+        clamp.set_child(col)
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(clamp)
+        return scroll
+
+    def refresh_dreams(self):
+        child = self.dreams_list.get_first_child()
+        while child:
+            self.dreams_list.remove(child)
+            child = self.dreams_list.get_first_child()
+        today = dt.date.today()
+        summary = dream_summary_text(self.store, self.dreams, today - dt.timedelta(days=29), today)
+        self.dream_summary.set_text(summary or "")
+        self.dream_summary_card.set_visible(bool(summary))
+        query = self.dream_search.get_text().strip().lower()
+        shown = 0
+        for dream in sorted(self.dreams.items, key=lambda d: (d[0], d[5]), reverse=True):
+            day, _feeling, _tags, text_ = dream[:4]
+            details = dream_details(dream)
+            if query and query not in text_.lower() and query not in details.lower():
+                continue
+            shown += 1
+            row = Gtk.ListBoxRow()
+            row.dream = dream
+            row.set_tooltip_text(tr("Click to edit"))
+            box = Gtk.Box(spacing=12)
+            for side in ("top", "bottom", "start", "end"):
+                getattr(box, "set_margin_" + side)(12)
+            icon = DreamIcon(32)
+            icon.set_valign(Gtk.Align.START)
+            box.append(icon)
+            textbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
+            when = fmt_date(day, tr("%A, %-d %B %Y"))
+            head = Gtk.Label(label=" · ".join(p for p in (when, details) if p), xalign=0, wrap=True)
+            head.add_css_class("heading")
+            textbox.append(head)
+            if text_.strip():
+                body = Gtk.Label(label=text_.strip(), xalign=0, wrap=True)
+                body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                textbox.append(body)
+            box.append(textbox)
+            row.set_child(box)
+            self.dreams_list.append(row)
+        self.dreams_list.set_visible(shown > 0)
+        self.dreams_empty.set_visible(shown == 0)
+        if self.dreams.items:
+            self.dreams_empty.set_text(tr("No dreams match \u201c%s\u201d.") % query)
+        else:
+            self.dreams_empty.set_text(tr("No dreams yet.\nAdd one in the morning, while you still "
+                                          "remember it."))
 
     def build_events_page(self):
         intro = Gtk.Label(wrap=True, xalign=0, hexpand=True, label=(
@@ -5001,7 +5567,8 @@ class Window(Adw.ApplicationWindow):
         self.rebuild_entries()
 
     def poll_health(self):
-        if not self._save_id and (self.store.changed_on_disk() or self.events.changed_on_disk()):
+        if not self._save_id and (self.store.changed_on_disk() or self.events.changed_on_disk()
+                                  or self.dreams.changed_on_disk()):
             self.reload_data()  # changed by another computer through the sync folder
         found = conflict_files()
         if found:
@@ -5113,7 +5680,7 @@ class Window(Adw.ApplicationWindow):
             path += "." + kind
         writer = export_xlsx if kind == "xlsx" else export_csv
         try:
-            count = writer(path, self.store, self.events, self.health)
+            count = writer(path, self.store, self.events, self.health, self.dreams)
             message = trn("Exported %d day to %s", "Exported %d days to %s", count) % (
                 count, os.path.basename(path))
         except ExportError as err:
@@ -5254,7 +5821,7 @@ class Window(Adw.ApplicationWindow):
     def merge_conflict_copies(self):
         self.flush()
         try:
-            files, added = merge_conflicts(self.store, self.events, self.health)
+            files, added = merge_conflicts(self.store, self.events, self.health, self.dreams)
         except OSError as err:
             self.notify(tr("Could not merge: %s") % (err.strerror or err))
             return
@@ -5273,6 +5840,7 @@ class Window(Adw.ApplicationWindow):
             index = next((i for i, e in enumerate(items) if e is self.current), None)
         self.store = Store()
         self.events = EventStore()
+        self.dreams = DreamStore()
         self.health = HealthStore()
         self.link.store = self.store
         items = self.store.entries(self.selected)
@@ -5331,6 +5899,8 @@ class Window(Adw.ApplicationWindow):
             self.refresh_notes()
         elif visible == "events":
             self.refresh_events()
+        elif visible == "dreams":
+            self.refresh_dreams()
 
     def refresh_charts(self):
         cur, today, mode = self.cursor, dt.date.today(), self.range_mode
@@ -5383,6 +5953,9 @@ class Window(Adw.ApplicationWindow):
         sub.set_text(tr("logged in a row, up to today"))
         for chart in (self.trend, self.counts, self.weekdays, self.hours, self.scales):
             chart.queue_draw()
+        dreams = dream_summary_text(self.store, self.dreams, *self.period())
+        self.chart_dreams.set_text(dreams or "")
+        self.chart_dreams_card.set_visible(bool(dreams))
         self.refresh_health()
 
     def refresh_notes(self):
@@ -5466,7 +6039,9 @@ def main(argv):
         end = dt.date.fromisoformat(opts["--to"]) if "--to" in opts else dt.date.today()
         start = dt.date.fromisoformat(opts["--from"]) if "--from" in opts else end - dt.timedelta(days=90)
         pages = export_report(argv[i + 1], Store(), EventStore(), HealthStore(), start, end,
-                              include_notes="--notes" in argv)
+                              include_notes="--notes" in argv, dreams=DreamStore(),
+                              dream_mode="text" if "--dream-text" in argv else
+                              "summary" if "--dreams" in argv else "off")
         print("Saved a %d-page report to %s" % (pages, argv[i + 1]))
         return 0
     if "--export" in argv:
@@ -5476,7 +6051,7 @@ def main(argv):
             return 2
         writer = export_xlsx if argv[i + 1].lower().endswith(".xlsx") else export_csv
         try:
-            count = writer(argv[i + 1], Store(), EventStore(), HealthStore())
+            count = writer(argv[i + 1], Store(), EventStore(), HealthStore(), DreamStore())
         except ExportError as err:
             print(err, file=sys.stderr)
             return 1

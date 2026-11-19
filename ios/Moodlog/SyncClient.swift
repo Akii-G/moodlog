@@ -94,6 +94,7 @@ enum SyncClient {
         var entries: [Entry]
         var events: [MoodEvent]
         var deleted: [Tombstone]
+        var dreams: [Dream]
         var device: String
     }
 
@@ -102,7 +103,8 @@ enum SyncClient {
     static func sync(_ store: AppStore) async throws -> Int {
         let state = store.state()
         let body = try JSONEncoder().encode(Outgoing(entries: state.entries, events: state.events,
-                                                     deleted: state.deleted, device: UIDevice.current.name))
+                                                     deleted: state.deleted, dreams: state.dreams ?? [],
+                                                     device: UIDevice.current.name))
         let data = try await request("api/sync", method: "POST", body: body)
         let remote: SyncState
         do {

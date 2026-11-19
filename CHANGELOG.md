@@ -4,6 +4,12 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 
 ## Moodlog for the PC
 
+### 2.3.0 (2026-11-19)
+
+- Dream journal: a new Dreams tab. Write down a dream with how it felt and tags such as nightmare or vivid, or note that you didn't remember one. Dreams show as a moon in the calendar, with a summary in the tab and in Charts, and sync with the iPhone.
+- The doctor report can include dreams: off by default, then just how many and the nightmare nights, or also what they were about.
+- Tabs take less room, so the window fits in half a screen again.
+
 ### 2.2.0 (2026-11-19)
 
 - Moodlog speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too.
@@ -78,6 +84,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 - First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file.
 
 ## Moodlog for iPhone
+
+### 1.2.0 (2026-11-19)
+
+- Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC.
 
 ### 1.1.0 (2026-11-19)
 
