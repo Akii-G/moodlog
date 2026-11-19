@@ -29,7 +29,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "1.9.0"
+VERSION = "1.9.1"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
 # Two optional 1-5 scales next to the mood. Index = position in an entry.
@@ -2037,7 +2037,7 @@ window, popover, tooltip {
   font-family: "SF Pro Text", "Inter", "Cantarell", "Fira Sans", sans-serif;
 }
 headerbar {
-  background: transparent; box-shadow: none; border: none;
+  background: transparent; background-image: none; box-shadow: none; border: none;
   min-height: 52px; padding: 0 10px;
 }
 headerbar button, headerbar menubutton > button {
@@ -2051,16 +2051,23 @@ stackswitcher > button {
   min-width: 78px; min-height: 28px; font-weight: 600;
 }
 .card {
-  border-radius: 24px;
+  border-radius: 24px; background-image: none;
 }
-button { border-radius: 999px; }
-button.flat { border-radius: 14px; }
+headerbar:backdrop { background: transparent; background-image: none; }
+stackswitcher { background-image: none; }
+button { border-radius: 999px; background-image: none; text-shadow: none; -gtk-icon-shadow: none; }
+button.flat, menubutton > button.flat {
+  border-radius: 14px; background-color: transparent; border-color: transparent;
+  box-shadow: none; color: inherit;
+}
 button.suggested-action {
   background-color: #0a84ff; color: #ffffff; font-weight: 600;
 }
 button.suggested-action:hover { background-color: #2b95ff; }
 button.suggested-action:active { background-color: #0071e3; }
 button.destructive-action { background-color: #ff453a; color: #ffffff; }
+button.suggested-action label, button.destructive-action label,
+togglebutton:checked:not(.flat) label, box > button:checked:not(.flat) label { color: #ffffff; }
 togglebutton:checked, button:checked { font-weight: 700; }
 entry, spinbutton, dropdown > button, searchentry {
   border-radius: 12px; min-height: 32px;
@@ -2096,6 +2103,8 @@ windowcontrols > button:backdrop { background-color: rgba(128,128,128,0.35); }
 """
 
 _TAHOE_LIGHT = _TAHOE_COMMON + """
+label, entry, text, textview { color: #1d1d1f; }
+.dim-label, label.dim-label { color: rgba(60,60,67,0.62); }
 window.background {
   background-color: #eef1f8;
   background-image: linear-gradient(135deg, #dde7fb 0%, #f2e7f4 45%, #e3f2ef 100%);
@@ -2150,6 +2159,8 @@ switch:checked { background-color: #34c759; }
 """
 
 _TAHOE_DARK = _TAHOE_COMMON + """
+label, entry, text, textview { color: #f5f5f7; }
+.dim-label, label.dim-label { color: rgba(235,235,245,0.6); }
 window.background {
   background-color: #17181f;
   background-image: linear-gradient(135deg, #1b2233 0%, #261d31 50%, #142629 100%);
@@ -2220,8 +2231,10 @@ def apply_style(name):
             provider.load_from_string(css)  # GTK 4.12 and newer
         except AttributeError:
             provider.load_from_data(css.encode("utf-8"), -1)
+        # Above the user's own ~/.config/gtk-4.0/gtk.css (where many system themes put
+        # their rules), so a chosen style really applies. Only while Tahoe is selected.
         Gtk.StyleContext.add_provider_for_display(display, provider,
-                                                  Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+                                                  Gtk.STYLE_PROVIDER_PRIORITY_USER + 1)
         _style_provider["css"] = provider
 
 

@@ -128,7 +128,7 @@ computer. The folder button in the title bar opens that folder and makes backups
 
 ## Install
 
-    sudo apt install ./moodlog_1.9.0_all.deb
+    sudo apt install ./moodlog_1.9.1_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 
