@@ -1,0 +1,65 @@
+name: Android app
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android.yml"]
+  release:
+    types: [published]   # every release gets the Android app attached
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Also attach the .apk to this existing release (its tag, e.g. 2.6.0)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check encryption, merging and the rest (unit tests)
+        working-directory: android
+        run: ./gradlew --no-daemon testDebugUnitTest --tests 'io.github.akiig.moodlog.SyncCryptoTest' --tests 'io.github.akiig.moodlog.AppStoreTest' --tests 'io.github.akiig.moodlog.SmallTest'
+
+      - name: Build the signed .apk
+        working-directory: android
+        env:
+          KEYSTORE_B64: ${{ secrets.MOODLOG_KEYSTORE_B64 }}
+          MOODLOG_KEYSTORE_PASSWORD: ${{ secrets.MOODLOG_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/moodlog-release.jks"
+            export MOODLOG_KEYSTORE="$RUNNER_TEMP/moodlog-release.jks"
+          else
+            echo "::warning::No signing key in the repository secrets: this .apk is signed with a throwaway key and can't update an installed Moodlog."
+          fi
+          ./gradlew --no-daemon assembleRelease
+          VERSION=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          APK="Moodlog-Android-$VERSION.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          ls -la "$APK"
+          echo "APK=$APK" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Moodlog-Android-apk
+          path: android/Moodlog-Android-*.apk
+
+      - name: Attach to the release
+        if: github.event_name == 'release' || inputs.release != ''
+        working-directory: android
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.release }}
+        run: gh release upload "$TAG" "$APK" --clobber --repo "${{ github.repository }}"

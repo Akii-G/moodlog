@@ -1,8 +1,12 @@
 # Changelog
 
-Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each GitHub release is named after the PC version and includes both apps.
+Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own version numbers. Each GitHub release is named after the PC version and includes all three apps.
 
 ## Moodlog for the PC
+
+### 2.6.0 (2026-11-19)
+
+- Moodlog for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up.
 
 ### 2.5.1 (2026-11-19)
 
@@ -133,4 +137,12 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 ### 1.0.0 (2026-11-19)
 
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.
+
+## Moodlog for Android
+
+### 1.0.0 (2026-11-19)
+
+- The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian.
+- Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi.
+- Sleep, steps and resting heart rate from Health Connect, sent to your PC if you turn it on.
 

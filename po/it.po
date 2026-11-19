@@ -1753,3 +1753,50 @@ msgstr "Leggi l'informativa completa"
 
 msgid "Close"
 msgstr "Chiudi"
+
+msgid "Install Moodlog for Android: download Moodlog-Android-….apk from the latest release on GitHub (github.com/Akii-G/moodlog/releases) on your phone and open it. Android asks once to allow installing apps from your browser.\n\nIn the app, open Settings and enter the address and token above (pop-os.local works; if it doesn't, use the \"If that fails\" address). Tap Test connection. Your phone and this PC must be on the same Wi-Fi.\n\nFor sleep, steps and resting heart rate: in Settings → Health Connect, allow access, then turn on Send with each sync. Your watch or fitness app needs to share its data with Health Connect."
+msgstr "Installa Moodlog per Android: dal telefono scarica Moodlog-Android-….apk dall'ultima versione su GitHub (github.com/Akii-G/moodlog/releases) e aprilo. Android chiede una volta di consentire l'installazione di app dal browser.\n\nNell'app apri Impostazioni e inserisci l'indirizzo e il token qui sopra (pop-os.local funziona; se non va, usa l'indirizzo di \"Se non funziona\"). Tocca Prova il collegamento. Il telefono e questo PC devono essere sulla stessa rete Wi-Fi.\n\nPer sonno, passi e frequenza cardiaca a riposo: in Impostazioni → Connessione Salute consenti l'accesso, poi attiva Invia a ogni sincronizzazione. Il tuo orologio o la tua app di fitness deve condividere i dati con Connessione Salute."
+
+msgid "Moodlog for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up."
+msgstr "Moodlog per Android: una nuova app per telefoni Android che sincronizza con questo PC umori, energia, ansia, note, eventi e sogni, in modo cifrato, e invia sonno, passi e frequenza cardiaca a riposo da Connessione Salute. In Sincronizza telefono trovi i passaggi per configurarla."
+
+msgid "Everything is saved in your data folder on this PC and, if you use it, inside the Moodlog app on your phone."
+msgstr "Tutto viene salvato nella tua cartella dei dati su questo PC e, se la usi, dentro l'app Moodlog sul telefono."
+
+msgid "Your phone sends your entries straight to this PC over your own network, encrypted with your token. The token itself is never sent."
+msgstr "Il tuo telefono invia le tue voci direttamente a questo PC sulla tua rete, cifrate con il tuo token. Il token stesso non viene mai inviato."
+
+msgid "Steps, resting heart rate and sleep are read only if you turn it on in the phone app, and only to show them next to your mood."
+msgstr "Passi, frequenza cardiaca a riposo e sonno vengono letti solo se lo attivi nell'app per il telefono, e solo per mostrarli accanto al tuo umore."
+
+msgid "Sync with my phone (iPhone or Android)"
+msgstr "Sincronizza con il mio telefono (iPhone o Android)"
+
+msgid "The token is a password, and the receiver works only on your local network. Moodlog for iPhone (1.4 and newer) and Moodlog for Android encrypt everything they send with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the phone app's Settings."
+msgstr "Il token è una password, e il ricevitore funziona solo sulla tua rete locale. Moodlog per iPhone (1.4 e successive) e Moodlog per Android cifrano tutto ciò che inviano con il token, così il token stesso non passa mai in rete. Il Comando rapido non può cifrare: invia i valori di Salute e il token in chiaro, quindi usalo solo su una rete di cui ti fidi. Usa lo stesso indirizzo e token nelle Impostazioni dell'app sul telefono."
+
+msgid "Android setup"
+msgstr "Configurazione su Android"
+
+msgid "iPhone Shortcut (only if you don't use the app)"
+msgstr "Comando rapido per iPhone (solo se non usi l'app)"
+
+msgid "The old token stops working at once. Enter the new one in the Moodlog app on your phone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
+msgstr "Il vecchio token smette subito di funzionare. Inserisci quello nuovo nell'app Moodlog sul telefono (Impostazioni) e nel Comando rapido, se lo usi. Conviene farlo una volta dopo l'aggiornamento alla sincronizzazione cifrata, perché le versioni precedenti inviavano il token in chiaro."
+
+msgid "Your phone can help"
+msgstr "Il tuo telefono può aiutarti"
+
+msgid "Phone sync brings in your sleep and steps, and syncs with Moodlog on your iPhone or Android phone. Optional too: Moodlog works fine without it."
+msgstr "Sincronizza telefono porta qui il tuo sonno e i tuoi passi, e si sincronizza con Moodlog sul tuo iPhone o telefono Android. Anche questo è facoltativo: Moodlog funziona benissimo senza."
+
+msgid "Sync with Moodlog on your phone, and receive steps, sleep and heart rate"
+msgstr "Sincronizza con Moodlog sul telefono e ricevi passi, sonno e battito"
+
+msgid "No health data yet. Use Phone sync in the title bar to bring in sleep, steps and heart rate from your phone, and compare them with your mood here."
+msgstr "Ancora nessun dato di salute. Usa Sincronizza telefono nella barra del titolo per portare qui sonno, passi e battito dal telefono, e confrontarli con il tuo umore."
+
+msgid "Moodlog for Android synced (%d change)."
+msgid_plural "Moodlog for Android synced (%d changes)."
+msgstr[0] "Moodlog per Android sincronizzato (%d modifica)."
+msgstr[1] "Moodlog per Android sincronizzato (%d modifiche)."

@@ -1,6 +1,6 @@
 # Moodlog
 
-A small, private mood tracker for Linux, with a companion app for iPhone. Log how
+A small, private mood tracker for Linux, with companion apps for iPhone and Android. Log how
 you feel in one click, see how things go over weeks and months, mark events such as
 a medication change, keep a dream journal, and bring a clear PDF report to your
 doctor. No account and no cloud: everything stays in plain files on your devices.
@@ -77,6 +77,20 @@ it with SideStore or AltStore.
 To connect it, open **Phone sync** on the PC, switch the receiver on, and enter the
 address and token shown there in the iPhone app's Settings.
 
+### Or on your Android phone
+
+**Moodlog for Android** does the same: moods, energy, anxiety, notes, events and
+dreams, synced with your PC over Wi-Fi, encrypted. It can send sleep, steps and
+resting heart rate from Health Connect, which most watches and fitness apps share
+with. Every [release](https://github.com/Akii-G/moodlog/releases) includes it as
+`Moodlog-Android-<version>.apk`: open it on your phone to install it (see
+[`android/README.md`](android/README.md)).
+
+<img src="docs/screenshots/android-log.png" alt="Moodlog for Android" width="300">
+
+Connect it the same way: **Phone sync** on the PC, then the address and token in the
+app's Settings.
+
 <details>
 <summary>Prefer a Shortcut for Apple Health instead of the app?</summary>
 
@@ -110,8 +124,8 @@ and the welcome tour.
 ![The Tahoe style, dark](docs/screenshots/tahoe-dark.png)
 
 The tour dims the window except for the part it explains, and walks through
-everything in a few calm steps. The iPhone app has its own, which switches to each
-tab as it goes.
+everything in a few calm steps. The phone apps have their own, which switches to
+each tab as it goes.
 
 ![The welcome tour](docs/screenshots/tour.png)
 
@@ -120,16 +134,16 @@ tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.5.1_all.deb
+    sudo apt install ./moodlog_2.6.0_all.deb
 
-Remove it with `sudo apt remove moodlog`; your data is kept. For the iPhone app, see
-[`ios/README.md`](ios/README.md).
+Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
+[`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).
 
 ## Your data
 
 Everything is in plain CSV files in `~/.local/share/moodlog/`, or in a folder you
 choose: `moods.csv`, `events.csv`, `dreams.csv` and `health.csv`. Nothing leaves your
-devices, there is no account, and the iPhone only talks to your own PC, encrypted.
+devices, there is no account, and the phone only talks to your own PC, encrypted.
 The [privacy policy](PRIVACY.md) ([in italiano](PRIVACY.it.md)) says exactly what is
 stored and sent; in the app it's under ☰ → Privacy.
 
@@ -175,7 +189,8 @@ From a terminal: `moodlog --export FILE.xlsx` (or `.csv`) and
 ## For developers
 
 Moodlog for the PC is one Python file, `src/moodlog` (GTK 4 and libadwaita); the
-iPhone app is SwiftUI, in `ios/`, built by GitHub Actions.
+iPhone app is SwiftUI, in `ios/`, and the Android app is Kotlin and Jetpack Compose,
+in `android/`. GitHub Actions builds both phone apps.
 
     sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 python3-openpyxl
     ./src/moodlog          # run from source
@@ -184,13 +199,16 @@ iPhone app is SwiftUI, in `ios/`, built by GitHub Actions.
 The scripts in `test/` check storage, merging, sync, events, dreams, the Gridgets
 link and the translations (`python3 test/test_store.py` and so on); the `ui*.py` and
 `interact.py` scripts drive the real window and need a display (or `xvfb-run`).
+`test/test_android_sync.py` syncs the Android app's code with the real PC receiver.
 
-**Translations** are gettext `.po` files in `po/` (PC) and `.lproj` folders in
-`ios/Moodlog/` (iPhone). To add a language, copy `po/moodlog.pot` to `po/<code>.po`
-and fill in the `msgstr` lines (Poedit works), add the code to `LANGUAGES` in
-`src/moodlog`, and copy `ios/Moodlog/it.lproj` to `<code>.lproj`.
-`tools/extract_strings.py --check` and `tools/extract_ios_strings.py --check` list
-anything still missing.
+**Translations** are gettext `.po` files in `po/` (PC), `.lproj` folders in
+`ios/Moodlog/` (iPhone) and `.strings` files in `android/app/src/main/assets/i18n/`
+(Android, the same format as the iPhone's). To add a language, copy `po/moodlog.pot`
+to `po/<code>.po` and fill in the `msgstr` lines (Poedit works), add the code to
+`LANGUAGES` in `src/moodlog`, copy `ios/Moodlog/it.lproj` to `<code>.lproj` and
+`it.strings` to `<code>.strings`. `tools/extract_strings.py --check`,
+`tools/extract_ios_strings.py --check` and `tools/extract_android_strings.py --check`
+list anything still missing.
 
 Changes are in [CHANGELOG.md](CHANGELOG.md).
 
@@ -199,8 +217,8 @@ Changes are in [CHANGELOG.md](CHANGELOG.md).
 ![Moodlog roadmap](docs/roadmap.png)
 
 Moodlog is for people who track their mood for their health and want to keep that
-data private. Next: a plain privacy policy and accessibility, then Flathub for every
-Linux distro, then Windows. See [ROADMAP.md](ROADMAP.md) for the details.
+data private. Next: accessibility and more languages, then Flathub for every Linux
+distro, then Windows. See [ROADMAP.md](ROADMAP.md) for the details.
 
 ## Licence
 

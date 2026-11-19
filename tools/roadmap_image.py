@@ -11,10 +11,11 @@ DONE, NOW, LATER = "#1baf7a", "#2a78d6", "#bdbbb3"
 
 STAGES = [
     ("Done", "November 2026", DONE, "Where we are", [
-        "PC app 1.0 \u2192 2.4", "iPhone app 1.0 \u2192 1.3", "Doctor report and events",
-        "Italian and English", "Dream journal, welcome tour", "Private sync, no cloud"]),
+        "PC 2.6, iPhone 1.4, Android 1.0", "Doctor report and events",
+        "Italian and English", "Dream journal, welcome tour", "Encrypted sync, no cloud",
+        "Privacy policy"]),
     ("Step 1", "Now", NOW, "Solid for its users", [
-        "Plain privacy policy", "Accessibility", "More languages"]),
+        "Accessibility", "More languages"]),
     ("Step 2", "Next", LATER, "Every Linux distro", [
         "Flatpak on Flathub", "Install from any distro's software centre"]),
     ("Step 3", "Later", LATER, "Windows", [

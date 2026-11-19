@@ -11,17 +11,18 @@ starts when the previous one is done.
 
 ## Done (November 2026)
 
-- Moodlog for the PC, 1.0 → 2.4: moods with notes, energy and anxiety, events, charts,
+- Moodlog for the PC, 1.0 → 2.6: moods with notes, energy and anxiety, events, charts,
   the doctor report, CSV/XLSX export, backup and restore, two styles.
-- Moodlog for iPhone, 1.0 → 1.3: logging on the phone, synced with the PC over home Wi-Fi,
+- Moodlog for iPhone, 1.0 → 1.4: logging on the phone, synced with the PC over home Wi-Fi,
   plus sleep, steps and heart rate from Apple Health.
-- English and Italian, a dream journal, and a welcome tour on both.
-- No account and no cloud: everything is in plain files on your own devices.
+- Moodlog for Android, 1.0: the same as the iPhone app, with Health Connect.
+- English and Italian, a dream journal, and a welcome tour on all three.
+- No account and no cloud: everything is in plain files on your own devices, and the
+  phone sync is encrypted.
+- A plain [privacy policy](PRIVACY.md).
 
 ## Step 1 – Solid for its users (now)
 
-- **Privacy policy:** a short, plain one. App stores ask for one, and "your data never
-  leaves your devices" is Moodlog's strongest promise.
 - **Accessibility:** screen-reader labels and full keyboard use.
 - **More languages**, after English and Italian. Writing about how you feel should
   happen in your own language.
@@ -43,6 +44,7 @@ starts when the previous one is done.
 - **Apple's App Store and Mac App Store.** Moodlog for iPhone stays a free download from
   the [releases](https://github.com/Akii-G/moodlog/releases), installed with SideStore
   or AltStore.
+- **Google Play, for now.** Moodlog for Android is a free `.apk` from the releases.
 
 ---
 

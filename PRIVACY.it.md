@@ -2,13 +2,13 @@
 
 *Read in English: [PRIVACY.md](PRIVACY.md)*
 
-Ultimo aggiornamento: 19 novembre 2026. Vale per Moodlog per PC 2.5.1 e Moodlog per iPhone 1.4.1, e per le versioni successive.
+Ultimo aggiornamento: 19 novembre 2026. Vale per Moodlog per PC 2.5.1, Moodlog per iPhone 1.4.1 e Moodlog per Android 1.0.0, e per le versioni successive.
 
 ## In breve
 
 - **Nessuno raccoglie i tuoi dati.** Moodlog non ha account, server, statistiche d'uso, pubblicità né tracciamento. Io, lo sviluppatore, non vedo mai niente di quello che scrivi.
-- **I tuoi dati restano sui tuoi dispositivi:** il tuo PC e, se lo usi, il tuo iPhone.
-- **L'unica cosa che viaggia è la sincronizzazione del telefono**, dal tuo iPhone direttamente al tuo PC sulla tua rete, cifrata.
+- **I tuoi dati restano sui tuoi dispositivi:** il tuo PC e, se ne usi uno, il tuo telefono.
+- **L'unica cosa che viaggia è la sincronizzazione del telefono**, dal tuo telefono direttamente al tuo PC sulla tua rete, cifrata.
 - **Nessuna delle due app si collega a internet.**
 
 ## Chi fa Moodlog
@@ -17,28 +17,32 @@ Moodlog è un progetto personale gratuito e open source di Giosuè ([Akii-G su G
 
 ## Cosa salva Moodlog, e dove
 
-Tutto quello che inserisci: umori e le loro note, tag, eventi (come un cambio di farmaco), sogni e, se lo attivi, i dati di salute dal tuo iPhone.
+Tutto quello che inserisci: umori e le loro note, tag, eventi (come un cambio di farmaco), sogni e, se lo attivi, i dati di salute dal tuo telefono.
 
 - **Sul PC** sta in semplici file nella tua cartella dei dati: `~/.local/share/moodlog/`, se non ne hai scelta un'altra. I file sono `moods.csv`, `events.csv`, `dreams.csv` e `health.csv`. Le impostazioni sono in `~/.config/moodlog/config.json`. Il token della sincronizzazione è in `sync.json`, e una riga sull'ultima sincronizzazione è in `sync-last.txt`.
-- **Sull'iPhone** sta nello spazio privato dell'app, che le altre app non possono leggere.
+- **Su iPhone e su Android** sta nello spazio privato dell'app, che le altre app non possono leggere.
 
 Moodlog non cifra i file sul PC. Li proteggono il tuo account utente e, se l'hai attivata quando hai installato il sistema, la cifratura del disco. Se tieni la cartella dei dati in una cartella sincronizzata da un altro programma (per esempio Syncthing, Nextcloud o Dropbox), quel programma, e qualsiasi server usi, ne terrà una copia secondo la sua informativa.
 
-Se il tuo iPhone fa il backup su iCloud o su un computer, il backup contiene i dati di Moodlog, come per ogni app. Di quei backup si occupa Apple.
+Se il tuo iPhone fa il backup su iCloud o su un computer, il backup contiene i dati di Moodlog, come per ogni app. Di quei backup si occupa Apple. Lo stesso vale per il backup di Android sul tuo account Google, se è attivo: se ne occupa Google, cifrato con il blocco schermo se il telefono ne ha uno.
 
 ## Cosa esce dal tuo dispositivo
 
-**Sincronizzazione del telefono (facoltativa).** Se la configuri, l'app per iPhone invia le tue voci al ricevitore sul tuo PC e riceve quelle del PC.
+**Sincronizzazione del telefono (facoltativa).** Se la configuri, l'app sul telefono invia le tue voci al ricevitore sul tuo PC e riceve quelle del PC.
 - Succede solo tra i tuoi dispositivi, sulla tua rete. Non passa mai da internet né da un mio server.
 - Tutto è cifrato con AES-256-GCM, con una chiave ricavata dal tuo token. Il token stesso non viene mai inviato.
 - Il ricevitore ascolta sulla porta 8765 del tuo PC e risponde solo alle richieste fatte con il tuo token.
+- Se il tuo telefono Android non trova da solo un indirizzo come `pop-os.local`, Moodlog lo chiede alla tua rete locale (nello stesso modo in cui il PC annuncia il suo nome). Quella domanda non esce mai dalla tua rete Wi-Fi.
+- Android chiama questo permesso "accesso completo alla rete": serve solo per il tuo PC.
 
 **Dati di salute (facoltativi, disattivati all'inizio).** L'app per iPhone legge i dati di salute solo dopo che glielo permetti in Salute, e solo quando attivi "Invia a ogni sincronizzazione" o tocchi "Invia ora gli ultimi 7 giorni" (Impostazioni dell’app → Salute di Apple). Allora legge:
 - i tuoi passi,
 - la frequenza cardiaca a riposo,
 - il sonno,
 
-tutto degli ultimi 7 giorni, e li invia al tuo PC con la sincronizzazione. Moodlog non scrive mai in Salute. I dati di salute servono solo a mostrarli accanto al tuo umore. Non sono mai usati per la pubblicità, non vengono mai venduti né dati a nessuno.
+tutto degli ultimi 7 giorni, e li invia al tuo PC con la sincronizzazione. Moodlog non scrive mai in Salute.
+
+Su Android funziona allo stesso modo con Connessione Salute: l'app legge passi, frequenza cardiaca a riposo e sonno degli ultimi 7 giorni solo dopo che glielo permetti in Connessione Salute, e solo quando attivi "Invia a ogni sincronizzazione" o tocchi "Invia ora gli ultimi 7 giorni" (Impostazioni → Connessione Salute). Non scrive mai in Connessione Salute. I dati di salute servono solo a mostrarli accanto al tuo umore. Non sono mai usati per la pubblicità, non vengono mai venduti né dati a nessuno.
 
 **Il Comando rapido di Apple (facoltativo, il vecchio modo di inviare i dati di salute).** I Comandi rapidi non possono cifrare. Se lo usi, i suoi dati e il token attraversano la rete in chiaro, quindi usalo solo su una rete di cui ti fidi. La sincronizzazione dell'app per iPhone è il modo cifrato.
 
@@ -54,8 +58,8 @@ Per ogni richiesta, il ricevitore scrive una riga nel registro di sistema del PC
 
 - **Vedere tutto:** i tuoi dati sono normali file CSV. Aprili da ☰ → Apri la cartella dei dati.
 - **Portarli via:** puoi fare un backup o esportarli quando vuoi.
-- **Cancellarli:** cancella una voce dall'app. Per cancellare tutto, elimina la cartella dei dati sul PC (e `~/.config/moodlog/`), ed elimina l'app dall'iPhone.
-- **Smettere di sincronizzare:** cancella l'indirizzo del PC nelle Impostazioni dell'app per iPhone, oppure ferma il ricevitore con `systemctl --user disable --now moodlog-sync.service`. Clicca "Cambia token…" nella finestra Sincronizza telefono del PC per rendere inutile il vecchio token.
+- **Cancellarli:** cancella una voce dall'app. Per cancellare tutto, elimina la cartella dei dati sul PC (e `~/.config/moodlog/`), ed elimina l'app dal telefono.
+- **Smettere di sincronizzare:** cancella l'indirizzo del PC nelle Impostazioni dell'app sul telefono, oppure ferma il ricevitore con `systemctl --user disable --now moodlog-sync.service`. Clicca "Cambia token…" nella finestra Sincronizza telefono del PC per rendere inutile il vecchio token.
 
 ## Bambini
 

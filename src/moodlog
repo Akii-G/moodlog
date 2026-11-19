@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.5.1"
+VERSION = "2.6.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -2547,9 +2547,13 @@ def run_sync_server():
                 except (ValueError, OSError) as err:
                     self.reply_json(400, {"error": str(err)})
                     return
-                write_sync_status(trn("Moodlog for iPhone synced (%d change).",
-                                      "Moodlog for iPhone synced (%d changes).", answer["changed"])
-                                  % answer["changed"], True)
+                if isinstance(doc, dict) and doc.get("app") == "android":
+                    done = trn("Moodlog for Android synced (%d change).",
+                               "Moodlog for Android synced (%d changes).", answer["changed"])
+                else:
+                    done = trn("Moodlog for iPhone synced (%d change).",
+                               "Moodlog for iPhone synced (%d changes).", answer["changed"])
+                write_sync_status(done % answer["changed"], True)
             elif route == "/api/e/health":
                 lines = doc.get("lines") if isinstance(doc, dict) else None
                 if not isinstance(lines, str):
@@ -3873,6 +3877,13 @@ class FaceIcon(Gtk.DrawingArea):
 
 # ----------------------------------------------------------------- phone sync window
 
+ANDROID_STEPS = tr("""Install Moodlog for Android: download Moodlog-Android-….apk from the latest release on GitHub (github.com/Akii-G/moodlog/releases) on your phone and open it. Android asks once to allow installing apps from your browser.
+
+In the app, open Settings and enter the address and token above (pop-os.local works; if it doesn't, use the "If that fails" address). Tap Test connection. Your phone and this PC must be on the same Wi-Fi.
+
+For sleep, steps and resting heart rate: in Settings → Health Connect, allow access, then turn on Send with each sync. Your watch or fitness app needs to share its data with Health Connect.""")
+
+
 SHORTCUT_STEPS = tr("""Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.
 
 A. Build the shortcut
@@ -4310,6 +4321,11 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.6.0", "2026-11-19", [
+        "Moodlog for Android: a new app for Android phones that syncs moods, energy, anxiety, "
+        "notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting "
+        "heart rate from Health Connect. Phone sync has the steps to set it up.",
+    ]),
     ("2.5.1", "2026-11-19", [
         "A privacy policy: \u2630 menu \u2192 Privacy shows in short what Moodlog does with your "
         "data (nothing leaves your devices except the encrypted phone sync), with a link to the "
@@ -4416,8 +4432,18 @@ CHANGELOG = [
 ]
 
 
-# Moodlog for iPhone (ios/) has its own version numbers. Only used for CHANGELOG.md,
-# never shown in the PC app's "What's new" window.
+# Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
+# numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
+ANDROID_CHANGELOG = [
+    ("1.0.0", "2026-11-19", [
+        "The first version: log your mood, energy, anxiety and a note, a month calendar, "
+        "charts, events, a dream journal, the welcome tour, English and Italian.",
+        "Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi.",
+        "Sleep, steps and resting heart rate from Health Connect, sent to your PC if you "
+        "turn it on.",
+    ]),
+]
+
 IPHONE_CHANGELOG = [
     ("1.4.1", "2026-11-19", [
         "A privacy policy: Settings \u2192 Privacy shows in short what Moodlog does with your "
@@ -4459,10 +4485,12 @@ def version_key(version):
 
 def changelog_markdown():
     lines = ["# Changelog", "",
-             "Moodlog for the PC and Moodlog for iPhone have their own version numbers. "
-             "Each GitHub release is named after the PC version and includes both apps.", ""]
+             "Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own "
+             "version numbers. Each GitHub release is named after the PC version and includes "
+             "all three apps.", ""]
     for heading, log in (("Moodlog for the PC", CHANGELOG),
-                         ("Moodlog for iPhone", IPHONE_CHANGELOG)):
+                         ("Moodlog for iPhone", IPHONE_CHANGELOG),
+                         ("Moodlog for Android", ANDROID_CHANGELOG)):
         lines.append("## " + heading)
         lines.append("")
         for version, day, items in log:
@@ -4483,13 +4511,13 @@ PRIVACY_POINTS = [
      "The developer never sees anything you write.")),
     (tr("It stays on your devices"),
      tr("Everything is saved in your data folder on this PC and, if you use it, "
-     "inside the iPhone app.")),
+     "inside the Moodlog app on your phone.")),
     (tr("Phone sync is encrypted"),
-     tr("Your iPhone sends your entries straight to this PC over your own network, "
+     tr("Your phone sends your entries straight to this PC over your own network, "
      "encrypted with your token. The token itself is never sent.")),
     (tr("Health data only if you choose"),
      tr("Steps, resting heart rate and sleep are read only if you turn it on in the "
-     "iPhone app, and only to show them next to your mood.")),
+     "phone app, and only to show them next to your mood.")),
     (tr("No internet"),
      tr("Moodlog never connects to the internet. Only a link you click, like the one "
      "below, opens a page in your browser.")),
@@ -4799,7 +4827,7 @@ class SyncWindow(Gtk.Window):
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(18)
 
-        title = Gtk.Label(label=tr("Receive health data from my iPhone"), xalign=0, hexpand=True)
+        title = Gtk.Label(label=tr("Sync with my phone (iPhone or Android)"), xalign=0, hexpand=True)
         title.add_css_class("heading")
         self.switch = Gtk.Switch(valign=Gtk.Align.CENTER)
         self.switch.connect("state-set", self.on_switch)
@@ -4841,16 +4869,19 @@ class SyncWindow(Gtk.Window):
 
         note = Gtk.Label(xalign=0, wrap=True, label=(
             tr("The token is a password, and the receiver works only on your local network. "
-               "Moodlog for iPhone (1.4 and newer) encrypts everything it sends with it, so the "
-               "token itself never crosses the network. The Shortcut can't encrypt: it sends "
-               "Health values and the token unencrypted, so use it only on a network you trust. "
-               "Use the same address and token in the iPhone app's Settings.")))
+               "Moodlog for iPhone (1.4 and newer) and Moodlog for Android encrypt everything "
+               "they send with it, so the token itself never crosses the network. The Shortcut "
+               "can't encrypt: it sends Health values and the token unencrypted, so use it only "
+               "on a network you trust. Use the same address and token in the phone app's "
+               "Settings.")))
         note.add_css_class("dim-label")
         note.add_css_class("caption")
         col.append(note)
 
         steps = Gtk.Label(label=SHORTCUT_STEPS, xalign=0, wrap=True, selectable=True)
-        col.append(card(steps, tr("iPhone setup")))
+        android = Gtk.Label(label=ANDROID_STEPS, xalign=0, wrap=True, selectable=True)
+        col.append(card(android, tr("Android setup")))
+        col.append(card(steps, tr("iPhone Shortcut (only if you don't use the app)")))
 
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -4872,8 +4903,8 @@ class SyncWindow(Gtk.Window):
                 self.error = tr("Could not change the token: %s") % err
                 self.update_status()
         ConfirmWindow(self, tr("Change the token?"),
-                      tr("The old token stops working at once. Enter the new one in Moodlog for "
-                         "iPhone (Settings) and in the Shortcut, if you use it. Worth doing once "
+                      tr("The old token stops working at once. Enter the new one in the Moodlog "
+                         "app on your phone (Settings) and in the Shortcut, if you use it. Worth doing once "
                          "after updating to encrypted sync, since older versions sent the token "
                          "unencrypted."),
                       [(tr("Change token"), change, "suggested-action")]).present()
@@ -4966,8 +4997,8 @@ TOUR_STEPS = [
     ("export", tr("For your appointments"),
      tr("Export makes a tidy PDF report for your doctor. You choose the period and what goes in; "
         "your notes and dreams stay out unless you say so.")),
-    ("sync", tr("Your iPhone can help"),
-     tr("Phone sync brings in your sleep and steps, and syncs with Moodlog for iPhone. Optional "
+    ("sync", tr("Your phone can help"),
+     tr("Phone sync brings in your sleep and steps, and syncs with Moodlog on your iPhone or Android phone. Optional "
         "too: Moodlog works fine without it.")),
     ("menu", tr("If you ever need me again"),
      tr("Style, language and this tour live in this menu. You can watch the tour again "
@@ -5381,7 +5412,7 @@ class Window(Adw.ApplicationWindow):
         export.set_tooltip_text(tr("Save everything (moods, notes, events, health data) to a file"))
         header.pack_end(export)
         sync = Gtk.Button(label=tr("Phone sync"))
-        sync.set_tooltip_text(tr("Receive steps, sleep and heart rate from your iPhone"))
+        sync.set_tooltip_text(tr("Sync with Moodlog on your phone, and receive steps, sleep and heart rate"))
         sync.connect("clicked", lambda *_: SyncWindow(self).present())
         header.pack_start(sync)
 
@@ -6347,7 +6378,7 @@ class Window(Adw.ApplicationWindow):
         else:
             self.health_text.set_text(
                 tr("No health data yet. Use Phone sync in the title bar to bring in sleep, steps "
-                "and heart rate from your iPhone, and compare them with your mood here."))
+                "and heart rate from your phone, and compare them with your mood here."))
         self.health_chart.queue_draw()
 
     def on_note_row(self, _list, row):

@@ -5,3 +5,8 @@ patch/
 test/*/
 test/shot.sh
 test/shots/
+android/.gradle/
+android/local.properties
+android/.kotlin/
+*.jks
+*.keystore
