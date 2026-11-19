@@ -1568,3 +1568,6 @@ msgstr "Il resoconto per il medico può includere i sogni: spento di base, poi s
 
 msgid "Tabs take less room, so the window fits in half a screen again."
 msgstr "Le schede occupano meno spazio, così la finestra entra di nuovo in mezzo schermo."
+
+msgid "After an update, the phone sync receiver switches to the new version by itself. Before, it kept running the old one until it was restarted, so new things such as dreams did not sync."
+msgstr "Dopo un aggiornamento, il ricevitore della sincronizzazione col telefono passa da solo alla nuova versione. Prima continuava a usare quella vecchia finché non veniva riavviato, quindi le novità come i sogni non si sincronizzavano."

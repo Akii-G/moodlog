@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.3.0"
+VERSION = "2.3.1"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -2483,11 +2483,64 @@ def run_sync_server():
 
     server = http.server.ThreadingHTTPServer(("0.0.0.0", int(cfg["port"])), Handler)
     print("Moodlog sync listening on port %d" % cfg["port"], flush=True)
+    script = os.path.realpath(os.path.abspath(sys.argv[0]))
+    updated = watch_for_update(script, server)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        pass
+        return 0
+    server.server_close()
+    if updated.is_set():
+        # Moodlog was updated (for example by apt): carry on with the new version, in the
+        # same process, so a receiver started by systemd or by hand stays up to date.
+        print("Moodlog was updated: restarting the sync receiver", flush=True)
+        os.execv(sys.executable, [sys.executable, script] + sys.argv[1:])
     return 0
+
+
+def file_stamp(path):
+    try:
+        st = os.stat(path)
+        return (st.st_ino, st.st_mtime_ns, st.st_size)
+    except OSError:
+        return None
+
+
+def watch_for_update(script, server):
+    """Stop `server` once `script` has been replaced and has stayed the same for a moment.
+    Returns an Event that is set when that happened."""
+    import threading
+    updated = threading.Event()
+    every = float(os.environ.get("MOODLOG_UPDATE_CHECK", "15"))
+    start = file_stamp(script)
+
+    def watch():
+        seen = start
+        while True:
+            time_sleep(every)
+            now = file_stamp(script)
+            if now is None or now == start:
+                seen = now
+                continue
+            if now != seen:          # still changing (an install in progress): look again
+                seen = now
+                continue
+            try:                     # only switch to a file that is complete and valid
+                compile(open(script, encoding="utf-8").read(), script, "exec")
+            except (OSError, SyntaxError, ValueError):
+                continue
+            updated.set()
+            server.shutdown()
+            return
+
+    if start is not None:
+        threading.Thread(target=watch, daemon=True).start()
+    return updated
+
+
+def time_sleep(seconds):
+    import time
+    time.sleep(seconds)
 
 
 # ----------------------------------------------------------------- Gridgets link
@@ -4126,6 +4179,11 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.3.1", "2026-11-19", [
+        "After an update, the phone sync receiver switches to the new version by itself. Before, "
+        "it kept running the old one until it was restarted, so new things such as dreams did not "
+        "sync.",
+    ]),
     ("2.3.0", "2026-11-19", [
         "Dream journal: a new Dreams tab. Write down a dream with how it felt and tags such as "
         "nightmare or vivid, or note that you didn't remember one. Dreams show as a moon in the "

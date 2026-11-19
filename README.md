@@ -204,7 +204,7 @@ After each update Moodlog shows what changed, once. You can open the full list a
 
 ## Install
 
-    sudo apt install ./moodlog_2.3.0_all.deb
+    sudo apt install ./moodlog_2.3.1_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 
