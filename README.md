@@ -195,3 +195,12 @@ MIT
 The scripts in `test/` check the storage, the phone-sync parser, events and the
 Gridgets link (`python3 test/test_store.py` and so on). The `ui*.py` and
 `interact.py` scripts drive the real window and need a display (or `xvfb-run`).
+
+## Roadmap
+
+![Moodlog roadmap](docs/roadmap.png)
+
+Moodlog is for people who track their mood for their health and want to keep that data
+private. Next: making it solid for them (languages, a first-run welcome, a privacy
+policy, accessibility), then Flathub for every Linux distro, then the iPhone and Mac
+App Stores, then Windows. See [ROADMAP.md](ROADMAP.md) for the details.
