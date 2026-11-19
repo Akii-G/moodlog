@@ -2,7 +2,8 @@
 # Moodlog - a small, local mood tracker.
 # Entries have a mood (1-5), an optional time of day and an optional note.
 # Everything is stored in plain CSV files in ~/.local/share/moodlog/
-#   moods.csv   date,time,mood,energy,anxiety,note   (several entries a day are allowed)
+#   moods.csv   date,time,mood,energy,anxiety,note,id,updated,deleted
+#               (several entries a day; id/updated/deleted let the iPhone app sync)
 #   events.csv  date,kind,title,note   (important events, e.g. a medication change)
 #   health.csv  date,metric,value   (optional, sent by your phone: see Phone sync)
 #
@@ -11,6 +12,7 @@
 import calendar
 import csv
 import datetime as dt
+import hashlib
 import hmac
 import json
 import math
@@ -18,6 +20,7 @@ import os
 import re
 import secrets
 import socket
+import uuid
 import subprocess
 import sys
 
@@ -29,7 +32,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "1.9.1"
+VERSION = "2.0.0"
 
 MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
 # Two optional 1-5 scales next to the mood. Index = position in an entry.
@@ -100,6 +103,28 @@ def to_level(avg):
     return max(1, min(5, int(avg + 0.5)))
 
 
+def now_stamp():
+    """Change time in UTC, e.g. 2026-11-19T05:20:31.123Z (sorts as text)."""
+    return dt.datetime.now(dt.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def new_id():
+    return uuid.uuid4().hex[:16]
+
+
+def legacy_id(*parts):
+    """Stable id for a row written before ids existed, the same on every computer."""
+    return hashlib.sha1("\x1f".join(str(p) for p in parts).encode("utf-8")).hexdigest()[:16]
+
+
+STAMP_RE = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$")
+
+
+def clean_stamp(value):
+    value = (value or "").strip()
+    return value if STAMP_RE.match(value) else ""
+
+
 def file_mtime(path):
     try:
         return os.path.getmtime(path)
@@ -111,23 +136,37 @@ class Store:
     """All entries, kept in memory and mirrored to a CSV file.
 
     A day can hold several entries. Each entry is a list
-    [time, mood, note, energy, anxiety]: time is "HH:MM" or "" (unknown), mood, energy
-    and anxiety are 1-5 or 0 (not given).
+    [time, mood, note, energy, anxiety, id, updated]: time is "HH:MM" or "" (unknown),
+    mood, energy and anxiety are 1-5 or 0 (not given), id identifies the entry on every
+    device, updated is when it last changed. Deleted entries leave a record
+    (self.deleted: id -> (time of deletion, date)) so a deletion syncs too.
     """
 
     def __init__(self, path=None):
         self.path = path or os.path.join(data_dir(), "moods.csv")
         self.mtime = None
-        self.days = {}  # date -> [[time, mood, note, energy, anxiety], ...] sorted by time
-        self.load()
+        self.days = {}  # date -> [[time, mood, note, energy, anxiety, id, updated], ...]
+        self.deleted = {}
+        if path != "":
+            self.load()
 
     def load(self):
         self.days = {}
+        self.deleted = {}
         self.mtime = file_mtime(self.path)
         if not os.path.exists(self.path):
             return
+        seen = {}
         with open(self.path, newline="", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f):
+                gone = clean_stamp(row.get("deleted"))
+                if gone and (row.get("id") or "").strip():
+                    try:
+                        gone_day = dt.date.fromisoformat((row.get("date") or "").strip())
+                    except ValueError:
+                        gone_day = None
+                    self.deleted[row["id"].strip()] = (gone, gone_day)
+                    continue
                 try:
                     day = dt.date.fromisoformat((row.get("date") or "").strip())
                     mood = int((row.get("mood") or "0").strip() or 0)
@@ -147,21 +186,80 @@ class Store:
                         value = 0
                     scales.append(value if 1 <= value <= 5 else 0)
                 if mood or note.strip() or any(scales):
-                    self.days.setdefault(day, []).append([time, mood, note] + scales)
+                    eid = (row.get("id") or "").strip()
+                    if not eid:  # written before version 2.0
+                        key = (day, time, mood, note) + tuple(scales)
+                        seen[key] = seen.get(key, 0) + 1
+                        eid = legacy_id(day, time, mood, scales[0], scales[1], note, seen[key])
+                    self.days.setdefault(day, []).append(
+                        [time, mood, note] + scales + [eid, clean_stamp(row.get("updated"))])
         for items in self.days.values():
             items.sort(key=lambda e: e[0])
 
     def save(self):
+        if self.changed_on_disk():  # changed by the phone or another computer meanwhile
+            self.absorb(Store(self.path))
         tmp = self.path + ".tmp"
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["date", "time", "mood", "energy", "anxiety", "note"])
+            w.writerow(["date", "time", "mood", "energy", "anxiety", "note", "id", "updated",
+                        "deleted"])
             for day in sorted(self.days):
-                for time, mood, note, energy, anxiety in self.days[day]:
+                for time, mood, note, energy, anxiety, eid, updated in self.days[day]:
                     w.writerow([day.isoformat(), time, mood or "", energy or "", anxiety or "",
-                                note])
+                                note, eid, updated, ""])
+            for eid, (gone, day) in sorted(self.deleted.items()):
+                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone])
         os.replace(tmp, self.path)
         self.mtime = file_mtime(self.path)
+
+    def find(self, eid):
+        for day, items in self.days.items():
+            for entry in items:
+                if entry[5] == eid:
+                    return day, entry
+        return None, None
+
+    def touch(self, entry):
+        entry[6] = now_stamp()
+
+    def absorb(self, other):
+        """Merge another copy into this one: for each entry the newest change wins, and a
+        deletion wins over any change made before it. Returns how many things changed."""
+        changed = 0
+        for eid, (gone, gone_day) in other.deleted.items():
+            day, entry = self.find(eid)
+            if entry is not None and entry[6] <= gone:
+                self.remove(day, entry, stamp=gone)
+                changed += 1
+            elif eid not in self.deleted or self.deleted[eid][0] < gone:
+                if entry is None:
+                    self.deleted[eid] = (gone, gone_day)
+        for day, items in other.days.items():
+            for theirs in items:
+                eid = theirs[5]
+                if eid in self.deleted and self.deleted[eid][0] >= theirs[6]:
+                    continue
+                mine_day, mine = self.find(eid)
+                if mine is None and any(e[:5] == theirs[:5] for e in self.entries(day)):
+                    continue  # the same entry, created separately on two devices
+                if mine is None:
+                    self.days.setdefault(day, []).append(list(theirs))
+                    self.resort(day)
+                    self.deleted.pop(eid, None)
+                    changed += 1
+                elif theirs[6] > mine[6]:
+                    if mine_day != day:
+                        self.days[mine_day] = [e for e in self.days[mine_day] if e is not mine]
+                        if not self.days[mine_day]:
+                            del self.days[mine_day]
+                        mine = list(theirs)
+                        self.days.setdefault(day, []).append(mine)
+                    else:
+                        mine[:] = list(theirs)
+                    self.resort(day)
+                    changed += 1
+        return changed
 
     def changed_on_disk(self):
         return file_mtime(self.path) != self.mtime
@@ -169,8 +267,9 @@ class Store:
     def entries(self, day):
         return self.days.get(day, [])
 
-    def add(self, day, time, mood, note, energy=0, anxiety=0):
-        entry = [time if TIME_RE.match(time or "") else "", mood, note, energy, anxiety]
+    def add(self, day, time, mood, note, energy=0, anxiety=0, eid=None, updated=None):
+        entry = [time if TIME_RE.match(time or "") else "", mood, note, energy, anxiety,
+                 eid or new_id(), updated or now_stamp()]
         items = self.days.setdefault(day, [])
         items.append(entry)
         items.sort(key=lambda e: e[0])
@@ -179,7 +278,9 @@ class Store:
     def resort(self, day):
         self.entries(day).sort(key=lambda e: e[0])
 
-    def remove(self, day, entry):
+    def remove(self, day, entry, stamp=None):
+        if len(entry) > 5:
+            self.deleted[entry[5]] = (stamp or now_stamp(), day)
         items = [e for e in self.entries(day) if e is not entry]
         if items:
             self.days[day] = items
@@ -233,7 +334,7 @@ class Store:
             head = "%s — %s (average %.1f of %d entries)" % (
                 title, MOOD_NAMES[to_level(avg)], avg, len(moods))
         lines = [head]
-        for time, mood, note, energy, anxiety in items:
+        for time, mood, note, energy, anxiety, *_ in items:
             extra = ", ".join("%s %d" % (name.lower(), value) for value, name in
                               ((energy, "Energy"), (anxiety, "Anxiety")) if value)
             if len(items) == 1 and not note.strip() and not extra:
@@ -272,21 +373,32 @@ AROUND_DAYS = 14
 
 
 class EventStore:
-    """Important events (a medication change, a move...): events.csv (date,kind,title,note)."""
+    """Important events (a medication change, a move...): events.csv.
+
+    Each event is [date, kind, title, note, id, updated]; deletions are kept like for moods.
+    """
 
     def __init__(self, path=None):
         self.path = path or os.path.join(data_dir(), "events.csv")
         self.mtime = None
-        self.items = []  # [date, kind, title, note]
-        self.load()
+        self.items = []
+        self.deleted = {}
+        if path != "":
+            self.load()
 
     def load(self):
         self.items = []
+        self.deleted = {}
         self.mtime = file_mtime(self.path)
         if not os.path.exists(self.path):
             return
-        with open(self.path, newline="", encoding="utf-8") as f:
+        with open(self.path, newline="", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f):
+                eid = (row.get("id") or "").strip()
+                gone = clean_stamp(row.get("deleted"))
+                if gone and eid:
+                    self.deleted[eid] = gone
+                    continue
                 try:
                     day = dt.date.fromisoformat((row.get("date") or "").strip())
                 except ValueError:
@@ -297,16 +409,23 @@ class EventStore:
                 kind = (row.get("kind") or "").strip()
                 if kind not in EVENT_LABELS:
                     kind = "other"
-                self.items.append([day, kind, title, row.get("note") or ""])
+                note = row.get("note") or ""
+                if not eid:
+                    eid = legacy_id("event", day, kind, title, note)
+                self.items.append([day, kind, title, note, eid, clean_stamp(row.get("updated"))])
         self.sort()
 
     def save(self):
+        if self.changed_on_disk():
+            self.absorb(EventStore(self.path))
         tmp = self.path + ".tmp"
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["date", "kind", "title", "note"])
-            for day, kind, title, note in self.items:
-                w.writerow([day.isoformat(), kind, title, note])
+            w.writerow(["date", "kind", "title", "note", "id", "updated", "deleted"])
+            for day, kind, title, note, eid, updated in self.items:
+                w.writerow([day.isoformat(), kind, title, note, eid, updated, ""])
+            for eid, gone in sorted(self.deleted.items()):
+                w.writerow(["", "", "", "", eid, "", gone])
         os.replace(tmp, self.path)
         self.mtime = file_mtime(self.path)
 
@@ -316,14 +435,51 @@ class EventStore:
     def sort(self):
         self.items.sort(key=lambda e: e[0])
 
-    def add(self, day, kind, title, note):
-        event = [day, kind, title, note]
+    def add(self, day, kind, title, note, eid=None, updated=None):
+        event = [day, kind, title, note, eid or new_id(), updated or now_stamp()]
         self.items.append(event)
         self.sort()
         return event
 
-    def remove(self, event):
+    def update(self, event, day, kind, title, note):
+        event[:4] = [day, kind, title, note]
+        event[5] = now_stamp()
+        self.sort()
+
+    def remove(self, event, stamp=None):
+        if len(event) > 4:
+            self.deleted[event[4]] = stamp or now_stamp()
         self.items = [e for e in self.items if e is not event]
+
+    def absorb(self, other):
+        changed = 0
+        mine = {e[4]: e for e in self.items}
+        for eid, gone in other.deleted.items():
+            event = mine.get(eid)
+            if event is not None and event[5] <= gone:
+                self.remove(event, stamp=gone)
+                mine.pop(eid)
+                changed += 1
+            elif event is None and self.deleted.get(eid, "") < gone:
+                self.deleted[eid] = gone
+        for theirs in other.items:
+            eid = theirs[4]
+            if self.deleted.get(eid, "") >= theirs[5] and eid in self.deleted:
+                continue
+            event = mine.get(eid)
+            if event is None and any(e[:4] == theirs[:4] for e in self.items):
+                continue  # the same event, created separately on two devices
+            if event is None:
+                copy = list(theirs)
+                self.items.append(copy)
+                mine[eid] = copy
+                self.deleted.pop(eid, None)
+                changed += 1
+            elif theirs[5] > event[5]:
+                event[:] = list(theirs)
+                changed += 1
+        self.sort()
+        return changed
 
     def on(self, day):
         return [e for e in self.items if e[0] == day]
@@ -459,7 +615,7 @@ def export_csv(path, store, events, health):
             if note.strip():
                 notes.append("%s: %s" % (time, _clean(note)) if time else _clean(note))
         evs = []
-        for _d, kind, title, note in events.on(day):
+        for _d, kind, title, note, *_ in events.on(day):
             line = "%s: %s" % (EVENT_LABELS[kind], title)
             if note.strip():
                 line += " (%s)" % _clean(note)
@@ -581,7 +737,7 @@ def export_xlsx(path, store, events, health):
         moods = ["%s %s" % (t, MOOD_NAMES[m]) if t else MOOD_NAMES[m] for t, m, _n, *_ in items if m]
         notes = ["%s  %s" % (t, n.strip()) if t else n.strip() for t, _m, n, *_ in items if n.strip()]
         evs = []
-        for _d, kind, title, note in events.on(day):
+        for _d, kind, title, note, *_ in events.on(day):
             evs.append("%s: %s%s" % (EVENT_LABELS[kind], title,
                                      (" — " + _clean(note)) if note.strip() else ""))
         values = [day, WEEKDAYS_LONG[day.weekday()], MOOD_NAMES[to_level(avg)] if avg else None,
@@ -623,7 +779,7 @@ def export_xlsx(path, store, events, health):
           [13, 8, 10, 7, 70, 9, 9])
     r = 1
     for day in sorted(store.days):
-        for time, mood, note, energy, anxiety in store.entries(day):
+        for time, mood, note, energy, anxiety, *_ in store.entries(day):
             ent_ws.cell(row=r + 1, column=6, value=energy or None).alignment = centre
             ent_ws.cell(row=r + 1, column=7, value=anxiety or None).alignment = centre
             r += 1
@@ -646,7 +802,7 @@ def export_xlsx(path, store, events, health):
           [13, 18, 32, 46, 13, 13])
     r = 1
     today = dt.date.today()
-    for day, kind, title, note in events.items:
+    for day, kind, title, note, *_ in events.items:
         r += 1
         ev_ws.cell(row=r, column=1, value=day).number_format = "d mmm yyyy"
         ev_ws.cell(row=r, column=2, value=EVENT_LABELS[kind])
@@ -1157,7 +1313,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             cr.stroke()
         event_head()
         for e in evs:
-            day, kind, title, note = e
+            day, kind, title, note = e[:4]
             what = title + (("\n" + note.strip()) if note.strip() else "")
             _w, h = pdf.text(what, colx[3], 0, 8.5, measure=True, width=210)
             if pdf.ensure(h + 10):
@@ -1336,20 +1492,8 @@ def restore_backup(path):
 
 def merge_folder_into(src, dst_store, dst_events, dst_health):
     """Add everything from the data files in folder `src` that the destination lacks."""
-    added = 0
-    other = Store(os.path.join(src, "moods.csv"))
-    for day, items in other.days.items():
-        mine = dst_store.entries(day)
-        for entry in items:
-            if entry not in mine:
-                dst_store.add(day, *([entry[0], entry[1], entry[2], entry[3], entry[4]]))
-                mine = dst_store.entries(day)
-                added += 1
-    events = EventStore(os.path.join(src, "events.csv"))
-    for event in events.items:
-        if event not in dst_events.items:
-            dst_events.add(*event)
-            added += 1
+    added = dst_store.absorb(Store(os.path.join(src, "moods.csv")))
+    added += dst_events.absorb(EventStore(os.path.join(src, "events.csv")))
     health = HealthStore(os.path.join(src, "health.csv"))
     for metric, days in health.values.items():
         mine = dst_health.values.setdefault(metric, {})
@@ -1386,17 +1530,9 @@ def merge_conflicts(store, events, health):
     os.makedirs(parked, exist_ok=True)
     for kind, path in found:
         if kind == "moods":
-            other = Store(path)
-            for day, items in other.days.items():
-                for entry in items:
-                    if entry not in store.entries(day):
-                        store.add(day, *entry)
-                        added += 1
+            added += store.absorb(Store(path))
         elif kind == "events":
-            for event in EventStore(path).items:
-                if event not in events.items:
-                    events.add(*event)
-                    added += 1
+            added += events.absorb(EventStore(path))
         else:
             for metric, days in HealthStore(path).values.items():
                 mine = health.values.setdefault(metric, {})
@@ -1741,6 +1877,87 @@ def parse_payload(body):
     return incoming, problems
 
 
+# ----------------------------------------------------------------- iPhone app sync (JSON)
+
+def stores_from_json(doc):
+    """Moods and events sent by the iPhone app -> (Store, EventStore), checked field by field."""
+    store, events = Store(""), EventStore("")
+    if not isinstance(doc, dict):
+        return store, events
+
+    def day_of(value):
+        try:
+            return dt.date.fromisoformat(str(value))
+        except ValueError:
+            return None
+
+    def level(value):
+        return value if isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 5 else 0
+
+    for item in (doc.get("entries") or [])[:200000]:
+        if not isinstance(item, dict):
+            continue
+        day, eid, stamp = day_of(item.get("date")), str(item.get("id") or "")[:64], clean_stamp(item.get("updated"))
+        if not day or not eid or not stamp:
+            continue
+        time = str(item.get("time") or "")
+        note = str(item.get("note") or "")[:20000]
+        mood, energy, anxiety = level(item.get("mood")), level(item.get("energy")), level(item.get("anxiety"))
+        if mood or energy or anxiety or note.strip():
+            store.add(day, time, mood, note, energy, anxiety, eid=eid, updated=stamp)
+    for item in (doc.get("events") or [])[:20000]:
+        if not isinstance(item, dict):
+            continue
+        day, eid, stamp = day_of(item.get("date")), str(item.get("id") or "")[:64], clean_stamp(item.get("updated"))
+        title = " ".join(str(item.get("title") or "").split())[:500]
+        if not day or not eid or not stamp or not title:
+            continue
+        kind = item.get("kind") if item.get("kind") in EVENT_LABELS else "other"
+        events.add(day, kind, title, str(item.get("note") or "")[:20000], eid=eid, updated=stamp)
+    for item in (doc.get("deleted") or [])[:200000]:
+        if not isinstance(item, dict):
+            continue
+        eid, gone = str(item.get("id") or "")[:64], clean_stamp(item.get("deleted"))
+        if not eid or not gone:
+            continue
+        if item.get("type") == "event":
+            events.deleted[eid] = max(gone, events.deleted.get(eid, ""))
+        else:
+            store.deleted[eid] = (gone, day_of(item.get("date")))
+    return store, events
+
+
+def stores_to_json(store, events):
+    entries = [{"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
+                "anxiety": e[4], "note": e[2], "updated": e[6]}
+               for day in sorted(store.days) for e in store.days[day]]
+    evs = [{"id": e[4], "date": e[0].isoformat(), "kind": e[1], "title": e[2], "note": e[3],
+            "updated": e[5]} for e in events.items]
+    deleted = [{"id": eid, "type": "entry", "deleted": gone,
+                "date": day.isoformat() if day else None}
+               for eid, (gone, day) in store.deleted.items()]
+    deleted += [{"id": eid, "type": "event", "deleted": gone} for eid, gone in events.deleted.items()]
+    return {"app": "Moodlog", "version": VERSION, "server_time": now_stamp(),
+            "entries": entries, "events": evs, "deleted": deleted}
+
+
+def sync_with_phone(body):
+    """Merge what the phone sent into the data files and return the merged state."""
+    try:
+        doc = json.loads(body.decode("utf-8") if isinstance(body, (bytes, bytearray)) else body)
+    except (ValueError, UnicodeDecodeError):
+        raise ValueError("The request is not valid JSON.")
+    remote_store, remote_events = stores_from_json(doc)
+    store, events = Store(), EventStore()
+    changed = store.absorb(remote_store) + events.absorb(remote_events)
+    if changed:
+        store.save()
+        events.save()
+    state = stores_to_json(store, events)
+    state["changed"] = changed
+    return state
+
+
 def sync_config():
     """Token and port for the phone sync receiver (created on first use)."""
     path = os.path.join(data_dir(), "sync.json")
@@ -1795,7 +2012,24 @@ def run_sync_server():
             self.end_headers()
             self.wfile.write(body)
 
+        def reply_json(self, code, doc):
+            body = json.dumps(doc, ensure_ascii=False).encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def route(self):
+            return self.path.split("?", 1)[0].rstrip("/") or "/"
+
         def do_GET(self):
+            if self.route() == "/api/ping":
+                if not self.authorised():
+                    self.reply_json(401, {"error": "Wrong or missing token."})
+                    return
+                self.reply_json(200, {"app": "Moodlog", "version": VERSION})
+                return
             self.reply(200, "Moodlog sync is running. Send health data with POST /health.")
 
         def authorised(self):
@@ -1809,16 +2043,39 @@ def run_sync_server():
 
         def do_POST(self):
             if not self.authorised():
+                if self.route().startswith("/api/"):
+                    self.reply_json(401, {"error": "Wrong or missing token. Copy it again from "
+                                                   "Moodlog > Phone sync."})
+                    return
                 self.reply(401, "Wrong or missing token. Copy it again from Moodlog > Phone sync.")
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
             except ValueError:
                 length = 0
-            if not 0 < length <= 5 * 1024 * 1024:
+            limit = 50 * 1024 * 1024 if self.route() == "/api/sync" else 5 * 1024 * 1024
+            if not 0 < length <= limit:
+                if self.route().startswith("/api/"):
+                    self.reply_json(400, {"error": "Empty request, or too large."})
+                    return
                 self.reply(400, "Empty request (or larger than 5 MB).")
                 return
             body = self.rfile.read(length)
+            if self.route() == "/api/sync":
+                try:
+                    state = sync_with_phone(body)
+                except (ValueError, OSError) as err:
+                    self.reply_json(400, {"error": str(err)})
+                    return
+                stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+                try:
+                    with open(sync_status_path(), "w", encoding="utf-8") as f:
+                        f.write("%s\nMoodlog for iPhone synced (%d change%s).\n" % (
+                            stamp, state["changed"], "" if state["changed"] == 1 else "s"))
+                except OSError:
+                    pass
+                self.reply_json(200, state)
+                return
             incoming, problems = parse_payload(body)
             store = HealthStore()
             stored = store.merge(incoming)
@@ -3167,8 +3424,7 @@ class EventWindow(Gtk.Window):
         note = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), False).strip()
         events = self.win.events
         if self.event:
-            self.event[:] = [day, kind, title, note]
-            events.sort()
+            events.update(self.event, day, kind, title, note)
         else:
             events.add(day, kind, title, note)
         if self.win.save_events():
@@ -3519,8 +3775,9 @@ class SyncWindow(Gtk.Window):
 
         note = Gtk.Label(xalign=0, wrap=True, label=(
             "The token is a password: only requests that carry it are accepted. The receiver "
-            "only takes data in over your local network and never sends any out. "
-            "Health values are saved next to your moods, in health.csv."))
+            "works only on your local network. It takes in Health values from the shortcut, "
+            "and it syncs moods and events with the Moodlog app for iPhone (use the same "
+            "address and token in the app's Settings)."))
         note.add_css_class("dim-label")
         note.add_css_class("caption")
         col.append(note)
@@ -4016,7 +4273,7 @@ class Window(Adw.ApplicationWindow):
             self.events_list.remove(child)
             child = self.events_list.get_first_child()
         for event in sorted(self.events.items, key=lambda e: e[0], reverse=True):
-            day, kind, title, note = event
+            day, kind, title, note = event[:4]
             row = Gtk.ListBoxRow()
             row.event = event
             row.set_tooltip_text("Click to edit")
@@ -4209,6 +4466,7 @@ class Window(Adw.ApplicationWindow):
             self._loading = False
         elif self.current[0] != value:
             self.current[0] = value
+            self.store.touch(self.current)
             self.store.resort(self.selected)
             self.schedule_save()
             self.rebuild_entries()
@@ -4292,6 +4550,7 @@ class Window(Adw.ApplicationWindow):
             self.update_mode()
         else:
             self.current[1:5] = [mood, note, energy, anxiety]
+            self.store.touch(self.current)
             if empty:
                 self.store.remove(day, self.current)
                 self.current = None
@@ -4306,7 +4565,7 @@ class Window(Adw.ApplicationWindow):
             child = self.entry_list.get_first_child()
         items = self.store.entries(self.selected)
         for entry in items:
-            time, mood, note, energy, anxiety = entry
+            time, mood, note, energy, anxiety = entry[:5]
             row = Gtk.ListBoxRow()
             row.entry = entry
             row.set_tooltip_text("Click to edit this entry")

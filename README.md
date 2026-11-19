@@ -59,6 +59,14 @@ Moodlog's CSV stays the source of truth. The link only runs while Moodlog is
 open and can be switched off at the bottom of the Log tab. Gridgets itself is
 not modified.
 
+### Moodlog for iPhone
+
+There is also a native iPhone app (in `ios/`): log moods, energy, anxiety, notes
+and events on your phone, and they sync with Moodlog on your PC through the same
+receiver (newest change wins; deletions sync too). It can send Apple Health data
+as well, so it can replace the shortcut. See [`ios/README.md`](ios/README.md) for
+how to install it (SideStore or AltStore) and connect it.
+
 ### iPhone shortcut
 
 A ready-made shortcut is available here:
@@ -123,12 +131,12 @@ nothing is lost. Settings such as the Gridgets link stay on each computer
 ## Your data
 
 Your moods are in a plain CSV file, `~/.local/share/moodlog/moods.csv` (or in the folder you chose)
-(columns: `date,time,mood,energy,anxiety,note`; one row per entry, time is `HH:MM` or empty, mood is 1 = awful to 5 = great, energy and anxiety are 1-5 or empty). In the calendar, a day with one entry is coloured by that mood, and a day with several shows a small grid with one tile per entry, in time order. A day's point in the charts is the average of its entries. Nothing leaves your
+(columns: `date,time,mood,energy,anxiety,note,id,updated,deleted`; one row per entry, time is `HH:MM` or empty, mood is 1 = awful to 5 = great, energy and anxiety are 1-5 or empty). In the calendar, a day with one entry is coloured by that mood, and a day with several shows a small grid with one tile per entry, in time order. A day's point in the charts is the average of its entries. Nothing leaves your
 computer. The folder button in the title bar opens that folder and makes backups.
 
 ## Install
 
-    sudo apt install ./moodlog_1.9.1_all.deb
+    sudo apt install ./moodlog_2.0.0_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 

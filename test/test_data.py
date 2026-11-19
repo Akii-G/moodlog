@@ -31,7 +31,7 @@ files, _ = m.read_backup(os.path.join(root, "evil.zip")); assert list(files) == 
 s.add(D(2026, 11, 3), "", 1, "later"); s.save(); m.EventStore().save()
 safety = m.restore_backup(bk)
 assert os.path.exists(safety) and "before-restore" in safety
-assert D(2026, 11, 3) not in m.Store().days and m.Store().entries(D(2026, 11, 1)) == [["09:00", 4, "first", 3, 2]]
+assert D(2026, 11, 3) not in m.Store().days and [e[:5] for e in m.Store().entries(D(2026, 11, 1))] == [["09:00", 4, "first", 3, 2]]
 assert m.EventStore().items[0][2] == "New dose" and m.HealthStore().values["steps"][D(2026, 11, 1)] == 4000
 with zipfile.ZipFile(safety) as z: assert b"later" in z.read("moods.csv")
 # a backup without events -> restoring leaves no events (that was the state)

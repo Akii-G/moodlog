@@ -9,7 +9,7 @@ e2 = ev.add(D(40), "life", "Moved house", "")
 ev.add(today + dt.timedelta(days=3), "medication", "Planned change", "")
 assert [e[0] for e in ev.items] == [D(40), D(20), today + dt.timedelta(days=3)]
 ev.save(); ev2 = m.EventStore(); assert ev2.items == ev.items
-rows = list(csv.reader(open(os.path.join(tmp, "events.csv")))); assert rows[0] == ["date", "kind", "title", "note"]
+rows = list(csv.reader(open(os.path.join(tmp, "events.csv")))); assert rows[0][:4] == ["date", "kind", "title", "note"]
 open(os.path.join(tmp, "events.csv"), "a").write("bad,medication,x,\n2026-01-01,weird,Kept as other,\n2026-01-02,health,,\n")
 ev3 = m.EventStore(); assert ["other"] == [e[1] for e in ev3.items if e[2] == "Kept as other"] and len(ev3.items) == 4
 assert ev.on(D(20)) == [e1] and ev.between(D(30), today) == [e1]

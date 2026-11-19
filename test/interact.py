@@ -36,15 +36,15 @@ def step():
         w.time_entry.emit("activate"); assert not w.time_entry.has_css_class("error") and e2[0] == "23:59"
         assert w.store.entries(today)[-1] is e2 and w.store.latest_mood(today) == 5
         w.flush()
-        saved = m.Store().entries(today)
+        saved = [e[:5] for e in m.Store().entries(today)]
         assert ["23:59", 5, "", 0, 0] in saved and [now, 2, 'line one, "quoted"\nline two', 0, 0] in saved, saved
         # energy / anxiety on the entry being edited; a scale alone keeps an entry alive
         w.on_entry_row(None, [r for r in rows(w) if r.entry is e2][0])
         w.scale_buttons[3][4].set_active(True); w.scale_buttons[4][2].set_active(True)
-        assert e2[3:] == [4, 2] and w.current_scale(3) == 4
+        assert e2[3:5] == [4, 2] and w.current_scale(3) == 4
         w.scale_buttons[4][5].set_active(True); assert e2[4] == 5 and not w.scale_buttons[4][2].get_active()
         w.face_buttons[5].set_active(False); assert w.current is e2 and e2[1] == 0           # still there: has scales
-        w.flush(); assert ["23:59", 0, "", 4, 5] in m.Store().entries(today)
+        w.flush(); assert ["23:59", 0, "", 4, 5] in [e[:5] for e in m.Store().entries(today)]
         w.face_buttons[5].set_active(True)
         # 4. click a row in the list -> that entry is loaded into the editor
         w.on_entry_row(None, [r for r in rows(w) if r.entry is e1][0])

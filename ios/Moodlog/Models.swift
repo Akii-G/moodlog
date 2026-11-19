@@ -1,0 +1,179 @@
+import Foundation
+
+// The same records Moodlog on the PC keeps. Field names match the PC's /api/sync JSON.
+
+struct Entry: Codable, Identifiable, Hashable {
+    var id: String
+    var date: String      // "YYYY-MM-DD"
+    var time: String      // "HH:MM" or "" when no time was given
+    var mood: Int         // 1-5, 0 = not given
+    var energy: Int       // 1-5, 0 = not given
+    var anxiety: Int      // 1-5, 0 = not given
+    var note: String
+    var updated: String   // UTC change time, e.g. 2026-11-19T05:20:31.123Z
+}
+
+struct MoodEvent: Codable, Identifiable, Hashable {
+    var id: String
+    var date: String
+    var kind: String      // medication, health, life, other
+    var title: String
+    var note: String
+    var updated: String
+}
+
+struct Tombstone: Codable, Hashable {
+    var id: String
+    var type: String      // "entry" or "event"
+    var deleted: String   // UTC time of the deletion
+    var date: String?
+}
+
+struct SyncState: Codable {
+    var entries: [Entry]
+    var events: [MoodEvent]
+    var deleted: [Tombstone]
+    var changed: Int?
+}
+
+enum Mood {
+    static let names = [1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"]
+
+    static func name(_ value: Int) -> String {
+        return names[value] ?? ""
+    }
+
+    /// Average mood -> nearest whole level, halves round up (same as the PC).
+    static func level(_ average: Double) -> Int {
+        return max(1, min(5, Int(average + 0.5)))
+    }
+}
+
+enum Scale {
+    static let energyWords = [1: "very low", 2: "low", 3: "medium", 4: "high", 5: "very high"]
+    static let anxietyWords = [1: "calm", 2: "a little", 3: "some", 4: "a lot", 5: "very anxious"]
+}
+
+enum EventKind: String, CaseIterable, Identifiable {
+    case medication, health, life, other
+
+    var id: String { return rawValue }
+
+    var label: String {
+        switch self {
+        case .medication: return "Medication change"
+        case .health: return "Health"
+        case .life: return "Life event"
+        case .other: return "Other"
+        }
+    }
+
+    static func label(for raw: String) -> String {
+        return (EventKind(rawValue: raw) ?? .other).label
+    }
+}
+
+enum Stamp {
+    static let formatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        f.timeZone = TimeZone(identifier: "UTC")
+        return f
+    }()
+
+    static func now() -> String {
+        return formatter.string(from: Date())
+    }
+}
+
+enum Day {
+    static let calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.firstWeekday = 2  // Monday
+        return c
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone.current
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone.current
+        f.dateFormat = "HH:mm"
+        return f
+    }()
+
+    static func string(_ date: Date) -> String {
+        return dayFormatter.string(from: date)
+    }
+
+    static func date(_ day: String) -> Date? {
+        return dayFormatter.date(from: day)
+    }
+
+    static var today: String {
+        return string(Date())
+    }
+
+    static func timeString(_ date: Date) -> String {
+        return timeFormatter.string(from: date)
+    }
+
+    /// "HH:MM" on a given day -> Date (for the time picker).
+    static func time(_ hhmm: String, on day: String) -> Date? {
+        guard let base = date(day) else { return nil }
+        let parts = hhmm.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return nil }
+        return calendar.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: base)
+    }
+
+    static func adding(_ days: Int, to day: String) -> String {
+        guard let d = date(day), let moved = calendar.date(byAdding: .day, value: days, to: d) else { return day }
+        return string(moved)
+    }
+
+    static func pretty(_ day: String, style: String = "EEEE d MMMM") -> String {
+        guard let d = date(day) else { return day }
+        let f = DateFormatter()
+        f.dateFormat = style
+        return f.string(from: d)
+    }
+
+    static func monthStart(_ date: Date) -> Date {
+        let parts = calendar.dateComponents([.year, .month], from: date)
+        return calendar.date(from: parts) ?? date
+    }
+
+    static func addMonths(_ n: Int, to month: Date) -> Date {
+        return calendar.date(byAdding: .month, value: n, to: month) ?? month
+    }
+
+    /// Every day of the month as "YYYY-MM-DD".
+    static func days(inMonth month: Date) -> [String] {
+        guard let range = calendar.range(of: .day, in: .month, for: month) else { return [] }
+        return range.compactMap { n in
+            calendar.date(byAdding: .day, value: n - 1, to: monthStart(month)).map(string)
+        }
+    }
+
+    /// Cells for a Monday-first month grid; nil = empty cell before the 1st.
+    static func grid(forMonth month: Date) -> [String?] {
+        let first = monthStart(month)
+        let weekday = calendar.component(.weekday, from: first)  // 1 = Sunday
+        let lead = (weekday + 5) % 7
+        return Array(repeating: nil, count: lead) + days(inMonth: month).map { Optional($0) }
+    }
+
+    static func monthTitle(_ month: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "LLLL yyyy"
+        return f.string(from: month).capitalized
+    }
+}
