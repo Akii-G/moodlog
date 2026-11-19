@@ -4780,9 +4780,11 @@ class TourOverlay(Gtk.Overlay):
         self.card.add_css_class("tour-card")
         self.card.set_size_request(self.CARD_WIDTH, -1)
         self.face = TourFace()
-        self.title = Gtk.Label(xalign=0, wrap=True)
+        # max_width_chars=1 with wrapping: the labels take the card's fixed width instead of
+        # asking for one long line, so the card is always CARD_WIDTH wide
+        self.title = Gtk.Label(xalign=0, wrap=True, max_width_chars=1)
         self.title.add_css_class("title-3")
-        self.body = Gtk.Label(xalign=0, wrap=True, max_width_chars=40)
+        self.body = Gtk.Label(xalign=0, wrap=True, max_width_chars=1)
         self.body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
         self.dots = Gtk.Label(xalign=0)
         self.dots.add_css_class("dim-label")
@@ -4905,26 +4907,48 @@ class TourOverlay(Gtk.Overlay):
         return tuple(x + (y - x) * p for x, y in zip(a, b))
 
     def card_place(self, hole):
-        """Where the card goes: under the spotlight, else above, else beside, else centred."""
+        """Where the card goes: under the spotlight, else above, else beside it, else centred.
+
+        The answer is kept for the step (and window size), so the card never jumps between
+        two places from one frame to the next."""
         W, H = self.get_width(), self.get_height()
         cw, ch = self.card_size()
+        key = (self.step, W, H, cw, ch, None if hole is None else tuple(round(v / 4) for v in hole))
+        if getattr(self, "_place", (None,))[0] == key:
+            return self._place[1]
+        self._place = (key, self._choose_place(hole, W, H, cw, ch))
+        return self._place[1]
+
+    @staticmethod
+    def _choose_place(hole, W, H, cw, ch, margin=16, gap=26):
         if hole is None:
-            return ((W - cw) / 2 + 20, max(20, (H - ch) / 2))
+            return ((W - cw) / 2, max(margin, (H - ch) / 2))
         x, y, w, h = hole
-        gap = 26
-        left = min(max(16, x + w / 2 - cw / 2), W - cw - 16)
-        if y + h + gap + ch < H - 12:
-            return (left, y + h + gap)
-        if y - gap - ch > 12:
-            return (left, y - gap - ch)
-        top = min(max(16, y + h / 2 - ch / 2), H - ch - 16)
-        if x + w + gap + cw < W:
-            return (x + w + gap, top)
-        return (max(16, x - gap - cw), top)
+        across = min(max(margin, x + w / 2 - cw / 2), W - cw - margin)
+        down = min(max(margin, y + h / 2 - ch / 2), H - ch - margin)
+        if y + h + gap + ch <= H - margin:
+            return (across, y + h + gap)
+        if y - gap - ch >= margin:
+            return (across, y - gap - ch)
+        room_right, room_left = W - (x + w) - gap - margin, x - gap - margin
+        if room_right >= cw:
+            return (x + w + gap, down)
+        if room_left >= cw:
+            return (x - gap - cw, down)
+        # no side has room: go where there is most, inside the window (it may cover an edge)
+        if room_right >= room_left:
+            return (max(margin, W - cw - margin), down)
+        return (margin, down)
 
     def card_size(self):
-        cw = max(self.card.get_width(), self.card.measure(Gtk.Orientation.HORIZONTAL, -1)[0])
-        ch = max(self.card.get_height(), self.card.measure(Gtk.Orientation.VERTICAL, cw)[0])
+        """The card's natural size: it doesn't depend on where the card sits."""
+        # measure() counts the margins too, and the margins are how the card is placed:
+        # take them out, or the card's position would change its own size
+        c = self.card
+        mx = c.get_margin_start() + c.get_margin_end()
+        my = c.get_margin_top() + c.get_margin_bottom()
+        cw = c.measure(Gtk.Orientation.HORIZONTAL, -1)[1] - mx
+        ch = c.measure(Gtk.Orientation.VERTICAL, cw + mx)[1] - my
         return cw, ch
 
     def current_card(self):

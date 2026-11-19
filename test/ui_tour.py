@@ -35,6 +35,15 @@ def s2():
         cw, ch = t.card_size()
         x, y = t.card_place(t.target(target))
         assert x >= 0 and y >= 0 and x + cw <= t.get_width() + 1 and y + ch <= t.get_height() + 1, (target, x, y, cw, ch)
+    # the card's size must not depend on where it sits (that made it jump back and forth)
+    t.go(2)
+    sizes = set()
+    for mx, my in ((0, 0), (500, 300), (16, 40)):
+        t.card.set_margin_start(mx); t.card.set_margin_top(my); sizes.add(t.card_size())
+    assert len(sizes) == 1, sizes
+    first = t.card_place(t.target("calendar"))
+    t._place = (None,)
+    assert t.card_place(t.target("calendar")) == first
     t.go(3); key(w, "Left"); assert t.step == 2; key(w, "Right"); assert t.step == 3
     t.go(len(m.TOUR_STEPS) - 1)
     assert t.next.get_label() == "Let's start" and not t.skip.get_visible() and t.face.get_visible()
