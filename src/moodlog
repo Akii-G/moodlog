@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.5.0"
+VERSION = "2.5.1"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -2607,6 +2607,8 @@ def run_sync_server():
             self.reply(200 if stored else 422, message)
 
         def log_message(self, fmt, *args):
+            # never log the query string: it can carry the token
+            args = tuple(a.split("?", 1)[0] if isinstance(a, str) else a for a in args)
             sys.stderr.write("moodlog-sync: %s\n" % (fmt % args))
 
     server = http.server.ThreadingHTTPServer(("0.0.0.0", int(cfg["port"])), Handler)
@@ -4308,6 +4310,13 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.5.1", "2026-11-19", [
+        "A privacy policy: \u2630 menu \u2192 Privacy shows in short what Moodlog does with your "
+        "data (nothing leaves your devices except the encrypted phone sync), with a link to the "
+        "full policy.",
+        "The phone sync receiver no longer writes the address of a request to the system log in "
+        "full, so a token sent in the address can't end up there.",
+    ]),
     ("2.5.0", "2026-11-19", [
         "Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your "
         "token, and the token itself never crosses the network. Phone sync shows whether the "
@@ -4410,6 +4419,10 @@ CHANGELOG = [
 # Moodlog for iPhone (ios/) has its own version numbers. Only used for CHANGELOG.md,
 # never shown in the PC app's "What's new" window.
 IPHONE_CHANGELOG = [
+    ("1.4.1", "2026-11-19", [
+        "A privacy policy: Settings \u2192 Privacy shows in short what Moodlog does with your "
+        "data, with a link to the full policy.",
+    ]),
     ("1.4.0", "2026-11-19", [
         "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), "
         "and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC.",
@@ -4458,6 +4471,87 @@ def changelog_markdown():
             lines.extend("- " + item for item in items)
             lines.append("")
     return "\n".join(lines)
+
+
+PRIVACY_URL = "https://github.com/Akii-G/moodlog/blob/main/PRIVACY.md"
+PRIVACY_URL_IT = "https://github.com/Akii-G/moodlog/blob/main/PRIVACY.it.md"
+
+# The short version of PRIVACY.md, shown in the app. Keep the two in step.
+PRIVACY_POINTS = [
+    (tr("Nobody collects your data"),
+     tr("Moodlog has no account, no server, no analytics and no ads. "
+     "The developer never sees anything you write.")),
+    (tr("It stays on your devices"),
+     tr("Everything is saved in your data folder on this PC and, if you use it, "
+     "inside the iPhone app.")),
+    (tr("Phone sync is encrypted"),
+     tr("Your iPhone sends your entries straight to this PC over your own network, "
+     "encrypted with your token. The token itself is never sent.")),
+    (tr("Health data only if you choose"),
+     tr("Steps, resting heart rate and sleep are read only if you turn it on in the "
+     "iPhone app, and only to show them next to your mood.")),
+    (tr("No internet"),
+     tr("Moodlog never connects to the internet. Only a link you click, like the one "
+     "below, opens a page in your browser.")),
+]
+
+
+def privacy_url():
+    return PRIVACY_URL_IT if LANG_CODE == "it" else PRIVACY_URL
+
+
+class PrivacyWindow(Gtk.Window):
+    """The privacy policy in short, with a link to the full one."""
+
+    def __init__(self, parent):
+        super().__init__(title=tr("Privacy"), transient_for=parent, modal=True)
+        self.parent_window = parent
+        self.set_default_size(520, 660)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        head = Gtk.Label(label=tr("Your data is yours"), xalign=0, wrap=True)
+        head.add_css_class("title-2")
+        col.append(head)
+        for title, text in PRIVACY_POINTS:
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+            heading = Gtk.Label(label=title, xalign=0, wrap=True)
+            heading.add_css_class("heading")
+            box.append(heading)
+            body = Gtk.Label(label=text, xalign=0, wrap=True)
+            body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            box.append(body)
+            col.append(card(box))
+
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_child(col)
+        folder = Gtk.Button(label=tr("Open data folder"))
+        folder.connect("clicked", lambda *_: parent.open_data_folder(None))
+        full = Gtk.Button(label=tr("Read the full policy"))
+        full.connect("clicked", self.on_full)
+        close = Gtk.Button(label=tr("Close"))
+        close.add_css_class("suggested-action")
+        close.connect("clicked", lambda *_: self.close())
+        bottom = Gtk.Box(spacing=8)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(bottom, "set_margin_" + side)(12)
+        bottom.append(folder)
+        bottom.append(full)
+        spacer = Gtk.Box(hexpand=True)
+        bottom.append(spacer)
+        bottom.append(close)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer.append(scroll)
+        outer.append(Gtk.Separator())
+        outer.append(bottom)
+        self.set_child(outer)
+
+    def on_full(self, *_):
+        try:
+            Gio.AppInfo.launch_default_for_uri(privacy_url(), None)
+        except GLib.Error:
+            pass
 
 
 class ChangelogWindow(Gtk.Window):
@@ -5261,9 +5355,13 @@ class Window(Adw.ApplicationWindow):
         tour_action = Gio.SimpleAction.new("tour", None)
         tour_action.connect("activate", lambda *_: self.start_tour())
         self.add_action(tour_action)
+        privacy_action = Gio.SimpleAction.new("privacy", None)
+        privacy_action.connect("activate", lambda *_: PrivacyWindow(self).present())
+        self.add_action(privacy_action)
         news_menu = Gio.Menu()
         news_menu.append(tr("Show the tour"), "win.tour")
         news_menu.append(tr("What's new"), "win.changelog")
+        news_menu.append(tr("Privacy"), "win.privacy")
         main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
         menu_btn.set_tooltip_text(tr("Style, language and what's new"))

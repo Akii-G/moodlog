@@ -83,6 +83,7 @@ struct SettingsView: View {
 
                 Section {
                     Button("Show the tour") { tour.start() }
+                    NavigationLink("Privacy") { PrivacyView() }
                 }
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")

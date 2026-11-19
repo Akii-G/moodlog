@@ -1705,3 +1705,51 @@ msgstr[1] "Moodlog per iPhone sincronizzato (%d modifiche)."
 
 msgid "Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button."
 msgstr "Sincronizzazione col telefono cifrata: Moodlog per iPhone 1.4 cifra tutto ciò che invia con il tuo token, e il token stesso non passa mai in rete. Sincronizza telefono mostra se l'ultima connessione era cifrata, e ha un nuovo pulsante Cambia token."
+
+msgid "A privacy policy: ☰ menu → Privacy shows in short what Moodlog does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy."
+msgstr "Un'informativa sulla privacy: menu ☰ → Privacy mostra in breve cosa fa Moodlog con i tuoi dati (niente esce dai tuoi dispositivi, tranne la sincronizzazione cifrata del telefono), con un link all'informativa completa."
+
+msgid "The phone sync receiver no longer writes the address of a request to the system log in full, so a token sent in the address can't end up there."
+msgstr "Il ricevitore della sincronizzazione non scrive più per intero l'indirizzo di una richiesta nel registro di sistema, così un token inviato nell'indirizzo non può finirci dentro."
+
+msgid "Privacy"
+msgstr "Privacy"
+
+msgid "Your data is yours"
+msgstr "I tuoi dati sono tuoi"
+
+msgid "Nobody collects your data"
+msgstr "Nessuno raccoglie i tuoi dati"
+
+msgid "Moodlog has no account, no server, no analytics and no ads. The developer never sees anything you write."
+msgstr "Moodlog non ha account, server, statistiche d'uso né pubblicità. Lo sviluppatore non vede mai niente di quello che scrivi."
+
+msgid "It stays on your devices"
+msgstr "Resta sui tuoi dispositivi"
+
+msgid "Everything is saved in your data folder on this PC and, if you use it, inside the iPhone app."
+msgstr "Tutto viene salvato nella tua cartella dei dati su questo PC e, se la usi, dentro l'app per iPhone."
+
+msgid "Phone sync is encrypted"
+msgstr "La sincronizzazione del telefono è cifrata"
+
+msgid "Your iPhone sends your entries straight to this PC over your own network, encrypted with your token. The token itself is never sent."
+msgstr "Il tuo iPhone invia le tue voci direttamente a questo PC sulla tua rete, cifrate con il tuo token. Il token stesso non viene mai inviato."
+
+msgid "Health data only if you choose"
+msgstr "Dati di salute solo se lo scegli tu"
+
+msgid "Steps, resting heart rate and sleep are read only if you turn it on in the iPhone app, and only to show them next to your mood."
+msgstr "Passi, frequenza cardiaca a riposo e sonno vengono letti solo se lo attivi nell'app per iPhone, e solo per mostrarli accanto al tuo umore."
+
+msgid "No internet"
+msgstr "Niente internet"
+
+msgid "Moodlog never connects to the internet. Only a link you click, like the one below, opens a page in your browser."
+msgstr "Moodlog non si collega mai a internet. Solo un link che clicchi, come quello qui sotto, apre una pagina nel browser."
+
+msgid "Read the full policy"
+msgstr "Leggi l'informativa completa"
+
+msgid "Close"
+msgstr "Chiudi"

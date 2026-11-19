@@ -120,7 +120,7 @@ tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.5.0_all.deb
+    sudo apt install ./moodlog_2.5.1_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the iPhone app, see
 [`ios/README.md`](ios/README.md).
@@ -129,7 +129,9 @@ Remove it with `sudo apt remove moodlog`; your data is kept. For the iPhone app,
 
 Everything is in plain CSV files in `~/.local/share/moodlog/`, or in a folder you
 choose: `moods.csv`, `events.csv`, `dreams.csv` and `health.csv`. Nothing leaves your
-devices, there is no account, and the iPhone only talks to your own PC.
+devices, there is no account, and the iPhone only talks to your own PC, encrypted.
+The [privacy policy](PRIVACY.md) ([in italiano](PRIVACY.it.md)) says exactly what is
+stored and sent; in the app it's under ☰ → Privacy.
 
 - **Back up and restore**: the folder button in the title bar makes one .zip with
   all your data and restores it (your current data is saved first).

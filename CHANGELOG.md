@@ -4,6 +4,11 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 
 ## Moodlog for the PC
 
+### 2.5.1 (2026-11-19)
+
+- A privacy policy: ☰ menu → Privacy shows in short what Moodlog does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy.
+- The phone sync receiver no longer writes the address of a request to the system log in full, so a token sent in the address can't end up there.
+
 ### 2.5.0 (2026-11-19)
 
 - Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button.
@@ -100,6 +105,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 - First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file.
 
 ## Moodlog for iPhone
+
+### 1.4.1 (2026-11-19)
+
+- A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy.
 
 ### 1.4.0 (2026-11-19)
 

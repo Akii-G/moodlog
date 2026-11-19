@@ -170,3 +170,16 @@
 "Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted." = "Sul PC c'è una versione vecchia di Moodlog. Aggiornala alla 2.5 o successiva: ora la sincronizzazione è cifrata.";
 "Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer." = "Il PC ha inviato qualcosa di inatteso. Aggiorna Moodlog sul PC alla 2.5 o successiva.";
 "Connected to Moodlog %@ on your PC (encrypted)" = "Collegato a Moodlog %@ sul PC (cifrato)";
+"Privacy" = "Privacy";
+"Your data is yours" = "I tuoi dati sono tuoi";
+"Nobody collects your data" = "Nessuno raccoglie i tuoi dati";
+"Moodlog has no account, no server, no analytics and no ads. The developer never sees anything you write." = "Moodlog non ha account, server, statistiche d'uso né pubblicità. Lo sviluppatore non vede mai niente di quello che scrivi.";
+"It stays on your devices" = "Resta sui tuoi dispositivi";
+"Everything is saved inside this app and, if you sync, on your own PC." = "Tutto viene salvato dentro quest'app e, se sincronizzi, sul tuo PC.";
+"Sync is encrypted" = "La sincronizzazione è cifrata";
+"Your entries go straight to your PC over your own Wi-Fi, encrypted with your token. The token itself is never sent." = "Le tue voci vanno direttamente al tuo PC sulla tua rete Wi-Fi, cifrate con il tuo token. Il token stesso non viene mai inviato.";
+"Health data only if you choose" = "Dati di salute solo se lo scegli tu";
+"Steps, resting heart rate and sleep are read only if you allow it and turn it on in Settings → Apple Health, and only to show them next to your mood on your PC. Moodlog never writes to Apple Health." = "Passi, frequenza cardiaca a riposo e sonno vengono letti solo se lo permetti e lo attivi in Impostazioni → Salute di Apple, e solo per mostrarli accanto al tuo umore sul PC. Moodlog non scrive mai in Salute.";
+"No internet" = "Niente internet";
+"Moodlog never connects to the internet. Only the link below opens a page in Safari." = "Moodlog non si collega mai a internet. Solo il link qui sotto apre una pagina in Safari.";
+"Read the full policy" = "Leggi l'informativa completa";
