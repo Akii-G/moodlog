@@ -19,7 +19,7 @@ Version: $VERSION
 Section: utils
 Priority: optional
 Architecture: all
-Depends: python3 (>= 3.8), python3-gi, python3-gi-cairo, gir1.2-gtk-4.0, gir1.2-adw-1, python3-openpyxl
+Depends: python3 (>= 3.8), python3-gi, python3-gi-cairo, gir1.2-gtk-4.0, gir1.2-adw-1, python3-openpyxl, python3-cryptography
 Installed-Size: $SIZE
 Maintainer: Moodlog <moodlog@localhost>
 Description: Small local mood tracker

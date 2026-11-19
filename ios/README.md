@@ -24,7 +24,7 @@ by itself).
 
 ## Connect to your PC
 
-1. On the PC, update Moodlog to 2.0 or newer, open **Phone sync** and switch the
+1. On the PC, update Moodlog to 2.5 or newer, open **Phone sync** and switch the
    receiver on.
 2. In the app, open **Settings**, enter the address and token shown there (for
    example `http://pop-os.local:8765`), and tap **Test connection**.
@@ -32,6 +32,10 @@ by itself).
 Sync runs when the app opens and a few seconds after each change. Entries made away
 from home stay on the phone and sync when you are back. For each entry the newest
 change wins; deletions sync too.
+
+Everything the app sends is encrypted with your token (AES-256-GCM), and the token
+itself never leaves the phone. Moodlog 2.4 and older on the PC can't read it: update
+the PC first.
 
 ## Build it yourself (needs a Mac)
 

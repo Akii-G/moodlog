@@ -120,7 +120,7 @@ tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.4.0_all.deb
+    sudo apt install ./moodlog_2.5.0_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the iPhone app, see
 [`ios/README.md`](ios/README.md).
@@ -152,12 +152,18 @@ devices, there is no account, and the iPhone only talks to your own PC.
 - Changes carry an id and a time, so the newest change wins and deletions sync too.
 
 The receiver is `moodlog --sync-server`, run as the systemd user service
-`moodlog-sync.service` on port 8765. It only accepts requests that carry your token
-and restarts itself after an update. Traffic is plain HTTP, so use it on a network
-you trust. It accepts `POST /api/sync` from the iPhone app and `POST /health` with
-text lines `metric;date;value` (and `sleep;start;end;stage`), JSON
-`{"data": "<those lines>"}`, JSON `{"date": ..., "steps": ..., ...}` or the Health
-Auto Export app's REST format (untested).
+`moodlog-sync.service` on port 8765, and restarts itself after an update.
+
+- **Moodlog for iPhone (1.4+) is encrypted end to end:** every request and reply is
+  sealed with AES-256-GCM using a key derived from your token (HKDF-SHA256), on
+  `POST /api/e/ping`, `/api/e/sync` and `/api/e/health`. The token itself is never
+  sent, so someone on the same Wi-Fi sees only scrambled data.
+- **The Shortcut can't encrypt:** `POST /health` takes the token in an
+  `Authorization` header and the data in clear (text lines `metric;date;value` and
+  `sleep;start;end;stage`, JSON `{"data": "<those lines>"}`, JSON
+  `{"date": ..., "steps": ..., ...}`, or Health Auto Export's REST format, untested).
+  Use it only on a network you trust. Phone sync shows whether the last connection
+  was encrypted, and **Change token…** makes a new token at any time.
 
 From a terminal: `moodlog --export FILE.xlsx` (or `.csv`) and
 `moodlog --report FILE.pdf --from 2026-09-01 --to 2026-11-30` (add `--notes`,

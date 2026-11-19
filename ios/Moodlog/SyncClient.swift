@@ -49,16 +49,15 @@ enum SyncClient {
         return url
     }
 
-    static func request(_ path: String, method: String = "GET", body: Data? = nil) async throws -> Data {
-        let url = try baseURL().appendingPathComponent(path)
+    /// Sends `payload` encrypted to `path` (e.g. "/api/e/sync") and returns the decrypted reply.
+    /// The token is only used as the key: it is never sent.
+    static func request(_ path: String, payload: Data) async throws -> Data {
+        let url = try baseURL().appendingPathComponent(String(path.dropFirst()))
         var req = URLRequest(url: url)
-        req.httpMethod = method
+        req.httpMethod = "POST"
         req.timeoutInterval = 20
-        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        if let body = body {
-            req.httpBody = body
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        }
+        req.httpBody = try SyncCrypto.seal(payload, token: token, path: path)
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let result: (Data, URLResponse)
         do {
             result = try await URLSession.shared.data(for: req)
@@ -66,28 +65,33 @@ enum SyncClient {
             throw SyncError.unreachable(error.localizedDescription)
         }
         let data = result.0
-        let response = result.1
-        guard let http = response as? HTTPURLResponse else { throw SyncError.server(tr("No answer from your PC.")) }
+        guard let http = result.1 as? HTTPURLResponse else { throw SyncError.server(tr("No answer from your PC.")) }
         if http.statusCode == 401 { throw SyncError.unauthorized }
+        if http.statusCode == 404 {
+            throw SyncError.server(tr("Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted."))
+        }
         if !(200..<300).contains(http.statusCode) {
             if let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let message = doc["error"] as? String {
                 throw SyncError.server(message)
             }
-            let text = String(data: data, encoding: .utf8) ?? ""
-            throw SyncError.server(text.isEmpty ? tr("Your PC answered with error %@.", String(http.statusCode)) : text)
+            throw SyncError.server(tr("Your PC answered with error %@.", String(http.statusCode)))
         }
-        return data
+        do {
+            return try SyncCrypto.open(data, token: token, path: path)
+        } catch {
+            throw SyncError.unauthorized
+        }
     }
 
-    /// Checks the address and token. Returns e.g. "Connected to Moodlog 2.0.0".
+    /// Checks the address and token. Returns e.g. "Connected to Moodlog 2.5.0".
     static func ping() async throws -> String {
-        let data = try await request("api/ping")
+        let data = try await request("/api/e/ping", payload: Data("{}".utf8))
         guard let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = doc["version"] as? String else {
-            throw SyncError.server(tr("That address answered, but it isn't Moodlog 2.0 or newer. Update Moodlog on your PC."))
+            throw SyncError.server(tr("Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer."))
         }
-        return tr("Connected to Moodlog %@ on your PC", version)
+        return tr("Connected to Moodlog %@ on your PC (encrypted)", version)
     }
 
     private struct Outgoing: Codable {
@@ -105,21 +109,22 @@ enum SyncClient {
         let body = try JSONEncoder().encode(Outgoing(entries: state.entries, events: state.events,
                                                      deleted: state.deleted, dreams: state.dreams ?? [],
                                                      device: UIDevice.current.name))
-        let data = try await request("api/sync", method: "POST", body: body)
+        let data = try await request("/api/e/sync", payload: body)
         let remote: SyncState
         do {
             remote = try JSONDecoder().decode(SyncState.self, from: data)
         } catch {
-            throw SyncError.server(tr("Your PC sent something unexpected. Update Moodlog on your PC to 2.0 or newer."))
+            throw SyncError.server(tr("Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer."))
         }
         return store.absorb(remote)
     }
 
-    /// Sends Health lines (the same format as the shortcut) to /health.
+    /// Sends Health lines (the same format as the shortcut), encrypted.
     static func sendHealth(lines: [String]) async throws -> String {
-        let body = try JSONSerialization.data(withJSONObject: ["data": lines.joined(separator: "\n")])
-        let data = try await request("health", method: "POST", body: body)
-        return (String(data: data, encoding: .utf8) ?? tr("Sent.")).trimmingCharacters(in: .whitespacesAndNewlines)
+        let body = try JSONSerialization.data(withJSONObject: ["lines": lines.joined(separator: "\n")])
+        let data = try await request("/api/e/health", payload: body)
+        let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return ((doc?["message"] as? String) ?? tr("Sent.")).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

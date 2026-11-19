@@ -32,9 +32,6 @@
 "Can't reach your PC. Is it on, with Phone sync switched on, and is your iPhone on the same Wi-Fi? (%@)" = "Impossibile raggiungere il PC. È acceso, con Sincronizza telefono attivo, e l'iPhone è sulla stessa rete Wi-Fi? (%@)";
 "No answer from your PC." = "Nessuna risposta dal PC.";
 "Your PC answered with error %@." = "Il PC ha risposto con l'errore %@.";
-"That address answered, but it isn't Moodlog 2.0 or newer. Update Moodlog on your PC." = "A quell'indirizzo risponde qualcosa, ma non è Moodlog 2.0 o successivo. Aggiorna Moodlog sul PC.";
-"Connected to Moodlog %@ on your PC" = "Collegato a Moodlog %@ sul PC";
-"Your PC sent something unexpected. Update Moodlog on your PC to 2.0 or newer." = "Il PC ha inviato qualcosa di inatteso. Aggiorna Moodlog sul PC alla 2.0 o successiva.";
 "Sent." = "Inviato.";
 "Not synced yet" = "Non ancora sincronizzato";
 "Synced at %@" = "Sincronizzato alle %@";
@@ -170,3 +167,6 @@
 "Back" = "Indietro";
 "Let's start" = "Iniziamo";
 "Next" = "Avanti";
+"Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted." = "Sul PC c'è una versione vecchia di Moodlog. Aggiornala alla 2.5 o successiva: ora la sincronizzazione è cifrata.";
+"Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer." = "Il PC ha inviato qualcosa di inatteso. Aggiorna Moodlog sul PC alla 2.5 o successiva.";
+"Connected to Moodlog %@ on your PC (encrypted)" = "Collegato a Moodlog %@ sul PC (cifrato)";

@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.4.0"
+VERSION = "2.5.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -2372,6 +2372,103 @@ def lan_address():
         return None
 
 
+# ----------------------------------------------------------------- encrypted sync
+#
+# Moodlog for iPhone 1.4+ encrypts everything it sends: AES-256-GCM with a key derived
+# from the shared token (HKDF-SHA256), so the token itself never crosses the network.
+# A message is JSON {"v": 1, "n": base64 nonce, "c": base64 ciphertext+tag}; the
+# additional data binds it to its endpoint and direction, so a message can't be replayed
+# as another kind of message.
+
+SYNC_SALT, SYNC_INFO = b"moodlog-sync", b"moodlog sync v1"
+
+
+def sync_key(token):
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=SYNC_SALT,
+                info=SYNC_INFO).derive(token.encode("utf-8"))
+
+
+def sync_aad(path, reply):
+    return ("moodlog/v1 %s %s" % ("reply" if reply else "request", path)).encode("utf-8")
+
+
+def seal(token, path, obj, reply=False):
+    import base64
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    nonce = secrets.token_bytes(12)
+    data = AESGCM(sync_key(token)).encrypt(nonce, json.dumps(obj, ensure_ascii=False).encode("utf-8"),
+                                           sync_aad(path, reply))
+    return json.dumps({"v": 1, "n": base64.b64encode(nonce).decode(),
+                       "c": base64.b64encode(data).decode()}).encode("utf-8")
+
+
+def unseal(token, path, body, reply=False):
+    """The JSON inside an encrypted message; ValueError if it isn't one for this token."""
+    import base64, binascii
+    from cryptography.exceptions import InvalidTag
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    try:
+        doc = json.loads(body)
+        nonce, data = base64.b64decode(doc["n"]), base64.b64decode(doc["c"])
+        if doc.get("v") != 1 or len(nonce) != 12:
+            raise ValueError("unknown format")
+        plain = AESGCM(sync_key(token)).decrypt(nonce, data, sync_aad(path, reply))
+        return json.loads(plain)
+    except (KeyError, TypeError, binascii.Error, InvalidTag, UnicodeDecodeError, ValueError,
+            AttributeError) as err:
+        raise ValueError("not readable with this token") from err
+
+
+def crypto_available():
+    try:
+        import cryptography.hazmat.primitives.ciphers.aead  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def store_health_lines(body):
+    """Store health data sent as text or JSON (the Shortcut or the iPhone app).
+    Returns (stored anything, message for the sender)."""
+    incoming, problems = parse_payload(body)
+    store = HealthStore()
+    stored = store.merge(incoming)
+    if stored:
+        store.save()
+    parts = [trn("%s for %d day", "%s for %d days", n) % (metric_info(m)[0].lower(), n)
+             for m, n in stored.items()]
+    message = (tr("OK. Stored ") + ", ".join(parts) + ".") if parts else \
+        tr("Nothing stored: no health values found in what was sent.")
+    if problems:
+        key = next((p for p in problems if p.startswith(tr("sleep times"))), problems[0])
+        message += tr("\n%d line(s) skipped. %s") % (len(problems), key)
+    return bool(parts), message
+
+
+def write_sync_status(message, encrypted):
+    stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
+    how = tr("Encrypted.") if encrypted else tr("Not encrypted (the Shortcut or an older iPhone app).")
+    try:
+        with open(sync_status_path(), "w", encoding="utf-8") as f:
+            f.write("%s\n%s\n%s\n" % (stamp, message.strip(), how))
+    except OSError:
+        pass
+
+
+def new_sync_token():
+    """Replace the token (the old one stops working at once; the receiver reads it per request)."""
+    cfg = sync_config()
+    cfg["token"] = secrets.token_urlsafe(18)
+    path = os.path.join(data_dir(), "sync.json")
+    fd = os.open(path + ".tmp", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(cfg, f)
+    os.replace(path + ".tmp", path)
+    return cfg["token"]
+
+
 def run_sync_server():
     """`moodlog --sync-server`: receive health data from the phone over the local network.
 
@@ -2380,7 +2477,6 @@ def run_sync_server():
     import http.server
 
     cfg = sync_config()
-    token = cfg["token"]
 
     class Handler(http.server.BaseHTTPRequestHandler):
         server_version = "Moodlog/" + VERSION
@@ -2420,9 +2516,62 @@ def run_sync_server():
             if not given and "?" in self.path:
                 import urllib.parse
                 given = (urllib.parse.parse_qs(self.path.split("?", 1)[1]).get("token") or [""])[0]
-            return hmac.compare_digest(given.strip().encode(), token.encode())
+            return hmac.compare_digest(given.strip().encode(), sync_config()["token"].encode())
+
+        def encrypted(self):
+            """/api/e/...: everything inside is encrypted with the token; nothing is sent in clear."""
+            route = self.route()
+            if not crypto_available():
+                self.reply_json(501, {"error": tr("Encrypted sync needs the python3-cryptography "
+                                                  "package on the PC.")})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            if not 0 < length <= 60 * 1024 * 1024:
+                self.reply_json(400, {"error": tr("Empty request, or too large.")})
+                return
+            token = sync_config()["token"]
+            try:
+                doc = unseal(token, route, self.rfile.read(length))
+            except ValueError:
+                self.reply_json(401, {"error": tr("Could not read the request: the token doesn't match. "
+                                                  "Copy it again from Moodlog > Phone sync.")})
+                return
+            if route == "/api/e/ping":
+                answer = {"app": "Moodlog", "version": VERSION}
+            elif route == "/api/e/sync":
+                try:
+                    answer = sync_with_phone(json.dumps(doc))
+                except (ValueError, OSError) as err:
+                    self.reply_json(400, {"error": str(err)})
+                    return
+                write_sync_status(trn("Moodlog for iPhone synced (%d change).",
+                                      "Moodlog for iPhone synced (%d changes).", answer["changed"])
+                                  % answer["changed"], True)
+            elif route == "/api/e/health":
+                lines = doc.get("lines") if isinstance(doc, dict) else None
+                if not isinstance(lines, str):
+                    self.reply_json(400, {"error": tr("Empty request, or too large.")})
+                    return
+                stored, message = store_health_lines(lines.encode("utf-8"))
+                write_sync_status(message, True)
+                answer = {"stored": stored, "message": message}
+            else:
+                self.reply_json(404, {"error": "unknown"})
+                return
+            body = seal(token, route, answer, reply=True)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def do_POST(self):
+            if self.route().startswith("/api/e/"):
+                self.encrypted()
+                return
             if not self.authorised():
                 if self.route().startswith("/api/"):
                     self.reply_json(401, {"error": tr("Wrong or missing token. Copy it again from "
@@ -2448,35 +2597,14 @@ def run_sync_server():
                 except (ValueError, OSError) as err:
                     self.reply_json(400, {"error": str(err)})
                     return
-                stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-                try:
-                    with open(sync_status_path(), "w", encoding="utf-8") as f:
-                        f.write(trn("%s\nMoodlog for iPhone synced (%d change).\n",
-                                "%s\nMoodlog for iPhone synced (%d changes).\n", state["changed"]) % (
-                            stamp, state["changed"]))
-                except OSError:
-                    pass
+                write_sync_status(trn("Moodlog for iPhone synced (%d change).",
+                                      "Moodlog for iPhone synced (%d changes).", state["changed"])
+                                  % state["changed"], False)
                 self.reply_json(200, state)
                 return
-            incoming, problems = parse_payload(body)
-            store = HealthStore()
-            stored = store.merge(incoming)
-            if stored:
-                store.save()
-            parts = [trn("%s for %d day", "%s for %d days", n) % (metric_info(m)[0].lower(), n)
-                     for m, n in stored.items()]
-            message = (tr("OK. Stored ") + ", ".join(parts) + ".") if parts else \
-                tr("Nothing stored: no health values found in what was sent.")
-            if problems:
-                key = next((p for p in problems if p.startswith(tr("sleep times"))), problems[0])
-                message += tr("\n%d line(s) skipped. %s") % (len(problems), key)
-            stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
-            try:
-                with open(sync_status_path(), "w", encoding="utf-8") as f:
-                    f.write("%s\n%s\n" % (stamp, message))
-            except OSError:
-                pass
-            self.reply(200 if parts else 422, message)
+            stored, message = store_health_lines(body)
+            write_sync_status(message, False)
+            self.reply(200 if stored else 422, message)
 
         def log_message(self, fmt, *args):
             sys.stderr.write("moodlog-sync: %s\n" % (fmt % args))
@@ -4180,6 +4308,11 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.5.0", "2026-11-19", [
+        "Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your "
+        "token, and the token itself never crosses the network. Phone sync shows whether the "
+        "last connection was encrypted, and has a new Change token button.",
+    ]),
     ("2.4.0", "2026-11-19", [
         "A welcome tour for new users: a few friendly, animated steps that point at each part of "
         "the window and explain it. It opens by itself on a new install; see it any time from the "
@@ -4277,6 +4410,10 @@ CHANGELOG = [
 # Moodlog for iPhone (ios/) has its own version numbers. Only used for CHANGELOG.md,
 # never shown in the PC app's "What's new" window.
 IPHONE_CHANGELOG = [
+    ("1.4.0", "2026-11-19", [
+        "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), "
+        "and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC.",
+    ]),
     ("1.3.0", "2026-11-19", [
         "A welcome tour for new users: it switches to each tab by itself and explains it, with "
         "a spotlight on the calendar and a line pointing at the tab. Watch it again from "
@@ -4593,20 +4730,27 @@ class SyncWindow(Gtk.Window):
             val = Gtk.Label(label=value, xalign=0, selectable=True, hexpand=True)
             val.set_wrap(True)
             val.set_wrap_mode(Pango.WrapMode.CHAR)
+            if name == tr("Token"):
+                self.token_label = val
             copy = Gtk.Button.new_from_icon_name("edit-copy-symbolic")
             copy.set_tooltip_text(tr("Copy"))
             copy.add_css_class("flat")
-            copy.connect("clicked", self.on_copy, value)
+            copy.connect("clicked", lambda _b, v=val: self.on_copy(None, v.get_text()))
             grid.attach(key, 0, r, 1, 1)
             grid.attach(val, 1, r, 1, 1)
             grid.attach(copy, 2, r, 1, 1)
         col.append(card(grid))
+        change = Gtk.Button(label=tr("Change token\u2026"), halign=Gtk.Align.START)
+        change.set_tooltip_text(tr("Make a new token: the old one stops working at once"))
+        change.connect("clicked", self.on_change_token)
+        col.append(change)
 
         note = Gtk.Label(xalign=0, wrap=True, label=(
-            tr("The token is a password: only requests that carry it are accepted. The receiver "
-            "works only on your local network. It takes in Health values from the shortcut, "
-            "and it syncs moods and events with the Moodlog app for iPhone (use the same "
-            "address and token in the app's Settings).")))
+            tr("The token is a password, and the receiver works only on your local network. "
+               "Moodlog for iPhone (1.4 and newer) encrypts everything it sends with it, so the "
+               "token itself never crosses the network. The Shortcut can't encrypt: it sends "
+               "Health values and the token unencrypted, so use it only on a network you trust. "
+               "Use the same address and token in the iPhone app's Settings.")))
         note.add_css_class("dim-label")
         note.add_css_class("caption")
         col.append(note)
@@ -4625,6 +4769,20 @@ class SyncWindow(Gtk.Window):
     def on_close(self, *_):
         GLib.source_remove(self._timer)
         return False
+
+    def on_change_token(self, *_):
+        def change():
+            try:
+                self.token_label.set_text(new_sync_token())
+            except OSError as err:
+                self.error = tr("Could not change the token: %s") % err
+                self.update_status()
+        ConfirmWindow(self, tr("Change the token?"),
+                      tr("The old token stops working at once. Enter the new one in Moodlog for "
+                         "iPhone (Settings) and in the Shortcut, if you use it. Worth doing once "
+                         "after updating to encrypted sync, since older versions sent the token "
+                         "unencrypted."),
+                      [(tr("Change token"), change, "suggested-action")]).present()
 
     def on_copy(self, _btn, value):
         self.get_clipboard().set_content(Gdk.ContentProvider.new_for_value(value))

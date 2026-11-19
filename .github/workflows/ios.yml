@@ -28,6 +28,11 @@ jobs:
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
 
+      - name: Check encryption matches the PC
+        run: |
+          swiftc -O -o crypto-check ios/Moodlog/SyncCrypto.swift ios/CryptoCheck/main.swift
+          ./crypto-check
+
       - name: Install XcodeGen and ldid
         run: brew install xcodegen ldid
 

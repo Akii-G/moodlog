@@ -1664,3 +1664,44 @@ msgstr "Mostra la guida"
 
 msgid "A welcome tour for new users: a few friendly, animated steps that point at each part of the window and explain it. It opens by itself on a new install; see it any time from the ☰ menu → Show the tour."
 msgstr "Una guida di benvenuto per chi inizia: pochi passaggi animati e rassicuranti che indicano ogni parte della finestra e la spiegano. Si apre da sola alla prima installazione; puoi rivederla quando vuoi dal menu ☰ → Mostra la guida."
+
+msgid "Encrypted."
+msgstr "Cifrato."
+
+msgid "Not encrypted (the Shortcut or an older iPhone app)."
+msgstr "Non cifrato (il comando rapido o una versione vecchia dell'app per iPhone)."
+
+msgid "Encrypted sync needs the python3-cryptography package on the PC."
+msgstr "La sincronizzazione cifrata richiede il pacchetto python3-cryptography sul PC."
+
+msgid "Could not read the request: the token doesn't match. Copy it again from Moodlog > Phone sync."
+msgstr "Impossibile leggere la richiesta: il token non corrisponde. Copialo di nuovo da Moodlog > Sincronizza telefono."
+
+msgid "Change token…"
+msgstr "Cambia token…"
+
+msgid "Make a new token: the old one stops working at once"
+msgstr "Crea un nuovo token: quello vecchio smette subito di funzionare"
+
+msgid "The token is a password, and the receiver works only on your local network. Moodlog for iPhone (1.4 and newer) encrypts everything it sends with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the iPhone app's Settings."
+msgstr "Il token è una password, e il ricevitore funziona solo nella tua rete locale. Moodlog per iPhone (1.4 e successive) cifra tutto ciò che invia con il token, così il token stesso non passa mai in rete. Il comando rapido non può cifrare: invia i valori di Salute e il token in chiaro, quindi usalo solo su una rete di cui ti fidi. Usa lo stesso indirizzo e token nelle Impostazioni dell'app per iPhone."
+
+msgid "Could not change the token: %s"
+msgstr "Impossibile cambiare il token: %s"
+
+msgid "Change the token?"
+msgstr "Cambiare il token?"
+
+msgid "The old token stops working at once. Enter the new one in Moodlog for iPhone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
+msgstr "Il vecchio token smette subito di funzionare. Inserisci quello nuovo in Moodlog per iPhone (Impostazioni) e nel comando rapido, se lo usi. Vale la pena farlo una volta dopo l'aggiornamento alla sincronizzazione cifrata, perché le versioni precedenti inviavano il token in chiaro."
+
+msgid "Change token"
+msgstr "Cambia token"
+
+msgid "Moodlog for iPhone synced (%d change)."
+msgid_plural "Moodlog for iPhone synced (%d changes)."
+msgstr[0] "Moodlog per iPhone sincronizzato (%d modifica)."
+msgstr[1] "Moodlog per iPhone sincronizzato (%d modifiche)."
+
+msgid "Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button."
+msgstr "Sincronizzazione col telefono cifrata: Moodlog per iPhone 1.4 cifra tutto ciò che invia con il tuo token, e il token stesso non passa mai in rete. Sincronizza telefono mostra se l'ultima connessione era cifrata, e ha un nuovo pulsante Cambia token."
