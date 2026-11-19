@@ -10,8 +10,10 @@ steps, resting heart rate) to the PC, replacing the shortcut.
 ## Install
 
 The app is built by GitHub Actions (`.github/workflows/ios.yml`) on every change to
-`ios/`. Download **Moodlog-ipa** from the latest run's artifacts (or the `.ipa`
-attached to an `ios-v…` release) and install it with **SideStore** or **AltStore**.
+`ios/`, and attached to every [release](https://github.com/Akii-G/moodlog/releases)
+as `Moodlog-iPhone-<version>.ipa`. The iPhone app has its own version number, so check
+the release notes (or [CHANGELOG.md](../CHANGELOG.md)) to see whether it changed.
+Install the `.ipa` with **SideStore** or **AltStore**.
 With a free Apple ID the app must be refreshed every 7 days (SideStore can do this
 by itself).
 

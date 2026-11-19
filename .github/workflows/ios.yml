@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths: ["ios/**", ".github/workflows/ios.yml"]
-    tags: ["ios-v*"]
+  release:
+    types: [published]   # every release gets the iPhone app attached
   workflow_dispatch:
 
 permissions:
@@ -48,13 +49,16 @@ jobs:
           # A placeholder signature that carries the Health entitlement; SideStore/AltStore
           # re-sign the app with your Apple ID when installing.
           ldid -SMoodlog/Moodlog.entitlements Payload/Moodlog.app/Moodlog
-          zip -qry Moodlog.ipa Payload
-          ls -la Moodlog.ipa
+          VERSION=$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml)
+          IPA="Moodlog-iPhone-$VERSION.ipa"
+          zip -qry "$IPA" Payload
+          ls -la "$IPA"
+          echo "IPA=$IPA" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Moodlog-ipa
-          path: ios/Moodlog.ipa
+          name: Moodlog-iPhone-ipa
+          path: ios/Moodlog-iPhone-*.ipa
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -63,7 +67,8 @@ jobs:
           path: ios/build.log
 
       - name: Attach to the release
-        if: startsWith(github.ref, 'refs/tags/ios-v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ios/Moodlog.ipa
+        if: github.event_name == 'release'
+        working-directory: ios
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "$IPA" --clobber --repo "${{ github.repository }}"

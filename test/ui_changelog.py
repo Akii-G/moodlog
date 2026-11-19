@@ -11,7 +11,7 @@ def wins(): return [w for w in Gtk.Window.list_toplevels() if isinstance(w, m.Ch
 def s1():
     assert len(wins()) == 1, "changelog not shown after update"
     assert json.load(open(os.path.join(cfg, "config.json")))["last_seen_version"] == m.VERSION
-    assert m.CHANGELOG[0][0] == m.VERSION and "## 1.0.0" in m.changelog_markdown()
+    assert m.CHANGELOG[0][0] == m.VERSION and "### 1.0.0" in m.changelog_markdown() and "## Moodlog for iPhone" in m.changelog_markdown()
     return False
 def s2():
     subprocess.run(["import", "-window", "root", "/tmp/changelog_%s.png" % tag])

@@ -96,7 +96,8 @@ not modified.
 There is also a native iPhone app (in `ios/`): log moods, energy, anxiety, notes
 and events on your phone, and they sync with Moodlog on your PC through the same
 receiver (newest change wins; deletions sync too). It can send Apple Health data
-as well, so it can replace the shortcut. See [`ios/README.md`](ios/README.md) for
+as well, so it can replace the shortcut. Every [release](https://github.com/Akii-G/moodlog/releases)
+includes it as `Moodlog-iPhone-<version>.ipa`. See [`ios/README.md`](ios/README.md) for
 how to install it (SideStore or AltStore) and connect it.
 
 ### iPhone shortcut

@@ -3633,6 +3633,19 @@ CHANGELOG = [
 ]
 
 
+# Moodlog for iPhone (ios/) has its own version numbers. Only used for CHANGELOG.md,
+# never shown in the PC app's "What's new" window.
+IPHONE_CHANGELOG = [
+    ("1.0.1", "2026-11-19", [
+        "Days with several moods show a face on each tile of the calendar, like on the PC.",
+    ]),
+    ("1.0.0", "2026-11-19", [
+        "First version: log moods with energy, anxiety and a note, add events, browse the "
+        "calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.",
+    ]),
+]
+
+
 def version_key(version):
     try:
         return tuple(int(part) for part in str(version).split("."))
@@ -3641,12 +3654,18 @@ def version_key(version):
 
 
 def changelog_markdown():
-    lines = ["# Changelog", "", "All versions of Moodlog for the PC, newest first.", ""]
-    for version, day, items in CHANGELOG:
-        lines.append("## %s (%s)" % (version, day))
+    lines = ["# Changelog", "",
+             "Moodlog for the PC and Moodlog for iPhone have their own version numbers. "
+             "Each GitHub release is named after the PC version and includes both apps.", ""]
+    for heading, log in (("Moodlog for the PC", CHANGELOG),
+                         ("Moodlog for iPhone", IPHONE_CHANGELOG)):
+        lines.append("## " + heading)
         lines.append("")
-        lines.extend("- " + item for item in items)
-        lines.append("")
+        for version, day, items in log:
+            lines.append("### %s (%s)" % (version, day))
+            lines.append("")
+            lines.extend("- " + item for item in items)
+            lines.append("")
     return "\n".join(lines)
 
 
