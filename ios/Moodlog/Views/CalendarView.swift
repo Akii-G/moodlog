@@ -163,13 +163,32 @@ struct DayCell: View {
                     ForEach(0..<cols, id: \.self) { c in
                         let i = r * cols + c
                         if i < shown.count {
-                            Rectangle().fill(Palette.mood(shown[i]))
+                            MoodTile(mood: shown[i])
                         } else {
                             Rectangle().fill(Color.clear)
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/// One entry's tile inside a day: its colour, plus the face when the tile is big enough.
+struct MoodTile: View {
+    let mood: Int
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            ZStack {
+                Rectangle().fill(Palette.mood(mood))
+                if side >= 14 {
+                    FaceView(mood: mood, ink: Palette.faceInk(mood), outline: false)
+                        .frame(width: side * 0.8, height: side * 0.8)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 }
