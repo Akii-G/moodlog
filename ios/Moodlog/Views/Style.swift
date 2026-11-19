@@ -126,9 +126,9 @@ struct ScalePicker: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(title)
+                Text(tr(title))
                 Spacer()
-                Text(value > 0 ? "\(value) · \(words[value] ?? "")" : "not set")
+                Text(value > 0 ? "\(value) · \(words[value] ?? "")" : tr("not set"))
                     .foregroundStyle(.secondary)
                     .font(.subheadline)
             }
@@ -145,7 +145,7 @@ struct ScalePicker: View {
                             .foregroundStyle(value == n ? Color.white : Color.primary)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(title) \(n), \(words[n] ?? "")")
+                    .accessibilityLabel("\(tr(title)) \(n), \(words[n] ?? "")")
                 }
             }
         }

@@ -22,10 +22,10 @@ struct ChartsView: View {
             guard let date = Day.date(d) else { return [] }
             var out: [Point] = []
             if let e = store.scaleAverage(on: d, energy: true) {
-                out.append(Point(id: d + "e", date: date, value: e, series: "Energy"))
+                out.append(Point(id: d + "e", date: date, value: e, series: tr("Energy")))
             }
             if let a = store.scaleAverage(on: d, energy: false) {
-                out.append(Point(id: d + "a", date: date, value: a, series: "Anxiety"))
+                out.append(Point(id: d + "a", date: date, value: a, series: tr("Anxiety")))
             }
             return out
         }
@@ -95,7 +95,7 @@ struct ChartsView: View {
                                     .foregroundStyle(by: .value("Scale", p.series))
                                     .symbol(by: .value("Scale", p.series))
                             }
-                            .chartForegroundStyleScale(["Energy": Palette.energy, "Anxiety": Palette.anxiety])
+                            .chartForegroundStyleScale([tr("Energy"): Palette.energy, tr("Anxiety"): Palette.anxiety])
                             .chartYScale(domain: 1...5)
                             .frame(height: 180)
                             Text("Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious.")
@@ -138,17 +138,17 @@ struct ChartsView: View {
         }
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             tile("Average mood", avg.map { String(format: "%.1f", $0) } ?? "–",
-                 avg.map { Mood.name(Mood.level($0)) } ?? "nothing logged")
-            tile("Days logged", "\(moodPoints.count)", "this month")
+                 avg.map { Mood.name(Mood.level($0)) } ?? tr("nothing logged"))
+            tile("Days logged", "\(moodPoints.count)", tr("this month"))
             tile("Most common", allMoods.isEmpty ? "–" : Mood.name(common ?? 3),
-                 allMoods.isEmpty ? "" : "\(allMoods.filter { $0 == (common ?? 3) }.count) times")
-            tile("Current streak", "\(store.streak) day\(store.streak == 1 ? "" : "s")", "in a row")
+                 allMoods.isEmpty ? "" : trn("%@ time", "%@ times", allMoods.filter { $0 == (common ?? 3) }.count))
+            tile("Current streak", trn("%@ day", "%@ days", store.streak), tr("in a row"))
         }
     }
 
     private func tile(_ title: String, _ value: String, _ sub: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(tr(title)).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.title2.weight(.bold))
             Text(sub).font(.caption2).foregroundStyle(.secondary)
         }
@@ -159,7 +159,7 @@ struct ChartsView: View {
 
     private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.headline)
+            Text(tr(title)).font(.headline)
             content()
         }
         .padding()
@@ -168,7 +168,7 @@ struct ChartsView: View {
     }
 
     private func empty(_ text: String) -> some View {
-        Text(text).font(.subheadline).foregroundStyle(.secondary)
+        Text(tr(text)).font(.subheadline).foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, minHeight: 80)
     }
 }

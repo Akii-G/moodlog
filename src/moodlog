@@ -32,18 +32,137 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 
-MOOD_NAMES = {1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"}
+# ----------------------------------------------------------------- languages
+# Text in the app goes through tr() (and trn() for plurals). Translations are plain
+# gettext .po files: po/it.po in the source tree, /usr/share/moodlog/po/it.po when installed.
+# The language follows the system, unless one is chosen in the ☰ menu (config "language")
+# or set with MOODLOG_LANG.
+
+LANGUAGES = [("auto", "Automatic"), ("en", "English"), ("it", "Italiano")]
+
+
+def system_language():
+    for var in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
+        value = (os.environ.get(var) or "").split(":")[0]
+        if value:
+            code = value.split(".")[0].split("_")[0].split("@")[0].lower()
+            return "en" if code in ("c", "posix") else code
+    return "en"
+
+
+def configured_language():
+    base = (os.environ.get("MOODLOG_CONFIG_DIR") or os.environ.get("MOODLOG_DATA_DIR")
+            or os.path.join(GLib.get_user_config_dir(), "moodlog"))
+    try:
+        with open(os.path.join(base, "config.json"), encoding="utf-8") as f:
+            value = json.load(f).get("language", "auto")
+        return value if value in dict(LANGUAGES) else "auto"
+    except (OSError, ValueError, AttributeError):
+        return "auto"
+
+
+def pick_language():
+    wanted = os.environ.get("MOODLOG_LANG") or configured_language()
+    if wanted == "auto":
+        wanted = system_language()
+    return wanted if wanted in dict(LANGUAGES) and wanted != "auto" else "en"
+
+
+def po_paths(code):
+    here = os.path.dirname(os.path.realpath(os.path.abspath(sys.argv[0] if __name__ == "__main__"
+                                                            else __file__)))
+    dirs = [os.environ.get("MOODLOG_PO_DIR"), os.path.join(here, "..", "po"),
+            os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "po"),
+            "/usr/share/moodlog/po"]
+    return [os.path.join(d, code + ".po") for d in dirs if d]
+
+
+def read_po(path):
+    """A gettext .po file -> {msgid: text, (msgid, msgid_plural): [forms]}. Fuzzy entries are skipped."""
+    catalog, entries = {}, []
+    entry, key, fuzzy_next = None, None, False
+    with open(path, encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if line.startswith("#"):
+                fuzzy_next = fuzzy_next or (line.startswith("#,") and "fuzzy" in line)
+                continue
+            if line.startswith('"'):
+                if entry is not None and key:
+                    entry[key] += json.loads(line)
+                continue
+            name, _sep, rest = line.partition(" ")
+            if not name:
+                continue
+            if name == "msgid":
+                entry = {"fuzzy": fuzzy_next}
+                fuzzy_next = False
+                entries.append(entry)
+            if entry is not None:
+                key = name
+                entry[key] = json.loads(rest.strip())
+    for e in entries:
+        msgid = e.get("msgid")
+        if not msgid or e["fuzzy"]:
+            continue
+        if "msgid_plural" in e:
+            forms = [e.get("msgstr[0]", ""), e.get("msgstr[1]", "")]
+            if all(forms):
+                catalog[(msgid, e["msgid_plural"])] = forms
+        elif e.get("msgstr"):
+            catalog[msgid] = e["msgstr"]
+    return catalog
+
+
+LANG_CODE = pick_language()
+CATALOG = {}
+if LANG_CODE != "en":
+    for _path in po_paths(LANG_CODE):
+        if os.path.exists(_path):
+            try:
+                CATALOG = read_po(_path)
+            except (OSError, ValueError):
+                CATALOG = {}
+            break
+
+
+def tr(text):
+    return CATALOG.get(text) or text
+
+
+def trn(singular, plural, n):
+    """The right form for a count; both English and Italian use one form for 1, another otherwise."""
+    forms = CATALOG.get((singular, plural))
+    if forms:
+        return forms[0] if n == 1 else forms[1]
+    return singular if n == 1 else plural
+
+
+def fmt_date(day, pattern):
+    """strftime with the app's own day and month names, so dates follow the app's language."""
+    names = {"%A": WEEKDAYS_LONG[day.weekday()], "%a": WEEKDAYS[day.weekday()],
+             "%B": MONTHS[day.month - 1], "%b": MONTHS_SHORT[day.month - 1]}
+    if LANG_CODE == "it":   # Italian writes day and month names in lower case mid-sentence
+        names = {k: v.lower() for k, v in names.items()}
+    out = day.strftime(re.sub("%[aAbB]", lambda m: names[m.group(0)].replace("%", "%%"), pattern))
+    return out[:1].upper() + out[1:] if LANG_CODE == "it" else out
+
+
+MOOD_NAMES = {1: tr("Awful"), 2: tr("Bad"), 3: tr("Okay"), 4: tr("Good"), 5: tr("Great")}
 # Two optional 1-5 scales next to the mood. Index = position in an entry.
-SCALES = [(3, "energy", "Energy", "1 = very low, 5 = very high"),
-          (4, "anxiety", "Anxiety", "1 = calm, 5 = very anxious")]
-SCALE_WORDS = {"energy": {1: "very low", 2: "low", 3: "medium", 4: "high", 5: "very high"},
-               "anxiety": {1: "calm", 2: "a little", 3: "some", 4: "a lot", 5: "very anxious"}}
-WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-WEEKDAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-MONTHS = ["January", "February", "March", "April", "May", "June", "July",
-          "August", "September", "October", "November", "December"]
+SCALES = [(3, "energy", tr("Energy"), tr("1 = very low, 5 = very high")),
+          (4, "anxiety", tr("Anxiety"), tr("1 = calm, 5 = very anxious"))]
+SCALE_WORDS = {"energy": {1: tr("very low"), 2: tr("low"), 3: tr("medium"), 4: tr("high"),
+                          5: tr("very high")},
+               "anxiety": {1: tr("calm"), 2: tr("a little"), 3: tr("some"), 4: tr("a lot"),
+                           5: tr("very anxious")}}
+WEEKDAYS = [tr("Mon"), tr("Tue"), tr("Wed"), tr("Thu"), tr("Fri"), tr("Sat"), tr("Sun")]
+WEEKDAYS_LONG = [tr("Monday"), tr("Tuesday"), tr("Wednesday"), tr("Thursday"), tr("Friday"), tr("Saturday"), tr("Sunday")]
+MONTHS = [tr("January"), tr("February"), tr("March"), tr("April"), tr("May"), tr("June"), tr("July"),
+          tr("August"), tr("September"), tr("October"), tr("November"), tr("December")]
+MONTHS_SHORT = [name[:3] for name in MONTHS]   # Jan…, and gen, feb, mar… in Italian
 
 # Mood colours: red (low) <-> blue (high) with a neutral grey middle.
 # Red/blue stays readable for people with red-green colour blindness,
@@ -326,17 +445,17 @@ class Store:
         items = self.entries(day)
         moods = [e[1] for e in items if e[1]]
         if not moods:
-            head = "%s — no mood logged" % title
+            head = tr("%s — no mood logged") % title
         elif len(moods) == 1:
             head = "%s — %s" % (title, MOOD_NAMES[moods[0]])
         else:
             avg = sum(moods) / len(moods)
-            head = "%s — %s (average %.1f of %d entries)" % (
+            head = tr("%s — %s (average %.1f of %d entries)") % (
                 title, MOOD_NAMES[to_level(avg)], avg, len(moods))
         lines = [head]
         for time, mood, note, energy, anxiety, *_ in items:
             extra = ", ".join("%s %d" % (name.lower(), value) for value, name in
-                              ((energy, "Energy"), (anxiety, "Anxiety")) if value)
+                              ((energy, tr("Energy")), (anxiety, tr("Anxiety"))) if value)
             if len(items) == 1 and not note.strip() and not extra:
                 break
             parts = [p for p in (time, MOOD_NAMES.get(mood, ""), extra, note.strip()) if p]
@@ -366,8 +485,8 @@ class Store:
 
 # ----------------------------------------------------------------- events
 
-EVENT_KINDS = [("medication", "Medication change"), ("health", "Health"),
-               ("life", "Life event"), ("other", "Other")]
+EVENT_KINDS = [("medication", tr("Medication change")), ("health", tr("Health")),
+               ("life", tr("Life event")), ("other", tr("Other"))]
 EVENT_LABELS = dict(EVENT_KINDS)
 AROUND_DAYS = 14
 
@@ -490,7 +609,7 @@ class EventStore:
 
 
 def event_line(event):
-    return "%s — %s: %s" % (event[0].strftime("%a %-d %b"), EVENT_LABELS[event[1]], event[2])
+    return "%s — %s: %s" % (fmt_date(event[0], "%a %-d %b"), EVENT_LABELS[event[1]], event[2])
 
 
 def mood_around(store, day, span=AROUND_DAYS):
@@ -508,18 +627,18 @@ def mood_around(store, day, span=AROUND_DAYS):
 def event_summary(store, event):
     day = event[0]
     if day > dt.date.today():
-        return "Planned. Your mood before and after will be compared once it has happened."
+        return tr("Planned. Your mood before and after will be compared once it has happened.")
     (b_avg, b_n), (a_avg, a_n), complete = mood_around(store, day)
-    weeks = "%d weeks" % (AROUND_DAYS // 7)
+    weeks = tr("%d weeks") % (AROUND_DAYS // 7)
 
     def part(avg, n):
         if n < 3:
-            return "not enough days logged (%d)" % n
-        return "%.1f (%d day%s logged)" % (avg, n, "" if n == 1 else "s")
+            return tr("not enough days logged (%d)") % n
+        return trn("%.1f (%d day logged)", "%.1f (%d days logged)", n) % (avg, n)
 
-    text_ = "Mood in the %s before: %s · after: %s" % (weeks, part(b_avg, b_n), part(a_avg, a_n))
+    text_ = tr("Mood in the %s before: %s · after: %s") % (weeks, part(b_avg, b_n), part(a_avg, a_n))
     if not complete:
-        text_ += ", so far"
+        text_ += tr(", so far")
     return text_
 
 
@@ -595,8 +714,8 @@ def export_csv(path, store, events, health):
     for metric in metrics:
         days.update(health.values.get(metric, {}))
 
-    header = ["Date", "Weekday", "Mood", "Mood score (1–5)", "Moods during the day",
-              "Notes", "Events", "Energy (1–5)", "Anxiety (1–5)"]
+    header = [tr("Date"), tr("Weekday"), tr("Mood"), tr("Mood score (1–5)"), tr("Moods during the day"),
+              tr("Notes"), tr("Events"), tr("Energy (1–5)"), tr("Anxiety (1–5)")]
     for metric in metrics:
         title, unit, _dec, _how = metric_info(metric)
         unit = {"h": "hours"}.get(unit, unit)
@@ -661,8 +780,8 @@ def export_xlsx(path, store, events, health):
         from openpyxl.styles import Font as _Font
         from openpyxl.utils import get_column_letter
     except ImportError:
-        raise ExportError("The spreadsheet export needs the python3-openpyxl package "
-                          "(sudo apt install python3-openpyxl).")
+        raise ExportError(tr("The spreadsheet export needs the python3-openpyxl package "
+                          "(sudo apt install python3-openpyxl)."))
 
     def Font(**kw):
         kw.setdefault("name", "Calibri")
@@ -717,11 +836,11 @@ def export_xlsx(path, store, events, health):
 
     # ---- Days
     days_ws = wb.active
-    days_ws.title = "Days"
-    headers = ["Date", "Weekday", "Mood", "Score (1–5)", "Moods during the day", "Notes",
-               "Events"]
+    days_ws.title = tr("Days")
+    headers = [tr("Date"), tr("Weekday"), tr("Mood"), tr("Score (1–5)"), tr("Moods during the day"), tr("Notes"),
+               tr("Events")]
     widths = [13, 12, 10, 9, 30, 50, 36]
-    headers += ["Energy (1–5)", "Anxiety (1–5)"]
+    headers += [tr("Energy (1–5)"), tr("Anxiety (1–5)")]
     widths += [9, 9]
     formats = {}
     for metric in metrics:
@@ -774,8 +893,8 @@ def export_xlsx(path, store, events, health):
     finish(days_ws, len(headers), len(all_days), freeze="C2")
 
     # ---- Entries
-    ent_ws = wb.create_sheet("Entries")
-    table(ent_ws, ["Date", "Time", "Mood", "Score", "Note", "Energy", "Anxiety"],
+    ent_ws = wb.create_sheet(tr("Entries"))
+    table(ent_ws, [tr("Date"), tr("Time"), tr("Mood"), tr("Score"), tr("Note"), tr("Energy"), tr("Anxiety")],
           [13, 8, 10, 7, 70, 9, 9])
     r = 1
     for day in sorted(store.days):
@@ -795,10 +914,10 @@ def export_xlsx(path, store, events, health):
     finish(ent_ws, 7, r - 1)
 
     # ---- Events
-    ev_ws = wb.create_sheet("Events")
+    ev_ws = wb.create_sheet(tr("Events"))
     weeks = AROUND_DAYS // 7
-    table(ev_ws, ["Date", "Type", "Title", "Details",
-                  "Mood %d weeks before" % weeks, "Mood %d weeks after" % weeks],
+    table(ev_ws, [tr("Date"), tr("Type"), tr("Title"), tr("Details"),
+                  tr("Mood %d weeks before") % weeks, tr("Mood %d weeks after") % weeks],
           [13, 18, 32, 46, 13, 13])
     r = 1
     today = dt.date.today()
@@ -819,20 +938,20 @@ def export_xlsx(path, store, events, health):
     finish(ev_ws, 6, r - 1)
 
     # ---- Summary (first sheet)
-    sm = wb.create_sheet("Summary", 0)
+    sm = wb.create_sheet(tr("Summary"), 0)
     sm.sheet_view.showGridLines = False
     sm.column_dimensions["A"].width = 26
     for col in "BCD":
         sm.column_dimensions[col].width = 14
-    sm["A1"] = "Moodlog export"
+    sm["A1"] = tr("Moodlog export")
     sm["A1"].font = Font(size=20, bold=True, color=ink)
     mood_days = store.moods()
     entries = [m for _d, _t, m in store.timed()]
     span = ""
     if all_days:
-        span = " · data from %s to %s" % (all_days[0].strftime("%-d %B %Y"),
-                                               all_days[-1].strftime("%-d %B %Y"))
-    sm["A2"] = "Exported %s%s" % (today.strftime("%-d %B %Y"), span)
+        span = tr(" · data from %s to %s") % (fmt_date(all_days[0], "%-d %B %Y"),
+                                               fmt_date(all_days[-1], "%-d %B %Y"))
+    sm["A2"] = tr("Exported %s%s") % (fmt_date(today, "%-d %B %Y"), span)
     sm["A2"].font = Font(color=muted)
 
     def figure(row, label, value, level=None, fmt=None):
@@ -849,24 +968,24 @@ def export_xlsx(path, store, events, health):
     avg_all = sum(m for _d, m in mood_days) / len(mood_days) if mood_days else 0
     day_avgs = [store.day_avg(d) for d, _m in mood_days]
     avg_all = sum(day_avgs) / len(day_avgs) if day_avgs else 0
-    figure(4, "Days with a mood", len(mood_days))
-    figure(5, "Moods logged", len(entries))
-    figure(6, "Average mood (1–5)", round(avg_all, 1) if avg_all else "–",
+    figure(4, tr("Days with a mood"), len(mood_days))
+    figure(5, tr("Moods logged"), len(entries))
+    figure(6, tr("Average mood (1–5)"), round(avg_all, 1) if avg_all else "–",
            to_level(avg_all) if avg_all else None, "0.0")
     if entries:
         common = max(range(1, 6), key=lambda m: (entries.count(m), m))
-        figure(7, "Most common mood", MOOD_NAMES[common], common)
+        figure(7, tr("Most common mood"), MOOD_NAMES[common], common)
     else:
-        figure(7, "Most common mood", "–")
-    figure(8, "Events logged", len(events.items))
+        figure(7, tr("Most common mood"), "–")
+    figure(8, tr("Events logged"), len(events.items))
 
     def section(row, title):
         cell = sm.cell(row=row, column=1, value=title)
         cell.font = Font(bold=True, size=13, color=ink)
 
     # mood counts + bar chart
-    section(10, "How often you logged each mood")
-    for c, name in enumerate(["Mood", "Times", "Share"], start=1):
+    section(10, tr("How often you logged each mood"))
+    for c, name in enumerate([tr("Mood"), tr("Times"), tr("Share")], start=1):
         cell = sm.cell(row=11, column=c, value=name)
         cell.fill, cell.font = head_fill, head_font
     total = len(entries) or 1
@@ -882,7 +1001,7 @@ def export_xlsx(path, store, events, health):
     if entries:
         chart = BarChart()
         chart.type = "bar"
-        chart.title = "How often you logged each mood"
+        chart.title = tr("How often you logged each mood")
         chart.legend = None
         chart.add_data(Reference(sm, min_col=2, min_row=11, max_row=16), titles_from_data=True)
         chart.set_categories(Reference(sm, min_col=1, min_row=12, max_row=16))
@@ -901,8 +1020,8 @@ def export_xlsx(path, store, events, health):
         sm.add_chart(chart, "F4")
 
     # monthly averages + line chart
-    section(19, "Average mood by month")
-    for c, name in enumerate(["Month", "Days logged", "Average (1–5)"], start=1):
+    section(19, tr("Average mood by month"))
+    for c, name in enumerate([tr("Month"), tr("Days logged"), tr("Average (1–5)")], start=1):
         cell = sm.cell(row=20, column=c, value=name)
         cell.fill, cell.font = head_fill, head_font
     months = {}
@@ -921,7 +1040,7 @@ def export_xlsx(path, store, events, health):
             sm.cell(row=row, column=c).border = rule
     if len(months) >= 2:
         chart = LineChart()
-        chart.title = "Average mood by month"
+        chart.title = tr("Average mood by month")
         chart.legend = None
         chart.add_data(Reference(sm, min_col=3, min_row=20, max_row=row), titles_from_data=True)
         chart.set_categories(Reference(sm, min_col=1, min_row=21, max_row=row))
@@ -977,7 +1096,7 @@ class _Pdf:
         import cairo
         self.surface = cairo.PDFSurface(path, self.W, self.H)
         try:
-            self.surface.set_metadata(cairo.PDF_METADATA_TITLE, "Mood report")
+            self.surface.set_metadata(cairo.PDF_METADATA_TITLE, tr("Mood report"))
             self.surface.set_metadata(cairo.PDF_METADATA_CREATOR, "Moodlog " + VERSION)
         except (AttributeError, Exception):
             pass
@@ -1015,9 +1134,9 @@ class _Pdf:
 
     def footer(self):
         y = self.H - self.M + 4
-        self.text("Made with Moodlog · self-reported data, not a medical record", self.M, y,
+        self.text(tr("Made with Moodlog · self-reported data, not a medical record"), self.M, y,
                   7.5, REPORT_INK["muted"])
-        self.text("Page %d" % self.page, self.W - self.M, y, 7.5, REPORT_INK["muted"], align=2)
+        self.text(tr("Page %d") % self.page, self.W - self.M, y, 7.5, REPORT_INK["muted"], align=2)
 
     def new_page(self):
         self.footer()
@@ -1059,32 +1178,33 @@ def export_report(path, store, events, health, start, end, include_notes=False,
     sleep_days = [d for d in days if d in sleep]
 
     # ---- title
-    pdf.text("Mood report", M, pdf.y, 20, ink["ink"], bold=True)
+    pdf.text(tr("Mood report"), M, pdf.y, 20, ink["ink"], bold=True)
     pdf.y += 30
-    sub = "%s – %s · %d days · made with Moodlog on %s" % (
-        start.strftime("%-d %B %Y"), end.strftime("%-d %B %Y"), span,
-        dt.date.today().strftime("%-d %B %Y"))
+    sub = tr("%s – %s · %d days · made with Moodlog on %s") % (
+        fmt_date(start, "%-d %B %Y"), fmt_date(end, "%-d %B %Y"), span,
+        fmt_date(dt.date.today(), "%-d %B %Y"))
     pdf.text(sub, M, pdf.y, 9, ink["muted"])
     pdf.y += 24
 
     # ---- key numbers
     avg_mood = _avg(store.day_avg(d) for d in mood_days)
-    tiles = [("Days with a mood", "%d of %d" % (len(mood_days), span), None),
-             ("Average mood (1–5)", ("%.1f  %s" % (avg_mood, MOOD_NAMES[to_level(avg_mood)]))
+    tiles = [(tr("Days with a mood"), tr("%d of %d") % (len(mood_days), span), None),
+             (tr("Average mood (1–5)"), ("%.1f  %s" % (avg_mood, MOOD_NAMES[to_level(avg_mood)]))
               if avg_mood else "–", to_level(avg_mood) if avg_mood else None),
-             ("Moods logged", str(len(entries)), None)]
+             (tr("Moods logged"), str(len(entries)), None)]
     for index, key, name, _hint in SCALES:
         value = _avg(store.day_scale(d, index) for d in days)
-        tiles.append(("Average %s (1–5)" % name.lower(),
+        tiles.append(({"energy": tr("Average energy (1–5)"),
+                    "anxiety": tr("Average anxiety (1–5)")}[key],
                       ("%.1f  %s" % (value, SCALE_WORDS[key][to_level(value)])) if value else "–",
                       None))
     if sleep_days:
-        tiles.append(("Average sleep", "%.1f h  (%d nights)" % (_avg(sleep[d] for d in sleep_days),
+        tiles.append((tr("Average sleep"), tr("%.1f h  (%d nights)") % (_avg(sleep[d] for d in sleep_days),
                                                              len(sleep_days)), None))
     elif rhr:
         vals = [rhr[d] for d in days if d in rhr]
         if vals:
-            tiles.append(("Resting heart rate", "%.0f bpm" % _avg(vals), None))
+            tiles.append((tr("Resting heart rate"), tr("%.0f bpm") % _avg(vals), None))
     cols, gap, th = 3, 10, 50
     tw = (W - 2 * M - gap * (cols - 1)) / cols
     for i, (label, value, level) in enumerate(tiles):
@@ -1103,7 +1223,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 
     # ---- mood mix (one stacked bar)
     if entries:
-        pdf.text("How often each mood was logged", M, pdf.y, 10, ink["ink"], bold=True)
+        pdf.text(tr("How often each mood was logged"), M, pdf.y, 10, ink["ink"], bold=True)
         pdf.y += 17
         total, x, bw, bh = len(entries), M, W - 2 * M, 14
         for level in range(1, 6):
@@ -1136,7 +1256,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         if not weekly:
             for i, d in enumerate(days):
                 if d in values:
-                    out.append((i, values[d], d.strftime("%-d %b")))
+                    out.append((i, values[d], fmt_date(d, "%-d %b")))
             return out, span
         weeks = {}
         for d, v in values.items():
@@ -1154,10 +1274,10 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             first = d.day == 1 or i == 0
             if span <= 45:
                 show = d.weekday() == 0 or i == 0
-                label = d.strftime("%-d %b")
+                label = fmt_date(d, "%-d %b")
             else:
                 show = first
-                label = d.strftime("%b %Y" if d.month == 1 or i == 0 else "%b")
+                label = fmt_date(d, "%b %Y" if d.month == 1 or i == 0 else "%b")
             if show:
                 slot = i if not weekly else i // 7
                 x = xpos(slot, n, left, width)
@@ -1202,8 +1322,8 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 
     left, width = M + 44, W - 2 * M - 44
     if mood_days:
-        top, height = chart_frame("Mood, %s" % ("weekly average" if weekly else "daily average"),
-                                  note=("Numbered marks are the events listed below."
+        top, height = chart_frame(tr("Mood, %s") % (tr("weekly average") if weekly else tr("daily average")),
+                                  note=(tr("Numbered marks are the events listed below.")
                                         if evs else None))
         for level in range(1, 6):
             y = round(top + height - (level - 1) / 4 * height) + 0.5
@@ -1240,8 +1360,8 @@ def export_report(path, store, events, health, start, end, include_notes=False,
                     for index, key, _n, _h in SCALES}
     if any(scale_values.values()):
         top, height = chart_frame(
-            "Energy and anxiety (1–5)", legend=[(name, ink[key]) for _i, key, name, _h in SCALES],
-            height=96, note="Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious.")
+            tr("Energy and anxiety (1–5)"), legend=[(name, ink[key]) for _i, key, name, _h in SCALES],
+            height=96, note=tr("Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious."))
         for level in range(1, 6):
             y = round(top + height - (level - 1) / 4 * height) + 0.5
             src(cr, ink["grid"])
@@ -1271,7 +1391,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         axis_ticks(n, left, width, top, height)
 
     if sleep_days:
-        top, height = chart_frame("Sleep (hours a night%s)" % (", weekly average" if weekly else ""),
+        top, height = chart_frame(tr("Sleep (hours a night%s)") % (tr(", weekly average") if weekly else ""),
                                   height=86)
         pts, n = buckets({d: sleep[d] for d in sleep_days})
         hi = max(10, math.ceil(max(v for _i, v, _l in pts) / 2) * 2)
@@ -1294,12 +1414,12 @@ def export_report(path, store, events, health, start, end, include_notes=False,
     # ---- events
     if evs:
         pdf.ensure(70)
-        pdf.text("Events", M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.text(tr("Events"), M, pdf.y, 12, ink["ink"], bold=True)
         pdf.y += 22
         weeks = AROUND_DAYS // 7
         colx = [M, M + 22, M + 92, M + 190, M + 410, M + 466]
-        heads = ["#", "Date", "Type", "What happened",
-                 "Mood %dw before" % weeks, "Mood %dw after" % weeks]
+        heads = ["#", tr("Date"), tr("Type"), tr("What happened"),
+                 tr("Mood %dw before") % weeks, tr("Mood %dw after") % weeks]
 
         def event_head():
             for x, h in zip(colx, heads):
@@ -1320,7 +1440,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
                 event_head()
             y = pdf.y
             pdf.text(str(number[id(e)]), colx[0], y, 8.5, ink["ink"], bold=True)
-            pdf.text(day.strftime("%-d %b %Y"), colx[1], y, 8.5, ink["ink"])
+            pdf.text(fmt_date(day, "%-d %b %Y"), colx[1], y, 8.5, ink["ink"])
             pdf.text(EVENT_LABELS[kind], colx[2], y, 8.5, ink["ink"], width=95)
             pdf.text(what, colx[3], y, 8.5, ink["ink"], width=210)
             if day <= dt.date.today():
@@ -1334,7 +1454,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
                     else:
                         pdf.text("–", x + 10, y, 8.5, ink["muted"])
                 if not complete:
-                    pdf.text("so far", colx[5] + 10, y + 11, 7, ink["muted"], italic=True)
+                    pdf.text(tr("so far"), colx[5] + 10, y + 11, 7, ink["muted"], italic=True)
             pdf.y += max(h, 22) + 6
             src(cr, ink["grid"])
             cr.set_line_width(0.5)
@@ -1347,15 +1467,15 @@ def export_report(path, store, events, health, start, end, include_notes=False,
     rows = [d for d in days if store.entries(d) or events.on(d) or (include_health and d in sleep)]
     if rows:
         pdf.ensure(80)
-        pdf.text("Day by day", M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.text(tr("Day by day"), M, pdf.y, 12, ink["ink"], bold=True)
         pdf.y += 22
         has_sleep = bool(sleep_days)
-        cols = [("Date", 74), ("Mood", 92), ("Energy", 40), ("Anxiety", 44)]
+        cols = [(tr("Date"), 74), (tr("Mood"), 92), (tr("Energy"), 40), (tr("Anxiety"), 44)]
         if has_sleep:
-            cols.append(("Sleep", 38))
-        cols.append(("Event", 34))
+            cols.append((tr("Sleep"), 38))
+        cols.append((tr("Event"), 34))
         if include_notes:
-            cols.append(("Notes", W - 2 * M - sum(c[1] for c in cols)))
+            cols.append((tr("Notes"), W - 2 * M - sum(c[1] for c in cols)))
         xs, x = [], M
         for _name, w in cols:
             xs.append(x)
@@ -1388,7 +1508,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
                 cr.rectangle(M, y - 2, W - 2 * M, h + 4)
                 src(cr, ink["tile"])
                 cr.fill()
-            pdf.text(d.strftime("%a %-d %b"), xs[0], y, 8, ink["ink"])
+            pdf.text(fmt_date(d, "%a %-d %b"), xs[0], y, 8, ink["ink"])
             avg = store.day_avg(d)
             if avg:
                 cr.rectangle(xs[1], y + 1.5, 7, 7)
@@ -1461,12 +1581,12 @@ def read_backup(path):
                     info = {}
             files = {n: z.read(n) for n in DATA_FILES if n in names}
     except (zipfile.BadZipFile, OSError) as err:
-        raise BackupError("This file is not a Moodlog backup (%s)." % err)
+        raise BackupError(tr("This file is not a Moodlog backup (%s).") % err)
     if not any(n in files for n in CONTENT_FILES):
-        raise BackupError("This file is not a Moodlog backup: it has no moods, events or "
-                          "health data in it.")
+        raise BackupError(tr("This file is not a Moodlog backup: it has no moods, events or "
+                          "health data in it."))
     if "moods.csv" in files and not files["moods.csv"].lstrip(b"\xef\xbb\xbf").startswith(b"date"):
-        raise BackupError("The moods file in this backup is damaged.")
+        raise BackupError(tr("The moods file in this backup is damaged."))
     return files, info
 
 
@@ -1554,12 +1674,12 @@ def merge_conflicts(store, events, health):
 #   "max"  = daily totals that only grow (a partial day never beats a full one)
 #   "last" = daily averages, newest value wins
 METRICS = {
-    "sleep_hours": ("Sleep", "h", 1, "max"),
-    "steps": ("Steps", "", 0, "max"),
-    "resting_hr": ("Resting heart rate", "bpm", 0, "last"),
-    "heart_rate": ("Average heart rate", "bpm", 0, "last"),
-    "hrv": ("Heart rate variability", "ms", 0, "last"),
-    "active_energy": ("Active energy", "kcal", 0, "max"),
+    "sleep_hours": (tr("Sleep"), "h", 1, "max"),
+    "steps": (tr("Steps"), "", 0, "max"),
+    "resting_hr": (tr("Resting heart rate"), "bpm", 0, "last"),
+    "heart_rate": (tr("Average heart rate"), "bpm", 0, "last"),
+    "hrv": (tr("Heart rate variability"), "ms", 0, "last"),
+    "active_energy": (tr("Active energy"), "kcal", 0, "max"),
 }
 ALIASES = {
     "step": "steps", "steps": "steps", "step_count": "steps", "passi": "steps",
@@ -1774,20 +1894,20 @@ def parse_payload(body):
             name = re.sub(r"[\s\-]+", "_", parts[0].lower()).strip("_")
             metric = ALIASES.get(name, name)
             if len(parts) < 3 or not re.fullmatch(r"[a-z0-9_]{1,40}", metric):
-                problems.append("could not read this line: %s" % line[:80])
+                problems.append(tr("could not read this line: %s") % line[:80])
                 continue
             when = parse_when(parts[1])
             if when is None:
-                problems.append("could not read the date in: %s (set Date Format to ISO 8601)" % line[:80])
+                problems.append(tr("could not read the date in: %s (set Date Format to ISO 8601)") % line[:80])
                 continue
             if metric == "sleep":
                 end = parse_when(parts[2]) if len(parts) >= 4 else None
                 if end is not None:
                     if not (has_clock(parts[1]) and has_clock(parts[2])):
                         problems.append(
-                            "sleep times arrived without a clock time, so they were skipped. In "
+                            tr("sleep times arrived without a clock time, so they were skipped. In "
                             "the shortcut, tap Data di inizio and Data di fine in the sleep line "
-                            "and turn on Includi ora (Include Time).")
+                            "and turn on Includi ora (Include Time)."))
                         continue
                     stage = parts[3].lower()
                     if not any(word in stage for word in NOT_ASLEEP):
@@ -1796,14 +1916,14 @@ def parse_payload(body):
                 metric = "sleep_hours"
             value = parse_number(parts[2], whole=(metric == "steps"))
             if value is None:
-                problems.append("could not read the number in: %s" % line[:80])
+                problems.append(tr("could not read the number in: %s") % line[:80])
                 continue
             add(metric, when.date(), value)
 
     def take_record(rec):
         when = parse_when(rec.get("date", ""))
         if when is None:
-            problems.append("a record has no readable date")
+            problems.append(tr("a record has no readable date"))
             return
         for key, raw in rec.items():
             name = re.sub(r"[\s\-]+", "_", str(key).lower())
@@ -1857,7 +1977,7 @@ def parse_payload(body):
                 for block in blocks:
                     take_lines(block)
             else:
-                problems.append("the JSON had nothing I recognise in it")
+                problems.append(tr("the JSON had nothing I recognise in it"))
     elif isinstance(doc, list):
         for rec in doc:
             if isinstance(rec, dict):
@@ -1946,7 +2066,7 @@ def sync_with_phone(body):
     try:
         doc = json.loads(body.decode("utf-8") if isinstance(body, (bytes, bytearray)) else body)
     except (ValueError, UnicodeDecodeError):
-        raise ValueError("The request is not valid JSON.")
+        raise ValueError(tr("The request is not valid JSON."))
     remote_store, remote_events = stores_from_json(doc)
     store, events = Store(), EventStore()
     changed = store.absorb(remote_store) + events.absorb(remote_events)
@@ -2026,11 +2146,11 @@ def run_sync_server():
         def do_GET(self):
             if self.route() == "/api/ping":
                 if not self.authorised():
-                    self.reply_json(401, {"error": "Wrong or missing token."})
+                    self.reply_json(401, {"error": tr("Wrong or missing token.")})
                     return
                 self.reply_json(200, {"app": "Moodlog", "version": VERSION})
                 return
-            self.reply(200, "Moodlog sync is running. Send health data with POST /health.")
+            self.reply(200, tr("Moodlog sync is running. Send health data with POST /health."))
 
         def authorised(self):
             given = self.headers.get("Authorization", "")
@@ -2044,10 +2164,10 @@ def run_sync_server():
         def do_POST(self):
             if not self.authorised():
                 if self.route().startswith("/api/"):
-                    self.reply_json(401, {"error": "Wrong or missing token. Copy it again from "
-                                                   "Moodlog > Phone sync."})
+                    self.reply_json(401, {"error": tr("Wrong or missing token. Copy it again from "
+                                                   "Moodlog > Phone sync.")})
                     return
-                self.reply(401, "Wrong or missing token. Copy it again from Moodlog > Phone sync.")
+                self.reply(401, tr("Wrong or missing token. Copy it again from Moodlog > Phone sync."))
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -2056,9 +2176,9 @@ def run_sync_server():
             limit = 50 * 1024 * 1024 if self.route() == "/api/sync" else 5 * 1024 * 1024
             if not 0 < length <= limit:
                 if self.route().startswith("/api/"):
-                    self.reply_json(400, {"error": "Empty request, or too large."})
+                    self.reply_json(400, {"error": tr("Empty request, or too large.")})
                     return
-                self.reply(400, "Empty request (or larger than 5 MB).")
+                self.reply(400, tr("Empty request (or larger than 5 MB)."))
                 return
             body = self.rfile.read(length)
             if self.route() == "/api/sync":
@@ -2070,8 +2190,9 @@ def run_sync_server():
                 stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
                 try:
                     with open(sync_status_path(), "w", encoding="utf-8") as f:
-                        f.write("%s\nMoodlog for iPhone synced (%d change%s).\n" % (
-                            stamp, state["changed"], "" if state["changed"] == 1 else "s"))
+                        f.write(trn("%s\nMoodlog for iPhone synced (%d change).\n",
+                                "%s\nMoodlog for iPhone synced (%d changes).\n", state["changed"]) % (
+                            stamp, state["changed"]))
                 except OSError:
                     pass
                 self.reply_json(200, state)
@@ -2081,13 +2202,13 @@ def run_sync_server():
             stored = store.merge(incoming)
             if stored:
                 store.save()
-            parts = ["%s for %d day%s" % (metric_info(m)[0].lower(), n, "" if n == 1 else "s")
+            parts = [trn("%s for %d day", "%s for %d days", n) % (metric_info(m)[0].lower(), n)
                      for m, n in stored.items()]
-            message = ("OK. Stored " + ", ".join(parts) + ".") if parts else \
-                "Nothing stored: no health values found in what was sent."
+            message = (tr("OK. Stored ") + ", ".join(parts) + ".") if parts else \
+                tr("Nothing stored: no health values found in what was sent.")
             if problems:
-                key = next((p for p in problems if p.startswith("sleep times")), problems[0])
-                message += "\n%d line(s) skipped. %s" % (len(problems), key)
+                key = next((p for p in problems if p.startswith(tr("sleep times"))), problems[0])
+                message += tr("\n%d line(s) skipped. %s") % (len(problems), key)
             stamp = dt.datetime.now().strftime("%Y-%m-%d %H:%M")
             try:
                 with open(sync_status_path(), "w", encoding="utf-8") as f:
@@ -2284,7 +2405,7 @@ class GridgetsLink:
 
 # ----------------------------------------------------------------- styles
 
-STYLES = [("default", "Default (GNOME)"), ("tahoe", "Tahoe (macOS-like)")]
+STYLES = [("default", tr("Default (GNOME)")), ("tahoe", tr("Tahoe (macOS-like)"))]
 STYLE = {"name": "default"}
 
 # Tahoe: frosted translucent cards on a soft colour wash, pill controls, macOS blue.
@@ -2800,21 +2921,22 @@ class CalendarView(Canvas):
             cr.set_line_width(2)
             cr.stroke()
         if day <= today or events:
-            title = day.strftime("%a %-d %b")
+            title = fmt_date(day, "%a %-d %b")
             tip = win.store.describe_day(day, title) if day <= today else title
             for event in events:
-                tip += "\nEvent \u2014 %s: %s" % (EVENT_LABELS[event[1]], event[2])
+                tip += tr("\nEvent \u2014 %s: %s") % (EVENT_LABELS[event[1]], event[2])
             self.hits.append((x, y, size, size, tip))
 
 
 # ----------------------------------------------------------------- charts
 
 def no_data(cr, widget, w, h, th):
-    text(cr, widget, "No moods logged in this period yet", w / 2, h / 2, 10.5,
+    text(cr, widget, tr("No moods logged in this period yet"), w / 2, h / 2, 10.5,
          th["muted"], ax=0.5, ay=0.5)
 
 
-PLOT_LEFT, PLOT_RIGHT = 58, 18
+# Room on the left for the mood names on the y axis ("Così così" in Italian is the longest).
+PLOT_LEFT, PLOT_RIGHT = max(58, 14 + 6.3 * max(len(n) for n in MOOD_NAMES.values())), 18
 
 
 def time_axis(win):
@@ -2828,7 +2950,7 @@ def time_axis(win):
         n = calendar.monthrange(cur.year, cur.month)[1]
         labels = [(d - 1, str(d)) for d in range(1, n + 1) if d == 1 or d % 5 == 0]
         return (n, labels, lambda day: day.day - 1,
-                lambda i: cur.replace(day=i + 1).strftime("%a %-d %b"))
+                lambda i: fmt_date(cur.replace(day=i + 1), "%a %-d %b"))
     if mode == "year":
         months = [(cur.year, m) for m in range(1, 13)]
     else:
@@ -2892,9 +3014,9 @@ class TrendChart(Canvas):
                 avg = win.store.day_avg(day)  # exact average of that day's entries
                 tip = win.store.describe_day(day, describe(i))
             else:
-                tip = "%s — average %.1f (%s), %d day%s logged" % (
-                    describe(i), avg, MOOD_NAMES[to_level(avg)].lower(), len(vals),
-                    "" if len(vals) == 1 else "s")
+                tip = trn("%s — average %.1f (%s), %d day logged", "%s — average %.1f (%s), %d days logged",
+                          len(vals)) % (
+                    describe(i), avg, MOOD_NAMES[to_level(avg)].lower(), len(vals))
             pts.append((i, avg, tip))
 
         top, bottom = 24, 30
@@ -2963,7 +3085,7 @@ class HealthChart(Canvas):
             if i is not None:
                 buckets.setdefault(i, []).append(value)
         if not buckets:
-            text(cr, self, "No %s data in this period" % title.lower(), w / 2, h / 2, 10.5,
+            text(cr, self, tr("No %s data in this period") % title.lower(), w / 2, h / 2, 10.5,
                  th["muted"], ax=0.5, ay=0.5)
             return
         daily = win.range_mode == "month"
@@ -3000,8 +3122,8 @@ class HealthChart(Canvas):
         def tip(i, v, count):
             if daily:
                 return "%s — %s" % (describe(i), format_value(metric, v))
-            return "%s — average %s over %d day%s" % (
-                describe(i), format_value(metric, v), count, "" if count == 1 else "s")
+            return trn("%s — average %s over %d day", "%s — average %s over %d days", count) % (
+                describe(i), format_value(metric, v), count)
 
         if columns:
             gap = (w - PLOT_LEFT - PLOT_RIGHT - 16) / max(n - 1, 1)
@@ -3074,7 +3196,7 @@ class ScaleChart(Canvas):
             cr.stroke()
             text(cr, self, str(level), PLOT_LEFT - 10, y, 9, th["muted"], ax=1, ay=0.5)
         if not any(pts for _k, _n, pts in series):
-            text(cr, self, "No energy or anxiety logged in this period yet",
+            text(cr, self, tr("No energy or anxiety logged in this period yet"),
                  (w + PLOT_LEFT - PLOT_RIGHT) / 2, top + ph / 2, 10.5, th["muted"], ax=0.5, ay=0.5)
             return
         for i, label in labels:
@@ -3119,8 +3241,9 @@ class ScaleChart(Canvas):
                 if daily:
                     tip = "%s — %s %.1f (%s)" % (describe(i), name.lower(), v, word)
                 else:
-                    tip = "%s — average %s %.1f (%s) over %d day%s" % (
-                        describe(i), name.lower(), v, word, count, "" if count == 1 else "s")
+                    tip = trn("%s — average %s %.1f (%s) over %d day",
+                              "%s — average %s %.1f (%s) over %d days", count) % (
+                        describe(i), name.lower(), v, word, count)
                 self.hits.append((x - 9, y - 9, 18, 18, tip))
             if pts:  # direct label at the newest point
                 i, v, _c = pts[-1]
@@ -3145,7 +3268,8 @@ class CountChart(Canvas):
             return
         counts = {m: moods.count(m) for m in range(1, 6)}
         top_count, total = max(counts.values()), len(moods)
-        left, right = 92, 78
+        widest = max(self.create_pango_layout(n).get_pixel_size()[0] for n in MOOD_NAMES.values())
+        left, right = max(92, 34 + widest + 14), 78
         row = (h - 8) / 5
         thick = min(20, row - 12)
         for i, mood in enumerate([5, 4, 3, 2, 1]):
@@ -3166,8 +3290,8 @@ class CountChart(Canvas):
                 cr.stroke()
             label = "%d · %d%%" % (n, round(100 * n / total)) if n else "0"
             text(cr, self, label, left + length + 8, cy, 9.5, th["ink2"], ay=0.5)
-            self.hits.append((0, cy - row / 2, w, row, "%s: %d of %d entr%s" % (
-                MOOD_NAMES[mood], n, total, "y" if total == 1 else "ies")))
+            self.hits.append((0, cy - row / 2, w, row, trn("%s: %d of %d entry", "%s: %d of %d entries", total) % (
+                MOOD_NAMES[mood], n, total)))
 
 
 class WeekdayChart(Canvas):
@@ -3205,7 +3329,7 @@ class WeekdayChart(Canvas):
             vals = by_day[i]
             if not vals:
                 text(cr, self, "–", cx, top + ph - 6, 9.5, th["muted"], ax=0.5, ay=1)
-                self.hits.append((cx - band / 2, top, band, ph, "%s: nothing logged" % WEEKDAYS[i]))
+                self.hits.append((cx - band / 2, top, band, ph, tr("%s: nothing logged") % WEEKDAYS[i]))
                 continue
             avg = sum(vals) / len(vals)
             bh = avg / 5 * ph
@@ -3213,9 +3337,8 @@ class WeekdayChart(Canvas):
             src(cr, th["moods"][to_level(avg)])
             cr.fill()
             text(cr, self, "%.1f" % avg, cx, top + ph - bh - 4, 9.5, th["ink2"], ax=0.5, ay=1)
-            self.hits.append((cx - band / 2, top, band, ph, "%s: average %.1f (%s) over %d day%s" % (
-                WEEKDAYS[i], avg, MOOD_NAMES[to_level(avg)].lower(), len(vals),
-                "" if len(vals) == 1 else "s")))
+            self.hits.append((cx - band / 2, top, band, ph, trn("%s: average %.1f (%s) over %d day", "%s: average %.1f (%s) over %d days",
+                len(vals)) % (WEEKDAYS[i], avg, MOOD_NAMES[to_level(avg)].lower(), len(vals))))
 
 
 class HoursChart(Canvas):
@@ -3229,7 +3352,7 @@ class HoursChart(Canvas):
     def draw(self, cr, w, h, th):
         data = [(t, m) for _d, t, m in self.win.period_entries() if t]
         if not data:
-            text(cr, self, "No entries with a time in this period yet", w / 2, h / 2, 10.5,
+            text(cr, self, tr("No entries with a time in this period yet"), w / 2, h / 2, 10.5,
                  th["muted"], ax=0.5, ay=0.5)
             return
         blocks = {i: [] for i in range(8)}
@@ -3255,7 +3378,7 @@ class HoursChart(Canvas):
             vals = blocks[i]
             if not vals:
                 text(cr, self, "–", cx, top + ph - 6, 9.5, th["muted"], ax=0.5, ay=1)
-                self.hits.append((cx - band / 2, top, band, ph, "%s: nothing logged" % span))
+                self.hits.append((cx - band / 2, top, band, ph, tr("%s: nothing logged") % span))
                 continue
             avg = sum(vals) / len(vals)
             bh = avg / 5 * ph
@@ -3263,9 +3386,9 @@ class HoursChart(Canvas):
             src(cr, th["moods"][to_level(avg)])
             cr.fill()
             text(cr, self, "%.1f" % avg, cx, top + ph - bh - 4, 9.5, th["ink2"], ax=0.5, ay=1)
-            self.hits.append((cx - band / 2, top, band, ph, "%s:00 to %s:00 — average %.1f (%s) over %d entr%s" % (
-                span[:2], span[3:], avg, MOOD_NAMES[to_level(avg)].lower(), len(vals),
-                "y" if len(vals) == 1 else "ies")))
+            self.hits.append((cx - band / 2, top, band, ph, trn("%s:00 to %s:00 — average %.1f (%s) over %d entry",
+                "%s:00 to %s:00 — average %.1f (%s) over %d entries", len(vals)) % (
+                span[:2], span[3:], avg, MOOD_NAMES[to_level(avg)].lower(), len(vals))))
 
 
 class FaceIcon(Gtk.DrawingArea):
@@ -3288,7 +3411,7 @@ class FaceIcon(Gtk.DrawingArea):
 
 # ----------------------------------------------------------------- phone sync window
 
-SHORTCUT_STEPS = """Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.
+SHORTCUT_STEPS = tr("""Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.
 
 A. Build the shortcut
 1. Shortcuts → + → name it "Moodlog Sync".
@@ -3311,7 +3434,7 @@ Automation tab → + → Time of Day → pick a time when you are normally using
 
 Every run sends the last 7 days, so days that were missed fill in on the next run.
 Other names you can send the same way: heart_rate, hrv, active_energy.
-If the iPhone cannot connect and this PC has a firewall on, allow the port: sudo ufw allow 8765/tcp"""
+If the iPhone cannot connect and this PC has a firewall on, allow the port: sudo ufw allow 8765/tcp""")
 
 SERVICE = "moodlog-sync.service"
 
@@ -3341,7 +3464,7 @@ class EventWindow(Gtk.Window):
     """Add or edit one event."""
 
     def __init__(self, win, event=None, day=None):
-        super().__init__(title="Edit event" if event else "Add event", transient_for=win,
+        super().__init__(title=tr("Edit event") if event else tr("Add event"), transient_for=win,
                          modal=True)
         self.set_default_size(440, -1)
         self.win, self.event = win, event
@@ -3357,16 +3480,16 @@ class EventWindow(Gtk.Window):
         kinds = [k for k, _label in EVENT_KINDS]
         self.kind_drop.set_selected(kinds.index(event[1]) if event else 0)
         self.title_entry = Gtk.Entry(text=event[2] if event else "", hexpand=True)
-        self.title_entry.set_placeholder_text("What happened, e.g. new dose")
+        self.title_entry.set_placeholder_text(tr("What happened, e.g. new dose"))
         self.title_entry.connect("activate", self.on_save)
-        for r, (name, widget) in enumerate((("Date", self.date_entry), ("Type", self.kind_drop),
-                                            ("Title", self.title_entry))):
+        for r, (name, widget) in enumerate(((tr("Date"), self.date_entry), (tr("Type"), self.kind_drop),
+                                            (tr("Title"), self.title_entry))):
             label = Gtk.Label(label=name, xalign=0)
             label.add_css_class("dim-label")
             grid.attach(label, 0, r, 1, 1)
             grid.attach(widget, 1, r, 1, 1)
         col.append(grid)
-        details = Gtk.Label(label="Details (optional)", xalign=0)
+        details = Gtk.Label(label=tr("Details (optional)"), xalign=0)
         details.add_css_class("dim-label")
         col.append(details)
         self.note_view = Gtk.TextView()
@@ -3387,15 +3510,15 @@ class EventWindow(Gtk.Window):
 
         buttons = Gtk.Box(spacing=8)
         if event:
-            delete = Gtk.Button(label="Delete")
+            delete = Gtk.Button(label=tr("Delete"))
             delete.add_css_class("destructive-action")
             delete.connect("clicked", self.on_delete)
             buttons.append(delete)
         spacer = Gtk.Box(hexpand=True)
         buttons.append(spacer)
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=tr("Cancel"))
         cancel.connect("clicked", lambda *_: self.close())
-        save = Gtk.Button(label="Save")
+        save = Gtk.Button(label=tr("Save"))
         save.add_css_class("suggested-action")
         save.connect("clicked", self.on_save)
         buttons.append(cancel)
@@ -3413,11 +3536,11 @@ class EventWindow(Gtk.Window):
         try:
             day = dt.date.fromisoformat(raw)
         except ValueError:
-            self.fail("Write the date as year-month-day, for example %s." % dt.date.today().isoformat())
+            self.fail(tr("Write the date as year-month-day, for example %s.") % dt.date.today().isoformat())
             return
         title = " ".join(self.title_entry.get_text().split())
         if not title:
-            self.fail("Give the event a short title.")
+            self.fail(tr("Give the event a short title."))
             return
         kind = EVENT_KINDS[self.kind_drop.get_selected()][0]
         buf = self.note_view.get_buffer()
@@ -3430,32 +3553,32 @@ class EventWindow(Gtk.Window):
         if self.win.save_events():
             self.close()
         else:
-            self.fail("Could not save the event to events.csv.")
+            self.fail(tr("Could not save the event to events.csv."))
 
     def on_delete(self, *_):
         self.win.events.remove(self.event)
         if self.win.save_events():
             self.close()
         else:
-            self.fail("Could not save the change to events.csv.")
+            self.fail(tr("Could not save the change to events.csv."))
 
 
 class ReportWindow(Gtk.Window):
     """Choose a period and what to include, then save the doctor report."""
 
-    PRESETS = [("Last 30 days", 30), ("Last 3 months", 91), ("Last 6 months", 182),
-               ("This year", "year"), ("Everything", "all")]
+    PRESETS = [(tr("Last 30 days"), 30), (tr("Last 3 months"), 91), (tr("Last 6 months"), 182),
+               (tr("This year"), "year"), (tr("Everything"), "all")]
 
     def __init__(self, win):
-        super().__init__(title="Report for your doctor", transient_for=win, modal=True)
+        super().__init__(title=tr("Report for your doctor"), transient_for=win, modal=True)
         self.set_default_size(500, -1)
         self.win = win
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(20)
         intro = Gtk.Label(xalign=0, wrap=True, label=(
-            "A printable PDF with your mood over a period, energy and anxiety, sleep, your "
-            "events (such as medication changes) and a day-by-day table."))
+            tr("A printable PDF with your mood over a period, energy and anxiety, sleep, your "
+            "events (such as medication changes) and a day-by-day table.")))
         intro.add_css_class("dim-label")
         col.append(intro)
         presets = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=5)
@@ -3467,19 +3590,19 @@ class ReportWindow(Gtk.Window):
         grid = Gtk.Grid(column_spacing=12, row_spacing=10)
         self.start_entry = Gtk.Entry(hexpand=True, placeholder_text="YYYY-MM-DD")
         self.end_entry = Gtk.Entry(hexpand=True, placeholder_text="YYYY-MM-DD")
-        for r, (name, entry) in enumerate((("From", self.start_entry), ("To", self.end_entry))):
+        for r, (name, entry) in enumerate(((tr("From"), self.start_entry), (tr("To"), self.end_entry))):
             label = Gtk.Label(label=name, xalign=0)
             label.add_css_class("dim-label")
             grid.attach(label, 0, r, 1, 1)
             grid.attach(entry, 1, r, 1, 1)
         col.append(grid)
-        self.notes_check = Gtk.CheckButton(label="Include my notes")
+        self.notes_check = Gtk.CheckButton(label=tr("Include my notes"))
         notes_hint = Gtk.Label(xalign=0, wrap=True, label=(
-            "Notes can be private. Leave this off to share only the numbers and events."))
+            tr("Notes can be private. Leave this off to share only the numbers and events.")))
         notes_hint.add_css_class("dim-label")
         notes_hint.add_css_class("caption")
         notes_hint.set_margin_start(28)
-        self.health_check = Gtk.CheckButton(label="Include sleep from my phone", active=True)
+        self.health_check = Gtk.CheckButton(label=tr("Include sleep from my phone"), active=True)
         self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
         for wdg in (self.notes_check, notes_hint, self.health_check):
             col.append(wdg)
@@ -3488,9 +3611,9 @@ class ReportWindow(Gtk.Window):
         self.error.set_visible(False)
         col.append(self.error)
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=tr("Cancel"))
         cancel.connect("clicked", lambda *_: self.close())
-        save = Gtk.Button(label="Save PDF…")
+        save = Gtk.Button(label=tr("Save PDF…"))
         save.add_css_class("suggested-action")
         save.connect("clicked", self.on_save)
         buttons.append(cancel)
@@ -3517,16 +3640,16 @@ class ReportWindow(Gtk.Window):
             start = dt.date.fromisoformat(self.start_entry.get_text().strip())
             end = dt.date.fromisoformat(self.end_entry.get_text().strip())
         except ValueError:
-            self.error.set_text("Write both dates as year-month-day, for example %s."
+            self.error.set_text(tr("Write both dates as year-month-day, for example %s.")
                                 % dt.date.today().isoformat())
             self.error.set_visible(True)
             return None
         if end < start:
-            self.error.set_text("The end date is before the start date.")
+            self.error.set_text(tr("The end date is before the start date."))
             self.error.set_visible(True)
             return None
         if (end - start).days > 3 * 366:
-            self.error.set_text("Choose at most three years.")
+            self.error.set_text(tr("Choose at most three years."))
             self.error.set_visible(True)
             return None
         self.error.set_visible(False)
@@ -3538,7 +3661,7 @@ class ReportWindow(Gtk.Window):
             return
         start, end = period
         name = "moodlog-report-%s-to-%s.pdf" % (start.isoformat(), end.isoformat())
-        self.win._pick("Save the report", "save", lambda path: self.write(path, start, end), name)
+        self.win._pick(tr("Save the report"), "save", lambda path: self.write(path, start, end), name)
 
     def write(self, path, start, end):
         if not path.lower().endswith(".pdf"):
@@ -3550,7 +3673,7 @@ class ReportWindow(Gtk.Window):
                                   include_notes=self.notes_check.get_active(),
                                   include_health=self.health_check.get_active())
         except (OSError, Exception) as err:
-            self.error.set_text("Could not make the report: %s" % err)
+            self.error.set_text(tr("Could not make the report: %s") % err)
             self.error.set_visible(True)
             return
         self.close()
@@ -3558,14 +3681,18 @@ class ReportWindow(Gtk.Window):
             Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
         except GLib.Error:
             pass
-        win.notify("Saved the report (%d page%s) as %s" % (pages, "" if pages == 1 else "s",
-                                                           os.path.basename(path)))
+        win.notify(trn("Saved the report (%d page) as %s", "Saved the report (%d pages) as %s", pages) % (
+            pages, os.path.basename(path)))
 
 
 # ----------------------------------------------------------------- changelog
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.2.0", "2026-11-19", [
+        "Moodlog speaks Italian. It follows your system language, or choose one in the \u2630 "
+        "menu \u2192 Language. Dates, charts, the doctor report and exports are translated too.",
+    ]),
     ("2.1.0", "2026-11-19", [
         "A “What's new” window opens once after each update, with the full changelog. "
         "Open it again any time from the ☰ menu.",
@@ -3636,6 +3763,10 @@ CHANGELOG = [
 # Moodlog for iPhone (ios/) has its own version numbers. Only used for CHANGELOG.md,
 # never shown in the PC app's "What's new" window.
 IPHONE_CHANGELOG = [
+    ("1.1.0", "2026-11-19", [
+        "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in "
+        "Settings \u2192 Moodlog \u2192 Language.",
+    ]),
     ("1.0.1", "2026-11-19", [
         "Days with several moods show a face on each tile of the calendar, like on the PC.",
     ]),
@@ -3673,18 +3804,18 @@ class ChangelogWindow(Gtk.Window):
     """The full changelog; versions newer than the one last opened are marked as new."""
 
     def __init__(self, parent, since=None):
-        super().__init__(title="What's new in Moodlog", transient_for=parent, modal=True)
+        super().__init__(title=tr("What's new in Moodlog"), transient_for=parent, modal=True)
         self.set_default_size(560, 640)
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(20)
-        head = Gtk.Label(label="What's new in Moodlog %s" % VERSION, xalign=0, wrap=True)
+        head = Gtk.Label(label=tr("What's new in Moodlog %s") % VERSION, xalign=0, wrap=True)
         head.add_css_class("title-2")
         col.append(head)
         if since and version_key(since) < version_key(VERSION):
-            sub = "You updated from version %s. The changes since then are marked as new." % since
+            sub = tr("You updated from version %s. The changes since then are marked as new.") % since
         else:
-            sub = "The full history of Moodlog, newest first."
+            sub = tr("The full history of Moodlog, newest first.")
         sub_label = Gtk.Label(label=sub, xalign=0, wrap=True)
         sub_label.add_css_class("dim-label")
         col.append(sub_label)
@@ -3694,16 +3825,16 @@ class ChangelogWindow(Gtk.Window):
                       else version == VERSION)
             box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
             title_row = Gtk.Box(spacing=8)
-            title = Gtk.Label(label="Version %s" % version, xalign=0)
+            title = Gtk.Label(label=tr("Version %s") % version, xalign=0)
             title.add_css_class("heading")
             title_row.append(title)
             if is_new:
-                badge = Gtk.Label(label="New")
+                badge = Gtk.Label(label=tr("New"))
                 badge.add_css_class("caption")
                 badge.add_css_class("accent")
                 title_row.append(badge)
             try:
-                when = dt.date.fromisoformat(day).strftime("%-d %B %Y")
+                when = fmt_date(dt.date.fromisoformat(day), "%-d %B %Y")
             except ValueError:
                 when = day
             date_label = Gtk.Label(label=when, xalign=1, hexpand=True)
@@ -3712,7 +3843,7 @@ class ChangelogWindow(Gtk.Window):
             title_row.append(date_label)
             box.append(title_row)
             for item in items:
-                line = Gtk.Label(label="•  " + item, xalign=0, wrap=True)
+                line = Gtk.Label(label="•  " + tr(item), xalign=0, wrap=True)
                 line.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 if not is_new:
                     line.add_css_class("dim-label")
@@ -3722,7 +3853,7 @@ class ChangelogWindow(Gtk.Window):
         scroll = Gtk.ScrolledWindow(vexpand=True)
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroll.set_child(col)
-        close = Gtk.Button(label="Got it")
+        close = Gtk.Button(label=tr("Got it"))
         close.add_css_class("suggested-action")
         close.connect("clicked", lambda *_: self.close())
         bottom = Gtk.Box(halign=Gtk.Align.END)
@@ -3750,7 +3881,7 @@ class ConfirmWindow(Gtk.Window):
         col.append(head)
         col.append(text_)
         buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        cancel = Gtk.Button(label="Cancel")
+        cancel = Gtk.Button(label=tr("Cancel"))
         cancel.connect("clicked", lambda *_: self.close())
         buttons.append(cancel)
         for label, callback, style in choices:
@@ -3771,42 +3902,42 @@ class DataWindow(Gtk.Window):
     """Where the data lives, two-computer use through a sync folder, conflict copies."""
 
     def __init__(self, win):
-        super().__init__(title="Data folder and sync", transient_for=win, modal=True)
+        super().__init__(title=tr("Data folder and sync"), transient_for=win, modal=True)
         self.set_default_size(560, -1)
         self.win = win
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(20)
 
-        head = Gtk.Label(label="Your data is stored in", xalign=0)
+        head = Gtk.Label(label=tr("Your data is stored in"), xalign=0)
         head.add_css_class("heading")
         col.append(head)
         self.path_label = Gtk.Label(xalign=0, selectable=True, wrap=True, hexpand=True)
         self.path_label.set_wrap_mode(Pango.WrapMode.CHAR)
-        open_btn = Gtk.Button(label="Open")
+        open_btn = Gtk.Button(label=tr("Open"))
         open_btn.connect("clicked", lambda *_: win.open_data_folder(None))
         row = Gtk.Box(spacing=10)
         row.append(self.path_label)
         row.append(open_btn)
         col.append(card(row))
 
-        sync_head = Gtk.Label(label="Use Moodlog on two computers", xalign=0)
+        sync_head = Gtk.Label(label=tr("Use Moodlog on two computers"), xalign=0)
         sync_head.add_css_class("heading")
         col.append(sync_head)
         explain = Gtk.Label(xalign=0, wrap=True, label=(
-            "Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do "
+            tr("Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do "
             "the same on the other computer. Moodlog saves its files there and picks up "
             "changes from the other computer within a few seconds. If both computers change "
             "something at the very same time, the sync app may make a conflict copy; Moodlog "
-            "then offers to merge it, so nothing is lost."))
+            "then offers to merge it, so nothing is lost.")))
         explain.add_css_class("dim-label")
         col.append(explain)
         buttons = Gtk.Box(spacing=8)
-        choose = Gtk.Button(label="Choose another folder…")
+        choose = Gtk.Button(label=tr("Choose another folder…"))
         choose.add_css_class("suggested-action")
-        choose.connect("clicked", lambda *_: win.ask_folder("Choose the folder for your data",
+        choose.connect("clicked", lambda *_: win.ask_folder(tr("Choose the folder for your data"),
                                                             self.on_folder))
-        self.default_btn = Gtk.Button(label="Go back to the default folder")
+        self.default_btn = Gtk.Button(label=tr("Go back to the default folder"))
         self.default_btn.connect("clicked", lambda *_: self.on_folder(default_data_dir()))
         buttons.append(choose)
         buttons.append(self.default_btn)
@@ -3814,15 +3945,15 @@ class DataWindow(Gtk.Window):
 
         self.conflict_box = Gtk.Box(spacing=10)
         self.conflict_label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
-        merge = Gtk.Button(label="Merge them")
+        merge = Gtk.Button(label=tr("Merge them"))
         merge.connect("clicked", lambda *_: (win.merge_conflict_copies(), self.update()))
         self.conflict_box.append(self.conflict_label)
         self.conflict_box.append(merge)
         col.append(self.conflict_box)
 
         note = Gtk.Label(xalign=0, wrap=True, label=(
-            "Settings such as the Gridgets link stay on each computer. Back up from the folder "
-            "button menu whenever you like: a backup is a single .zip file."))
+            tr("Settings such as the Gridgets link stay on each computer. Back up from the folder "
+            "button menu whenever you like: a backup is a single .zip file.")))
         note.add_css_class("dim-label")
         note.add_css_class("caption")
         col.append(note)
@@ -3837,7 +3968,8 @@ class DataWindow(Gtk.Window):
         self.conflict_box.set_visible(bool(found))
         if found:
             self.conflict_label.set_text(
-                "%d conflict cop%s found from your sync app." % (len(found), "y" if len(found) == 1 else "ies"))
+                trn("%d conflict copy found from your sync app.",
+                    "%d conflict copies found from your sync app.", len(found)) % len(found))
 
     def on_folder(self, folder):
         win = self.win
@@ -3849,18 +3981,18 @@ class DataWindow(Gtk.Window):
         has_data = any(os.path.exists(os.path.join(folder, n)) for n in CONTENT_FILES)
         short = folder.replace(os.path.expanduser("~"), "~", 1)
         if not has_data:
-            ConfirmWindow(self, "Move your data to %s?" % short, (
-                "Your moods, events and health data are copied there, and Moodlog uses that "
-                "folder from now on. The old folder keeps its copy."),
-                [("Move here", lambda: self.switch(folder, copy=True), "suggested-action")]
+            ConfirmWindow(self, tr("Move your data to %s?") % short, (
+                tr("Your moods, events and health data are copied there, and Moodlog uses that "
+                "folder from now on. The old folder keeps its copy.")),
+                [(tr("Move here"), lambda: self.switch(folder, copy=True), "suggested-action")]
             ).present()
             return
-        ConfirmWindow(self, "%s already has Moodlog data" % short, (
-            "Merge puts what is on this computer together with what is already there, which is "
+        ConfirmWindow(self, tr("%s already has Moodlog data") % short, (
+            tr("Merge puts what is on this computer together with what is already there, which is "
             "what you want when setting up a second computer. Use that data switches to the "
-            "folder as it is; the data here stays in the old folder."),
-            [("Use that data", lambda: self.switch(folder), None),
-             ("Merge", lambda: self.switch(folder, merge=True), "suggested-action")]).present()
+            "folder as it is; the data here stays in the old folder.")),
+            [(tr("Use that data"), lambda: self.switch(folder), None),
+             (tr("Merge"), lambda: self.switch(folder, merge=True), "suggested-action")]).present()
 
     def switch(self, folder, copy=False, merge=False):
         import shutil
@@ -3892,17 +4024,17 @@ class DataWindow(Gtk.Window):
                 cfg["data_dir"] = folder
             save_config(cfg)
         except OSError as err:
-            win.notify("Could not use that folder: %s" % (err.strerror or err))
+            win.notify(tr("Could not use that folder: %s") % (err.strerror or err))
             return
         systemctl("try-restart", SERVICE)  # the phone receiver reads the folder when it starts
         win.reload_data()
         self.update()
-        win.notify("Moodlog now uses %s" % folder)
+        win.notify(tr("Moodlog now uses %s") % folder)
 
 
 class SyncWindow(Gtk.Window):
     def __init__(self, parent):
-        super().__init__(title="Phone sync", transient_for=parent, modal=True)
+        super().__init__(title=tr("Phone sync"), transient_for=parent, modal=True)
         self.set_default_size(600, 700)
         self.parent_win = parent
         cfg = sync_config()
@@ -3912,7 +4044,7 @@ class SyncWindow(Gtk.Window):
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(18)
 
-        title = Gtk.Label(label="Receive health data from my iPhone", xalign=0, hexpand=True)
+        title = Gtk.Label(label=tr("Receive health data from my iPhone"), xalign=0, hexpand=True)
         title.add_css_class("heading")
         self.switch = Gtk.Switch(valign=Gtk.Align.CENTER)
         self.switch.connect("state-set", self.on_switch)
@@ -3928,9 +4060,9 @@ class SyncWindow(Gtk.Window):
         ip = lan_address()
         address = "http://%s.local:%d/health" % (host, cfg["port"])
         grid = Gtk.Grid(column_spacing=12, row_spacing=8)
-        rows = [("Address", address), ("Token", cfg["token"])]
+        rows = [(tr("Address"), address), (tr("Token"), cfg["token"])]
         if ip:
-            rows.insert(1, ("If that fails", "http://%s:%d/health" % (ip, cfg["port"])))
+            rows.insert(1, (tr("If that fails"), "http://%s:%d/health" % (ip, cfg["port"])))
         for r, (name, value) in enumerate(rows):
             key = Gtk.Label(label=name, xalign=0)
             key.add_css_class("dim-label")
@@ -3938,7 +4070,7 @@ class SyncWindow(Gtk.Window):
             val.set_wrap(True)
             val.set_wrap_mode(Pango.WrapMode.CHAR)
             copy = Gtk.Button.new_from_icon_name("edit-copy-symbolic")
-            copy.set_tooltip_text("Copy")
+            copy.set_tooltip_text(tr("Copy"))
             copy.add_css_class("flat")
             copy.connect("clicked", self.on_copy, value)
             grid.attach(key, 0, r, 1, 1)
@@ -3947,16 +4079,16 @@ class SyncWindow(Gtk.Window):
         col.append(card(grid))
 
         note = Gtk.Label(xalign=0, wrap=True, label=(
-            "The token is a password: only requests that carry it are accepted. The receiver "
+            tr("The token is a password: only requests that carry it are accepted. The receiver "
             "works only on your local network. It takes in Health values from the shortcut, "
             "and it syncs moods and events with the Moodlog app for iPhone (use the same "
-            "address and token in the app's Settings)."))
+            "address and token in the app's Settings).")))
         note.add_css_class("dim-label")
         note.add_css_class("caption")
         col.append(note)
 
         steps = Gtk.Label(label=SHORTCUT_STEPS, xalign=0, wrap=True, selectable=True)
-        col.append(card(steps, "iPhone setup"))
+        col.append(card(steps, tr("iPhone setup")))
 
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -3979,9 +4111,9 @@ class SyncWindow(Gtk.Window):
         systemctl("daemon-reload")
         ok, err = systemctl("enable" if state else "disable", "--now", SERVICE)
         if not ok:
-            self.error = ("Could not %s the receiver (%s). You can also start it by hand "
-                          "in a terminal: moodlog --sync-server" % (
-                              "start" if state else "stop", err or "systemctl failed"))
+            self.error = (tr("Could not start the receiver (%s). You can also start it by hand "
+                             "in a terminal: moodlog --sync-server") if state else
+                          tr("Could not stop the receiver (%s).")) % (err or tr("systemctl failed"))
         else:
             self.error = ""
         GLib.idle_add(self.update_status)
@@ -3995,13 +4127,13 @@ class SyncWindow(Gtk.Window):
         lines = []
         if getattr(self, "error", ""):
             lines.append(self.error)
-        lines.append("The receiver is running." if active else "The receiver is off.")
+        lines.append(tr("The receiver is running.") if active else tr("The receiver is off."))
         try:
             with open(sync_status_path(), encoding="utf-8") as f:
                 stamp, _, message = f.read().strip().partition("\n")
-            lines.append("Last sync attempt %s. %s" % (stamp, message.replace("\n", " ")))
+            lines.append(tr("Last sync attempt %s. %s") % (stamp, message.replace("\n", " ")))
         except OSError:
-            lines.append("Nothing received from the phone yet.")
+            lines.append(tr("Nothing received from the phone yet."))
         self.status.set_text("\n".join(lines))
         return True
 
@@ -4060,12 +4192,12 @@ class Window(Adw.ApplicationWindow):
             action.connect("activate", lambda _a, _p, h=handler: h())
             self.add_action(action)
         data_menu = Gio.Menu()
-        data_menu.append("Open data folder", "win.open-folder")
-        data_menu.append("Back up\u2026", "win.backup")
-        data_menu.append("Restore from a backup\u2026", "win.restore")
-        data_menu.append("Data folder and sync\u2026", "win.data-folder")
+        data_menu.append(tr("Open data folder"), "win.open-folder")
+        data_menu.append(tr("Back up\u2026"), "win.backup")
+        data_menu.append(tr("Restore from a backup\u2026"), "win.restore")
+        data_menu.append(tr("Data folder and sync\u2026"), "win.data-folder")
         folder = Gtk.MenuButton(icon_name="folder-open-symbolic", menu_model=data_menu)
-        folder.set_tooltip_text("Your data: open the folder, back up, restore, sync")
+        folder.set_tooltip_text(tr("Your data: open the folder, back up, restore, sync"))
         header.pack_end(folder)
         current = load_config().get("style", "default")
         style_action = Gio.SimpleAction.new_stateful(
@@ -4079,15 +4211,25 @@ class Window(Adw.ApplicationWindow):
             item.set_action_and_target_value("win.style", GLib.Variant.new_string(key))
             style_menu.append_item(item)
         main_menu = Gio.Menu()
-        main_menu.append_section("Style", style_menu)
+        main_menu.append_section(tr("Style"), style_menu)
+        lang_action = Gio.SimpleAction.new_stateful(
+            "language", GLib.VariantType.new("s"), GLib.Variant.new_string(configured_language()))
+        lang_action.connect("change-state", self.on_language)
+        self.add_action(lang_action)
+        lang_menu = Gio.Menu()
+        for key, label in LANGUAGES:
+            item = Gio.MenuItem.new(tr("Automatic (system)") if key == "auto" else label, None)
+            item.set_action_and_target_value("win.language", GLib.Variant.new_string(key))
+            lang_menu.append_item(item)
+        main_menu.append_section(tr("Language"), lang_menu)
         news_action = Gio.SimpleAction.new("changelog", None)
         news_action.connect("activate", lambda *_: ChangelogWindow(self).present())
         self.add_action(news_action)
         news_menu = Gio.Menu()
-        news_menu.append("What's new", "win.changelog")
+        news_menu.append(tr("What's new"), "win.changelog")
         main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
-        menu_btn.set_tooltip_text("Style")
+        menu_btn.set_tooltip_text(tr("Style, language and what's new"))
         header.pack_end(menu_btn)
         report_action = Gio.SimpleAction.new("report", None)
         report_action.connect("activate", lambda *_: ReportWindow(self).present())
@@ -4097,21 +4239,21 @@ class Window(Adw.ApplicationWindow):
             action.connect("activate", lambda _a, _p, k=kind: self.on_export(k))
             self.add_action(action)
         menu = Gio.Menu()
-        menu.append("Report for your doctor (.pdf)\u2026", "win.report")
-        menu.append("Spreadsheet with colours and charts (.xlsx)", "win.export-xlsx")
-        menu.append("Plain CSV file (.csv)", "win.export-csv")
-        export = Gtk.MenuButton(label="Export", menu_model=menu)
-        export.set_tooltip_text("Save everything (moods, notes, events, health data) to a file")
+        menu.append(tr("Report for your doctor (.pdf)\u2026"), "win.report")
+        menu.append(tr("Spreadsheet with colours and charts (.xlsx)"), "win.export-xlsx")
+        menu.append(tr("Plain CSV file (.csv)"), "win.export-csv")
+        export = Gtk.MenuButton(label=tr("Export"), menu_model=menu)
+        export.set_tooltip_text(tr("Save everything (moods, notes, events, health data) to a file"))
         header.pack_end(export)
-        sync = Gtk.Button(label="Phone sync")
-        sync.set_tooltip_text("Receive steps, sleep and heart rate from your iPhone")
+        sync = Gtk.Button(label=tr("Phone sync"))
+        sync.set_tooltip_text(tr("Receive steps, sleep and heart rate from your iPhone"))
         sync.connect("clicked", lambda *_: SyncWindow(self).present())
         header.pack_start(sync)
 
-        self.stack.add_titled(self.build_log_page(), "log", "Log")
-        self.stack.add_titled(self.build_charts_page(), "charts", "Charts")
-        self.stack.add_titled(self.build_notes_page(), "notes", "Notes")
-        self.stack.add_titled(self.build_events_page(), "events", "Events")
+        self.stack.add_titled(self.build_log_page(), "log", tr("Log"))
+        self.stack.add_titled(self.build_charts_page(), "charts", tr("Charts"))
+        self.stack.add_titled(self.build_notes_page(), "notes", tr("Notes"))
+        self.stack.add_titled(self.build_events_page(), "events", tr("Events"))
         self.stack.connect("notify::visible-child", lambda *_: self.refresh())
 
         self.banner = Gtk.Box(spacing=12)
@@ -4120,7 +4262,7 @@ class Window(Adw.ApplicationWindow):
         for side in ("start", "end"):
             getattr(self.banner, "set_margin_" + side)(16)
         self.banner_label = Gtk.Label(xalign=0, wrap=True, hexpand=True)
-        banner_btn = Gtk.Button(label="Merge them")
+        banner_btn = Gtk.Button(label=tr("Merge them"))
         banner_btn.add_css_class("suggested-action")
         banner_btn.connect("clicked", lambda *_: self.merge_conflict_copies())
         self.banner.append(self.banner_label)
@@ -4163,16 +4305,16 @@ class Window(Adw.ApplicationWindow):
 
     def build_log_page(self):
         prev_b = Gtk.Button.new_from_icon_name("go-previous-symbolic")
-        prev_b.set_tooltip_text("Previous month")
+        prev_b.set_tooltip_text(tr("Previous month"))
         prev_b.connect("clicked", lambda *_: self.shift(-1))
         self.log_next = Gtk.Button.new_from_icon_name("go-next-symbolic")
-        self.log_next.set_tooltip_text("Next month")
+        self.log_next.set_tooltip_text(tr("Next month"))
         self.log_next.connect("clicked", lambda *_: self.shift(1))
         for b in (prev_b, self.log_next):
             b.add_css_class("flat")
         self.month_label = Gtk.Label(xalign=0, hexpand=True)
         self.month_label.add_css_class("title-3")
-        today_b = Gtk.Button(label="Today")
+        today_b = Gtk.Button(label=tr("Today"))
         today_b.connect("clicked", lambda *_: self.select_day(dt.date.today()))
         nav = Gtk.Box(spacing=6)
         for wdg in (self.month_label, today_b, prev_b, self.log_next):
@@ -4185,14 +4327,14 @@ class Window(Adw.ApplicationWindow):
         left.append(self.calendar)
         left.append(self.month_summary)
         link_label = Gtk.Label(xalign=0, hexpand=True, wrap=True,
-                               label="Linked with the Gridgets mood widget on your desktop")
+                               label=tr("Linked with the Gridgets mood widget on your desktop"))
         link_label.add_css_class("dim-label")
         link_label.add_css_class("caption")
         self.link_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
         self.link_switch.set_active(self.link.enabled)
         self.link_switch.set_tooltip_text(
-            "A mood picked in the widget is logged here, and moods logged here show up "
-            "in the widget (after the next unlock or login)")
+            tr("A mood picked in the widget is logged here, and moods logged here show up "
+            "in the widget (after the next unlock or login)"))
         self.link_switch.connect("notify::active", self.on_link_toggled)
         link_row = Gtk.Box(spacing=10)
         link_row.append(link_label)
@@ -4204,8 +4346,8 @@ class Window(Adw.ApplicationWindow):
 
         self.day_label = Gtk.Label(xalign=0, hexpand=True)
         self.day_label.add_css_class("title-3")
-        add_event = Gtk.Button(label="Add event")
-        add_event.set_tooltip_text("Log an important event on this day, e.g. a medication change")
+        add_event = Gtk.Button(label=tr("Add event"))
+        add_event.set_tooltip_text(tr("Log an important event on this day, e.g. a medication change"))
         add_event.connect("clicked", lambda *_: self.open_event(day=self.selected))
         day_row = Gtk.Box(spacing=8)
         day_row.append(self.day_label)
@@ -4227,7 +4369,7 @@ class Window(Adw.ApplicationWindow):
         self.time_entry.set_width_chars(5)
         self.time_entry.set_max_width_chars(5)
         self.time_entry.set_placeholder_text("HH:MM")
-        self.time_entry.set_tooltip_text("Time of this entry, 24-hour (optional). Press Enter to apply a change.")
+        self.time_entry.set_tooltip_text(tr("Time of this entry, 24-hour (optional). Press Enter to apply a change."))
         self.time_entry.connect("changed", self.on_time_changed)
         self.time_entry.connect("activate", self.apply_time)
         leave = Gtk.EventControllerFocus.new()
@@ -4247,7 +4389,7 @@ class Window(Adw.ApplicationWindow):
             btn = Gtk.ToggleButton()
             btn.set_child(inner)
             btn.add_css_class("flat")
-            btn.set_tooltip_text("%s (%d of 5)" % (MOOD_NAMES[mood], mood))
+            btn.set_tooltip_text(tr("%s (%d of 5)") % (MOOD_NAMES[mood], mood))
             btn.connect("toggled", self.on_face_toggled, mood)
             self.face_buttons[mood] = btn
             faces.append(btn)
@@ -4263,18 +4405,18 @@ class Window(Adw.ApplicationWindow):
             self.scale_buttons[index] = {}
             for value in range(1, 6):
                 btn = Gtk.ToggleButton(label=str(value))
-                btn.set_tooltip_text("%s %d: %s (optional)" % (name, value, SCALE_WORDS[key][value]))
+                btn.set_tooltip_text(tr("%s %d: %s (optional)") % (name, value, SCALE_WORDS[key][value]))
                 btn.connect("toggled", self.on_scale_toggled, index, value)
                 self.scale_buttons[index][value] = btn
                 buttons.append(btn)
             row.append(buttons)
             self.scales_box.append(row)
         scale_hint = Gtk.Label(xalign=0, wrap=True, label=(
-            "Optional. Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious."))
+            tr("Optional. Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious.")))
         scale_hint.add_css_class("dim-label")
         scale_hint.add_css_class("caption")
         self.scales_box.append(scale_hint)
-        note_label = Gtk.Label(label="Note", xalign=0)
+        note_label = Gtk.Label(label=tr("Note"), xalign=0)
         note_label.add_css_class("heading")
         self.note_view = Gtk.TextView()
         self.note_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
@@ -4289,11 +4431,11 @@ class Window(Adw.ApplicationWindow):
         self.saved_label = Gtk.Label(xalign=0, hexpand=True)
         self.saved_label.add_css_class("dim-label")
         self.saved_label.add_css_class("caption")
-        self.delete_btn = Gtk.Button(label="Delete entry")
+        self.delete_btn = Gtk.Button(label=tr("Delete entry"))
         self.delete_btn.connect("clicked", self.on_delete)
-        self.new_btn = Gtk.Button(label="New entry")
+        self.new_btn = Gtk.Button(label=tr("New entry"))
         self.new_btn.add_css_class("suggested-action")
-        self.new_btn.set_tooltip_text("Log another mood for this day")
+        self.new_btn.set_tooltip_text(tr("Log another mood for this day"))
         self.new_btn.connect("clicked", self.on_new)
         bottom = Gtk.Box(spacing=8)
         for wdg in (self.saved_label, self.delete_btn, self.new_btn):
@@ -4315,7 +4457,7 @@ class Window(Adw.ApplicationWindow):
     # -- charts page
 
     def build_charts_page(self):
-        self.range_drop = Gtk.DropDown.new_from_strings(["Month", "Year", "All time"])
+        self.range_drop = Gtk.DropDown.new_from_strings([tr("Month"), tr("Year"), tr("All time")])
         self.range_drop.connect("notify::selected", self.on_range_changed)
         self.chart_prev = Gtk.Button.new_from_icon_name("go-previous-symbolic")
         self.chart_prev.connect("clicked", lambda *_: self.shift(-1, charts=True))
@@ -4331,8 +4473,8 @@ class Window(Adw.ApplicationWindow):
 
         self.tiles = {}
         tiles = Gtk.Box(spacing=12, homogeneous=True)
-        for key, caption in (("avg", "Average mood"), ("days", "Days logged"),
-                             ("common", "Most common"), ("streak", "Current streak")):
+        for key, caption in (("avg", tr("Average mood")), ("days", tr("Days logged")),
+                             ("common", tr("Most common")), ("streak", tr("Current streak"))):
             value = Gtk.Label(xalign=0)
             value.add_css_class("title-1")
             sub = Gtk.Label(xalign=0)
@@ -4356,13 +4498,13 @@ class Window(Adw.ApplicationWindow):
         self.weekdays = WeekdayChart(self)
         self.hours = HoursChart(self)
         pair = Gtk.Box(spacing=12, homogeneous=True)
-        pair.append(card(self.counts, "How often you logged each mood"))
-        pair.append(card(self.weekdays, "Average mood by weekday (1–5)"))
+        pair.append(card(self.counts, tr("How often you logged each mood")))
+        pair.append(card(self.weekdays, tr("Average mood by weekday (1–5)")))
 
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(16)
-        health_title = Gtk.Label(label="Mood and your health data", xalign=0, hexpand=True)
+        health_title = Gtk.Label(label=tr("Mood and your health data"), xalign=0, hexpand=True)
         health_title.add_css_class("heading")
         self.metric_drop = Gtk.DropDown.new_from_strings([])
         self.metric_drop.connect("notify::selected", self.on_metric_changed)
@@ -4377,16 +4519,16 @@ class Window(Adw.ApplicationWindow):
             health_box.append(wdg)
         self.scales = ScaleChart(self)
         scales_note = Gtk.Label(xalign=0, wrap=True, label=(
-            "Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious. "
-            "Days without these show as gaps."))
+            tr("Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious. "
+            "Days without these show as gaps.")))
         scales_note.add_css_class("dim-label")
         scales_note.add_css_class("caption")
         scales_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         scales_box.append(self.scales)
         scales_box.append(scales_note)
         for wdg in (bar, tiles, card(trend_box), card(health_box),
-                    card(scales_box, "Energy and anxiety (1\u20135)"), pair,
-                    card(self.hours, "Average mood by time of day (1\u20135)")):
+                    card(scales_box, tr("Energy and anxiety (1\u20135)")), pair,
+                    card(self.hours, tr("Average mood by time of day (1\u20135)"))):
             col.append(wdg)
         clamp = Adw.Clamp(maximum_size=1000)
         clamp.set_child(col)
@@ -4421,7 +4563,7 @@ class Window(Adw.ApplicationWindow):
         for event in events:
             btn = Gtk.Button()
             btn.add_css_class("flat")
-            btn.set_tooltip_text("Edit this event")
+            btn.set_tooltip_text(tr("Edit this event"))
             box = Gtk.Box(spacing=8)
             box.append(EventIcon(22))
             label = Gtk.Label(label="%s: %s" % (EVENT_LABELS[event[1]], event[2]), xalign=0,
@@ -4435,11 +4577,11 @@ class Window(Adw.ApplicationWindow):
 
     def build_events_page(self):
         intro = Gtk.Label(wrap=True, xalign=0, hexpand=True, label=(
-            "Log things that can affect how you feel, such as a medication change. They show as "
+            tr("Log things that can affect how you feel, such as a medication change. They show as "
             "a flag in the calendar and as a dashed line on the charts, and each one compares "
-            "your mood in the two weeks before and after it."))
+            "your mood in the two weeks before and after it.")))
         intro.add_css_class("dim-label")
-        add = Gtk.Button(label="Add event", valign=Gtk.Align.START)
+        add = Gtk.Button(label=tr("Add event"), valign=Gtk.Align.START)
         add.add_css_class("suggested-action")
         add.connect("clicked", lambda *_: self.open_event(day=dt.date.today()))
         top = Gtk.Box(spacing=16)
@@ -4450,7 +4592,7 @@ class Window(Adw.ApplicationWindow):
         self.events_list.add_css_class("boxed-list")
         self.events_list.connect("row-activated", lambda _l, row: self.open_event(row.event))
         self.events_empty = Gtk.Label(wrap=True, justify=Gtk.Justification.CENTER,
-                                      label="No events yet.")
+                                      label=tr("No events yet."))
         self.events_empty.add_css_class("dim-label")
         self.events_empty.set_margin_top(48)
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
@@ -4474,7 +4616,7 @@ class Window(Adw.ApplicationWindow):
             day, kind, title, note = event[:4]
             row = Gtk.ListBoxRow()
             row.event = event
-            row.set_tooltip_text("Click to edit")
+            row.set_tooltip_text(tr("Click to edit"))
             box = Gtk.Box(spacing=12)
             for side in ("top", "bottom", "start", "end"):
                 getattr(box, "set_margin_" + side)(12)
@@ -4482,7 +4624,7 @@ class Window(Adw.ApplicationWindow):
             icon.set_valign(Gtk.Align.START)
             box.append(icon)
             textbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
-            when = Gtk.Label(label="%s · %s" % (day.strftime("%A, %-d %B %Y"),
+            when = Gtk.Label(label="%s · %s" % (fmt_date(day, tr("%A, %-d %B %Y")),
                                                      EVENT_LABELS[kind]), xalign=0)
             when.add_css_class("dim-label")
             when.add_css_class("caption")
@@ -4507,7 +4649,7 @@ class Window(Adw.ApplicationWindow):
 
 
     def build_notes_page(self):
-        self.search = Gtk.SearchEntry(placeholder_text="Search your notes")
+        self.search = Gtk.SearchEntry(placeholder_text=tr("Search your notes"))
         self.search.connect("search-changed", lambda *_: self.refresh_notes())
         self.notes_list = Gtk.ListBox()
         self.notes_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -4581,12 +4723,12 @@ class Window(Adw.ApplicationWindow):
         else:
             self.current = items[-1]
         if day == today:
-            title = "Today"
+            title = tr("Today")
         elif day == today - dt.timedelta(days=1):
-            title = "Yesterday"
+            title = tr("Yesterday")
         else:
-            title = day.strftime("%A")
-        self.day_label.set_text("%s, %s" % (title, day.strftime("%-d %B %Y")))
+            title = fmt_date(day, "%A")
+        self.day_label.set_text("%s, %s" % (title, fmt_date(day, "%-d %B %Y")))
         self.rebuild_day_events()
         self.load_editor()
         self.rebuild_entries()
@@ -4616,11 +4758,11 @@ class Window(Adw.ApplicationWindow):
     def update_mode(self):
         editing = self.current is not None
         if editing:
-            self.mode_label.set_text("Editing this entry")
+            self.mode_label.set_text(tr("Editing this entry"))
         elif self.selected == dt.date.today():
-            self.mode_label.set_text("New entry: how do you feel now?")
+            self.mode_label.set_text(tr("New entry: how do you feel now?"))
         else:
-            self.mode_label.set_text("New entry: how was this day?")
+            self.mode_label.set_text(tr("New entry: how was this day?"))
         self.delete_btn.set_visible(editing)
         self.new_btn.set_visible(editing)
 
@@ -4766,7 +4908,7 @@ class Window(Adw.ApplicationWindow):
             time, mood, note, energy, anxiety = entry[:5]
             row = Gtk.ListBoxRow()
             row.entry = entry
-            row.set_tooltip_text("Click to edit this entry")
+            row.set_tooltip_text(tr("Click to edit this entry"))
             box = Gtk.Box(spacing=10)
             for side in ("top", "bottom"):
                 getattr(box, "set_margin_" + side)(6)
@@ -4809,9 +4951,9 @@ class Window(Adw.ApplicationWindow):
             self._save_id = 0
             try:
                 self.store.save()
-                self.saved_label.set_text("Saved")
+                self.saved_label.set_text(tr("Saved"))
             except OSError as err:
-                self.saved_label.set_text("Could not save: %s" % err)
+                self.saved_label.set_text(tr("Could not save: %s") % err)
             self.sync_widget()
             self.rebuild_entries()
         return False
@@ -4864,9 +5006,11 @@ class Window(Adw.ApplicationWindow):
         found = conflict_files()
         if found:
             self.banner_label.set_text(
-                "Your sync app made %d conflict cop%s of your Moodlog data (both computers "
-                "changed it at the same time). Merge them to keep everything."
-                % (len(found), "y" if len(found) == 1 else "ies"))
+                trn("Your sync app made %d conflict copy of your Moodlog data (both computers "
+                    "changed it at the same time). Merge it to keep everything.",
+                    "Your sync app made %d conflict copies of your Moodlog data (both computers "
+                    "changed it at the same time). Merge them to keep everything.", len(found))
+                % len(found))
         self.banner.set_visible(bool(found))
         if not self._save_id and self.link.active() and self.link.changed_on_disk():
             if self.sync_widget():
@@ -4886,22 +5030,24 @@ class Window(Adw.ApplicationWindow):
         values = dict(self.health.series(metric, start, end))
         pairs = [(mood, values[day]) for day, mood in self.period_moods() if day in values]
         if len(pairs) < 8:
-            return ("%d day%s in this period have both a mood and %s data. With 8 or more, "
-                    "Moodlog compares your mood on higher and lower days." % (
-                        len(pairs), "" if len(pairs) == 1 else "s", title))
+            return (trn("%d day in this period has both a mood and %s data. With 8 or more, "
+                        "Moodlog compares your mood on higher and lower days.",
+                        "%d days in this period have both a mood and %s data. With 8 or more, "
+                        "Moodlog compares your mood on higher and lower days.", len(pairs)) % (
+                        len(pairs), title))
         ordered = sorted(v for _m, v in pairs)
         median = ordered[len(ordered) // 2]
         high = [m for m, v in pairs if v >= median]
         low = [m for m, v in pairs if v < median]
         if len(high) < 3 or len(low) < 3:
-            return "Your %s barely changed in this period, so there is nothing to compare yet." % title
+            return tr("Your %s barely changed in this period, so there is nothing to compare yet.") % title
         a, b = sum(high) / len(high), sum(low) / len(low)
         cut = format_value(metric, median)
         if abs(a - b) < 0.25:
-            return ("Your mood was about the same on days with more and less %s: %.1f at %s or "
-                    "more, %.1f below (%d days compared)." % (title, a, cut, b, len(pairs)))
-        return ("On days with %s at %s or more, your average mood was %.1f. On days below that "
-                "it was %.1f (%d days compared). This shows a pattern in your data, not a cause."
+            return (tr("Your mood was about the same on days with more and less %s: %.1f at %s or "
+                    "more, %.1f below (%d days compared).") % (title, a, cut, b, len(pairs)))
+        return (tr("On days with %s at %s or more, your average mood was %.1f. On days below that "
+                "it was %.1f (%d days compared). This shows a pattern in your data, not a cause.")
                 % (title, cut, a, b, len(pairs)))
 
     def refresh_health(self):
@@ -4921,8 +5067,8 @@ class Window(Adw.ApplicationWindow):
             self.health_text.set_text(self.insight())
         else:
             self.health_text.set_text(
-                "No health data yet. Use Phone sync in the title bar to bring in sleep, steps "
-                "and heart rate from your iPhone, and compare them with your mood here.")
+                tr("No health data yet. Use Phone sync in the title bar to bring in sleep, steps "
+                "and heart rate from your iPhone, and compare them with your mood here."))
         self.health_chart.queue_draw()
 
     def on_note_row(self, _list, row):
@@ -4935,13 +5081,13 @@ class Window(Adw.ApplicationWindow):
     def on_export(self, kind="csv"):
         self.flush()
         self._export_kind = kind
-        title = "Export to a spreadsheet" if kind == "xlsx" else "Export to CSV"
+        title = tr("Export to a spreadsheet") if kind == "xlsx" else tr("Export to CSV")
         if hasattr(Gtk, "FileDialog"):  # GTK 4.10 and newer
             dialog = Gtk.FileDialog(title=title, initial_name=self.export_name(kind))
             dialog.save(self, None, self._export_done_new)
             return
         dialog = Gtk.FileChooserNative.new(title, self, Gtk.FileChooserAction.SAVE,
-                                           "Export", "Cancel")
+                                           tr("Export"), tr("Cancel"))
         dialog.set_current_name(self.export_name(kind))
         dialog.connect("response", self._export_done_old)
         self._chooser = dialog  # keep a reference while it is open
@@ -4968,12 +5114,12 @@ class Window(Adw.ApplicationWindow):
         writer = export_xlsx if kind == "xlsx" else export_csv
         try:
             count = writer(path, self.store, self.events, self.health)
-            message = "Exported %d day%s to %s" % (count, "" if count == 1 else "s",
-                                                   os.path.basename(path))
+            message = trn("Exported %d day to %s", "Exported %d days to %s", count) % (
+                count, os.path.basename(path))
         except ExportError as err:
             message = str(err)
         except OSError as err:
-            message = "Could not export: %s" % (err.strerror or err)
+            message = tr("Could not export: %s") % (err.strerror or err)
         self.saved_label.set_text(message)
         if hasattr(Gtk, "AlertDialog"):  # GTK 4.10 and newer
             Gtk.AlertDialog(message=message).show(self)
@@ -4991,6 +5137,32 @@ class Window(Adw.ApplicationWindow):
         except OSError:
             pass
         self.redraw_all()
+
+    def on_language(self, action, value):
+        action.set_state(value)
+        cfg = load_config()
+        cfg["language"] = value.get_string()
+        try:
+            save_config(cfg)
+        except OSError:
+            pass
+        wanted = value.get_string()
+        if (system_language() if wanted == "auto" else wanted) in ("en", "it"):
+            new = system_language() if wanted == "auto" else wanted
+        else:
+            new = "en"
+        if new == LANG_CODE:
+            return
+        ConfirmWindow(self, tr("Restart Moodlog?"),
+                      tr("Moodlog needs to restart to change language. Everything you logged "
+                         "is saved."),
+                      [(tr("Restart now"), self.restart, "suggested-action")]).present()
+
+    def restart(self):
+        self.flush()
+        app = self.get_application()
+        app.restart = True
+        app.quit()
 
     def on_dark_changed(self, *_):
         if STYLE["name"] != "default":
@@ -5046,11 +5218,11 @@ class Window(Adw.ApplicationWindow):
                 path += ".zip"
             try:
                 names = make_backup(path)
-                self.notify("Backed up %d file%s to %s" % (len(names), "" if len(names) == 1 else "s",
-                                                          os.path.basename(path)))
+                self.notify(trn("Backed up %d file to %s", "Backed up %d files to %s", len(names)) % (
+                    len(names), os.path.basename(path)))
             except OSError as err:
-                self.notify("Could not back up: %s" % (err.strerror or err))
-        self._pick("Back up Moodlog", "save", write,
+                self.notify(tr("Could not back up: %s") % (err.strerror or err))
+        self._pick(tr("Back up Moodlog"), "save", write,
                    "moodlog-backup-%s.zip" % dt.date.today().isoformat())
 
     def on_restore(self):
@@ -5062,36 +5234,36 @@ class Window(Adw.ApplicationWindow):
             except BackupError as err:
                 self.notify(str(err))
                 return
-            made = info.get("created") or "an unknown date"
-            ConfirmWindow(self, "Restore this backup?", (
-                "Your current moods, events and health data will be replaced by the ones in "
+            made = info.get("created") or tr("an unknown date")
+            ConfirmWindow(self, tr("Restore this backup?"), (
+                tr("Your current moods, events and health data will be replaced by the ones in "
                 "the backup from %s. A copy of your current data is saved first, in the "
-                "backups folder inside your data folder." % made),
-                [("Restore", lambda: self.do_restore(path), "destructive-action")]).present()
-        self._pick("Restore from a backup", "open", chosen)
+                "backups folder inside your data folder.") % made),
+                [(tr("Restore"), lambda: self.do_restore(path), "destructive-action")]).present()
+        self._pick(tr("Restore from a backup"), "open", chosen)
 
     def do_restore(self, path):
         try:
             safety = restore_backup(path)
         except (BackupError, OSError) as err:
-            self.notify("Could not restore: %s" % err)
+            self.notify(tr("Could not restore: %s") % err)
             return
         self.reload_data()
-        self.notify("Backup restored. Your previous data was saved as %s" % os.path.basename(safety))
+        self.notify(tr("Backup restored. Your previous data was saved as %s") % os.path.basename(safety))
 
     def merge_conflict_copies(self):
         self.flush()
         try:
             files, added = merge_conflicts(self.store, self.events, self.health)
         except OSError as err:
-            self.notify("Could not merge: %s" % (err.strerror or err))
+            self.notify(tr("Could not merge: %s") % (err.strerror or err))
             return
         self.reload_data()
         self.banner.set_visible(False)
         if files:
-            self.notify("Merged %d conflict cop%s: %d item%s added. The copies were moved to "
-                        "backups/merged-conflicts." % (files, "y" if files == 1 else "ies",
-                                                      added, "" if added == 1 else "s"))
+            self.notify((trn("Merged %d conflict copy", "Merged %d conflict copies", files) % files + ": "
+                         + trn("%d item added.", "%d items added.", added) % added + " "
+                         + tr("The copies were moved to backups/merged-conflicts.")))
 
     def reload_data(self):
         """Read every data file again (after a restore, a folder change or a sync)."""
@@ -5144,11 +5316,12 @@ class Window(Adw.ApplicationWindow):
         month_moods = [m for _d, m in self.store.moods(cur, cur.replace(day=last))]
         if month_moods:
             avg = sum(month_moods) / len(month_moods)
-            self.month_summary.set_text("%d day%s logged this month · average %.1f (%s)" % (
-                len(month_moods), "" if len(month_moods) == 1 else "s", avg,
+            self.month_summary.set_text(trn("%d day logged this month · average %.1f (%s)",
+                "%d days logged this month · average %.1f (%s)", len(month_moods)) % (
+                len(month_moods), avg,
                 MOOD_NAMES[to_level(avg)].lower()))
         else:
-            self.month_summary.set_text("Nothing logged this month yet")
+            self.month_summary.set_text(tr("Nothing logged this month yet"))
         self.calendar.queue_draw()
 
         visible = self.stack.get_visible_child_name()
@@ -5167,19 +5340,19 @@ class Window(Adw.ApplicationWindow):
             days_total = calendar.monthrange(cur.year, cur.month)[1]
             if at_now:
                 days_total = today.day
-            self.trend_title.set_text("Mood day by day")
+            self.trend_title.set_text(tr("Mood day by day"))
         elif mode == "year":
             self.period_label.set_text(str(cur.year))
             at_now = cur.year >= today.year
             end = today if at_now else dt.date(cur.year, 12, 31)
             days_total = (end - dt.date(cur.year, 1, 1)).days + 1
-            self.trend_title.set_text("Average mood by month")
+            self.trend_title.set_text(tr("Average mood by month"))
         else:
-            self.period_label.set_text("All time")
+            self.period_label.set_text(tr("All time"))
             at_now = True
             first = min(self.store.days) if self.store.days else today
             days_total = (today - first).days + 1
-            self.trend_title.set_text("Average mood by month")
+            self.trend_title.set_text(tr("Average mood by month"))
         self.chart_prev.set_visible(mode != "all")
         self.chart_next.set_visible(mode != "all")
         self.chart_next.set_sensitive(not at_now)
@@ -5189,25 +5362,25 @@ class Window(Adw.ApplicationWindow):
         if moods:
             avg = sum(moods) / len(moods)
             value.set_text("%.1f" % avg)
-            sub.set_text("%s, on a 1–5 scale" % MOOD_NAMES[to_level(avg)])
+            sub.set_text(tr("%s, on a 1–5 scale") % MOOD_NAMES[to_level(avg)])
         else:
             value.set_text("–")
-            sub.set_text("nothing logged")
+            sub.set_text(tr("nothing logged"))
         value, sub = self.tiles["days"]
         value.set_text(str(len(moods)))
-        sub.set_text("of %d day%s so far" % (days_total, "" if days_total == 1 else "s"))
+        sub.set_text(trn("of %d day so far", "of %d days so far", days_total) % days_total)
         value, sub = self.tiles["common"]
         if moods:
             best = max(range(1, 6), key=lambda m: (moods.count(m), m))
             value.set_text(MOOD_NAMES[best])
-            sub.set_text("%d day%s" % (moods.count(best), "" if moods.count(best) == 1 else "s"))
+            sub.set_text(trn("%d day", "%d days", moods.count(best)) % moods.count(best))
         else:
             value.set_text("–")
             sub.set_text("")
         value, sub = self.tiles["streak"]
         streak = self.streak()
-        value.set_text("%d day%s" % (streak, "" if streak == 1 else "s"))
-        sub.set_text("logged in a row, up to today")
+        value.set_text(trn("%d day", "%d days", streak) % streak)
+        sub.set_text(tr("logged in a row, up to today"))
         for chart in (self.trend, self.counts, self.weekdays, self.hours, self.scales):
             chart.queue_draw()
         self.refresh_health()
@@ -5239,7 +5412,7 @@ class Window(Adw.ApplicationWindow):
                     spacer = Gtk.Box()
                     spacer.set_size_request(34, 34)
                     box.append(spacer)
-                when = day.strftime("%A, %-d %B %Y")
+                when = fmt_date(day, tr("%A, %-d %B %Y"))
                 if time:
                     when += " · " + time
                 if mood:
@@ -5259,16 +5432,17 @@ class Window(Adw.ApplicationWindow):
         self.notes_list.set_visible(shown > 0)
         self.notes_empty.set_visible(shown == 0)
         if query:
-            self.notes_empty.set_text("No notes match “%s”." % self.search.get_text().strip())
+            self.notes_empty.set_text(tr("No notes match “%s”.") % self.search.get_text().strip())
         else:
             self.notes_empty.set_text(
-                "No notes yet.\nAdd a few words when you log a mood and they will show up here.")
+                tr("No notes yet.\nAdd a few words when you log a mood and they will show up here."))
 
 
 class App(Adw.Application):
     def __init__(self, page=None):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
         self.page = page
+        self.restart = False   # set when the language changes: main() starts Moodlog again
 
     def do_activate(self):
         if not self.get_active_window():
@@ -5312,7 +5486,11 @@ def main(argv):
     for arg in argv[1:]:
         if arg.startswith("--page="):
             page = arg.split("=", 1)[1]
-    return App(page).run([argv[0]])
+    app = App(page)
+    status = app.run([argv[0]])
+    if app.restart:
+        os.execv(sys.executable, [sys.executable, os.path.abspath(argv[0])] + argv[1:])
+    return status
 
 
 if __name__ == "__main__":

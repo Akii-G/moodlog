@@ -19,7 +19,7 @@ starts when the previous one is done.
 
 ## Step 1 – Solid for its users (now)
 
-- **Languages:** Italian first, then others. Writing about how you feel should happen
+- **Languages:** Italian first (done in PC 2.2.0 and iPhone 1.1.0), then others. Writing about how you feel should happen
   in your own language.
 - **First-run welcome:** explain what to log and why, instead of an empty calendar.
 - **Privacy policy:** a short, plain one. The stores require it, and "your data never

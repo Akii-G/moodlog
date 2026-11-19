@@ -40,7 +40,7 @@ enum Mood {
     static let names = [1: "Awful", 2: "Bad", 3: "Okay", 4: "Good", 5: "Great"]
 
     static func name(_ value: Int) -> String {
-        return names[value] ?? ""
+        return names[value].map { tr($0) } ?? ""
     }
 
     /// Average mood -> nearest whole level, halves round up (same as the PC).
@@ -50,8 +50,12 @@ enum Mood {
 }
 
 enum Scale {
-    static let energyWords = [1: "very low", 2: "low", 3: "medium", 4: "high", 5: "very high"]
-    static let anxietyWords = [1: "calm", 2: "a little", 3: "some", 4: "a lot", 5: "very anxious"]
+    static var energyWords: [Int: String] {
+        return [1: tr("very low"), 2: tr("low"), 3: tr("medium"), 4: tr("high"), 5: tr("very high")]
+    }
+    static var anxietyWords: [Int: String] {
+        return [1: tr("calm"), 2: tr("a little"), 3: tr("some"), 4: tr("a lot"), 5: tr("very anxious")]
+    }
 }
 
 enum EventKind: String, CaseIterable, Identifiable {
@@ -61,10 +65,10 @@ enum EventKind: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .medication: return "Medication change"
-        case .health: return "Health"
-        case .life: return "Life event"
-        case .other: return "Other"
+        case .medication: return tr("Medication change")
+        case .health: return tr("Health")
+        case .life: return tr("Life event")
+        case .other: return tr("Other")
         }
     }
 
@@ -143,7 +147,15 @@ enum Day {
         guard let d = date(day) else { return day }
         let f = DateFormatter()
         f.dateFormat = style
-        return f.string(from: d)
+        let text = f.string(from: d)   // in the app's language: "lunedì 16 novembre" in Italian
+        return text.prefix(1).uppercased() + text.dropFirst()
+    }
+
+    /// Mon … Sun in the app's language, Monday first.
+    static var weekdayInitials: [String] {
+        let f = DateFormatter()
+        let names = f.shortStandaloneWeekdaySymbols ?? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        return (Array(names[1...]) + [names[0]]).map { $0.prefix(1).uppercased() + $0.dropFirst() }
     }
 
     static func monthStart(_ date: Date) -> Date {

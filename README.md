@@ -167,13 +167,26 @@ Your moods are in a plain CSV file, `~/.local/share/moodlog/moods.csv` (or in th
 (columns: `date,time,mood,energy,anxiety,note,id,updated,deleted`; one row per entry, time is `HH:MM` or empty, mood is 1 = awful to 5 = great, energy and anxiety are 1-5 or empty). In the calendar, a day with one entry is coloured by that mood, and a day with several shows a small grid with one tile per entry, in time order. A day's point in the charts is the average of its entries. Nothing leaves your
 computer. The folder button in the title bar opens that folder and makes backups.
 
+## Languages
+
+Moodlog is in English and Italian, on the PC and on the iPhone. It follows your
+system language. On the PC you can also choose one in the ☰ menu → **Language**; on the
+iPhone, in Settings → Moodlog → Language. Dates, charts, the doctor report and exports
+follow the chosen language; your notes and the data files stay as they are.
+
+To add a language: copy `po/moodlog.pot` to `po/<code>.po` and fill in the `msgstr`
+lines (any gettext editor such as Poedit works), add the code to `LANGUAGES` in
+`src/moodlog`, and for the iPhone copy `ios/Moodlog/it.lproj` to `<code>.lproj`.
+`tools/extract_strings.py --check` and `tools/extract_ios_strings.py --check` list
+anything still missing.
+
 ## What's new
 
 After each update Moodlog shows what changed, once. You can open the full list again from the ☰ menu → **What's new**, or read [CHANGELOG.md](CHANGELOG.md).
 
 ## Install
 
-    sudo apt install ./moodlog_2.1.0_all.deb
+    sudo apt install ./moodlog_2.2.0_all.deb
 
 Remove with `sudo apt remove moodlog` (your CSV is kept).
 
@@ -193,7 +206,7 @@ MIT
 ## Tests
 
 The scripts in `test/` check the storage, the phone-sync parser, events and the
-Gridgets link (`python3 test/test_store.py` and so on). The `ui*.py` and
+Gridgets link, and the translations (`python3 test/test_store.py`, `test/test_i18n.py` and so on). The `ui*.py` and
 `interact.py` scripts drive the real window and need a display (or `xvfb-run`).
 
 ## Roadmap

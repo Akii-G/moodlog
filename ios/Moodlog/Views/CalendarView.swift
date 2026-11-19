@@ -21,7 +21,7 @@ struct CalendarView: View {
                     }
                     header
                     HStack(spacing: 6) {
-                        ForEach(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], id: \.self) { d in
+                        ForEach(Day.weekdayInitials, id: \.self) { d in
                             Text(d).font(.caption2).foregroundStyle(.secondary).frame(maxWidth: .infinity)
                         }
                     }
@@ -85,11 +85,11 @@ struct CalendarView: View {
         let values = days.compactMap { store.average(on: $0) }
         let text: String
         if values.isEmpty {
-            text = "Nothing logged this month yet"
+            text = tr("Nothing logged this month yet")
         } else {
             let avg = values.reduce(0, +) / Double(values.count)
-            text = "\(days.count) day\(days.count == 1 ? "" : "s") logged · average "
-                + String(format: "%.1f", avg) + " (\(Mood.name(Mood.level(avg)).lowercased()))"
+            text = trn("%@ day logged · average %@ (%@)", "%@ days logged · average %@ (%@)", days.count,
+                       String(format: "%.1f", avg), Mood.name(Mood.level(avg)).lowercased())
         }
         return VStack(alignment: .leading, spacing: 4) {
             Text(text).font(.footnote).foregroundStyle(.secondary)
@@ -148,7 +148,7 @@ struct DayCell: View {
 
     private func accessibility(_ moods: [Int]) -> String {
         let date = Day.pretty(day)
-        if moods.isEmpty { return "\(date), nothing logged" }
+        if moods.isEmpty { return tr("%@, nothing logged", date) }
         return "\(date), " + moods.map { Mood.name($0) }.joined(separator: ", ")
     }
 

@@ -15,7 +15,7 @@ struct DayView: View {
         List {
             Section {
                 if entries.isEmpty {
-                    Text(day == Day.today ? "Nothing logged yet today." : "Nothing logged on this day.")
+                    Text(tr(day == Day.today ? "Nothing logged yet today." : "Nothing logged on this day."))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(entries) { entry in
@@ -32,11 +32,11 @@ struct DayView: View {
                 Button {
                     adding = true
                 } label: {
-                    Label(day == Day.today ? "How do you feel now?" : "Add a mood", systemImage: "plus.circle.fill")
+                    Label(tr(day == Day.today ? "How do you feel now?" : "Add a mood"), systemImage: "plus.circle.fill")
                 }
             } header: {
                 if let avg = store.average(on: day), entries.count > 1 {
-                    Text("Average " + String(format: "%.1f", avg) + " · " + Mood.name(Mood.level(avg)))
+                    Text(tr("Average %@ · %@", String(format: "%.1f", avg), Mood.name(Mood.level(avg))))
                 }
             }
             Section("Events") {
@@ -61,7 +61,7 @@ struct DayView: View {
                 }
             }
         }
-        .navigationTitle(day == Day.today ? "Today" : Day.pretty(day, style: "EEE d MMM"))
+        .navigationTitle(day == Day.today ? tr("Today") : Day.pretty(day, style: "EEE d MMM"))
         .sheet(isPresented: $adding) {
             EntryEditor(day: day, original: nil)
         }
@@ -170,7 +170,7 @@ struct EntryEditor: View {
                     }
                 }
             }
-            .navigationTitle(original == nil ? "New entry" : "Edit entry")
+            .navigationTitle(tr(original == nil ? "New entry" : "Edit entry"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

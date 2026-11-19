@@ -4,6 +4,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 
 ## Moodlog for the PC
 
+### 2.2.0 (2026-11-19)
+
+- Moodlog speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too.
+
 ### 2.1.0 (2026-11-19)
 
 - A “What's new” window opens once after each update, with the full changelog. Open it again any time from the ☰ menu.
@@ -74,6 +78,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 - First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file.
 
 ## Moodlog for iPhone
+
+### 1.1.0 (2026-11-19)
+
+- Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Moodlog → Language.
 
 ### 1.0.1 (2026-11-19)
 

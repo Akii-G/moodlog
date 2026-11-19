@@ -55,14 +55,15 @@ struct EventsView: View {
 
     private func summary(_ event: MoodEvent) -> String {
         if event.date > Day.today {
-            return "Planned. Your mood before and after will be compared once it has happened."
+            return tr("Planned. Your mood before and after will be compared once it has happened.")
         }
         let around = store.moodAround(event.date)
         func part(_ value: (Double, Int)) -> String {
-            return value.1 < 3 ? "not enough days logged (\(value.1))" : String(format: "%.1f", value.0) + " (\(value.1) days)"
+            return value.1 < 3 ? tr("not enough days logged (%@)", String(value.1))
+                : trn("%2$@ (%1$@ day)", "%2$@ (%1$@ days)", value.1, String(format: "%.1f", value.0))
         }
-        var text = "Mood in the 2 weeks before: \(part(around.before)) · after: \(part(around.after))"
-        if !around.complete { text += ", so far" }
+        var text = tr("Mood in the 2 weeks before: %@ · after: %@", part(around.before), part(around.after))
+        if !around.complete { text += tr(", so far") }
         return text
     }
 }
@@ -109,7 +110,7 @@ struct EventEditor: View {
                     }
                 }
             }
-            .navigationTitle(original == nil ? "Add event" : "Edit event")
+            .navigationTitle(tr(original == nil ? "Add event" : "Edit event"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
