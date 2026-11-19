@@ -3,6 +3,7 @@ import SwiftUI
 struct CalendarView: View {
     @Environment(AppStore.self) private var store
     @Environment(SyncCoordinator.self) private var sync
+    @Environment(TourState.self) private var tour
     @AppStorage("server") private var server = ""
     @State private var month = Day.monthStart(Date())
 
@@ -38,6 +39,7 @@ struct CalendarView: View {
                             }
                         }
                     }
+                    .tourTarget("calendar", in: tour)
                     summary
                 }
                 .padding()

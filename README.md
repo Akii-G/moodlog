@@ -203,7 +203,8 @@ anything still missing.
 The first time you open Moodlog, a short tour walks you through the window: it dims
 everything except the part it is talking about, highlights it, and explains it in a
 few calm sentences. Skip it whenever you like (Escape), or use the arrow keys. See it
-again from the ☰ menu → **Show the tour**.
+again from the ☰ menu → **Show the tour**. Moodlog for iPhone has its own tour, which
+switches to each tab as it explains it (Settings → **Show the tour**).
 
 ## What's new
 

@@ -4,6 +4,7 @@ import SwiftUI
 struct MoodlogApp: App {
     @State private var store = AppStore()
     @State private var sync = SyncCoordinator()
+    @State private var tour = TourState()
     @Environment(\.scenePhase) private var phase
 
     init() {
@@ -15,6 +16,7 @@ struct MoodlogApp: App {
             ContentView()
                 .environment(store)
                 .environment(sync)
+                .environment(tour)
                 .onAppear {
                     let coordinator = sync
                     store.onChange = { [weak store] in
@@ -33,18 +35,44 @@ struct MoodlogApp: App {
 }
 
 struct ContentView: View {
+    @Environment(AppStore.self) private var store
+    @Environment(TourState.self) private var tour
+    @AppStorage("tourDone") private var tourDone = false
+    @State private var tab = 0
+
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             CalendarView()
                 .tabItem { Label("Log", systemImage: "calendar") }
+                .tag(0)
             ChartsView()
                 .tabItem { Label("Charts", systemImage: "chart.xyaxis.line") }
+                .tag(1)
             DreamsView()
                 .tabItem { Label("Dreams", systemImage: "moon.stars") }
+                .tag(2)
             EventsView()
                 .tabItem { Label("Events", systemImage: "flag") }
+                .tag(3)
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(4)
+        }
+        .overlay {
+            if tour.step != nil {
+                TourOverlay(tour: tour, tab: $tab) {
+                    withAnimation(.easeOut(duration: 0.25)) { tour.step = nil }
+                    tourDone = true
+                    tab = 0
+                }
+                .transition(.opacity)
+            }
+        }
+        .onAppear {
+            // a brand-new install (nothing logged yet): show the welcome tour once
+            if !tourDone && store.entries.isEmpty && store.events.isEmpty && store.dreams.isEmpty {
+                tour.start()
+            }
         }
     }
 }

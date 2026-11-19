@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @Environment(SyncCoordinator.self) private var sync
+    @Environment(TourState.self) private var tour
     @AppStorage("server") private var server = ""
     @AppStorage("token") private var token = ""
     @AppStorage("autoSync") private var autoSync = true
@@ -80,6 +81,9 @@ struct SettingsView: View {
                     Text("Sends sleep, steps and resting heart rate to Moodlog on your PC, like the shortcut does. You can stop using the shortcut once this works.")
                 }
 
+                Section {
+                    Button("Show the tour") { tour.start() }
+                }
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
                     LabeledContent("Entries on this iPhone", value: "\(store.entries.count)")

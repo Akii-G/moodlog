@@ -97,6 +97,10 @@ Moodlog for the PC and Moodlog for iPhone have their own version numbers. Each G
 
 ## Moodlog for iPhone
 
+### 1.3.0 (2026-11-19)
+
+- A welcome tour for new users: it switches to each tab by itself and explains it, with a spotlight on the calendar and a line pointing at the tab. Watch it again from Settings → Show the tour.
+
 ### 1.2.0 (2026-11-19)
 
 - Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC.
