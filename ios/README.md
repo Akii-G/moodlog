@@ -5,6 +5,8 @@ note), see the month calendar and charts, mark events, and sync everything with
 Moodlog on your PC over your home Wi-Fi. It can also send Apple Health data (sleep,
 steps, resting heart rate) to the PC, replacing the shortcut.
 
+<img src="../docs/screenshots/iphone-log.png" alt="The Log tab of Moodlog for iPhone" width="300">
+
 ## Install
 
 The app is built by GitHub Actions (`.github/workflows/ios.yml`) on every change to

@@ -9,7 +9,7 @@ A small, local mood tracker for Linux (GTK 4 / libadwaita, one Python file).
 
 ## Screenshots
 
-These are screenshots of the real app, filled with made-up sample data.
+These are screenshots of the real app. The PC ones use made-up sample data.
 
 **Log**: the month calendar (days with several moods show one tile per entry, flags
 mark events) and the editor for the selected day.
@@ -30,6 +30,10 @@ energy and anxiety, and more below.
 ![The Log tab in the Tahoe style, light](docs/screenshots/tahoe-light.png)
 
 ![The Charts tab in the Tahoe style, dark](docs/screenshots/tahoe-dark.png)
+
+**Moodlog for iPhone**: the month calendar on the phone, synced with the PC.
+
+<img src="docs/screenshots/iphone-log.png" alt="The Log tab of Moodlog for iPhone" width="300">
 
 **Report for your doctor**: the first page of the PDF.
 
