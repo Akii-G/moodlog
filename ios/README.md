@@ -14,6 +14,11 @@ The app is built by GitHub Actions (`.github/workflows/ios.yml`) on every change
 as `Moodlog-iPhone-<version>.ipa`. The iPhone app has its own version number, so check
 the release notes (or [CHANGELOG.md](../CHANGELOG.md)) to see whether it changed.
 Install the `.ipa` with **SideStore** or **AltStore**.
+
+To try a build that isn't in a release yet, open the repo's **Actions** tab → **iOS app** →
+the latest run, and download **Moodlog-iPhone-ipa** under *Artifacts*. GitHub always
+delivers artifacts as a `.zip`: extract it to get the `.ipa`, and install that (don't
+upload the `.zip` to a release, since every release already gets the `.ipa` automatically).
 With a free Apple ID the app must be refreshed every 7 days (SideStore can do this
 by itself).
 
