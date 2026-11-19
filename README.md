@@ -192,8 +192,7 @@ Changes are in [CHANGELOG.md](CHANGELOG.md).
 
 Moodlog is for people who track their mood for their health and want to keep that
 data private. Next: a plain privacy policy and accessibility, then Flathub for every
-Linux distro, then the iPhone and Mac App Stores, then Windows. See
-[ROADMAP.md](ROADMAP.md) for the details.
+Linux distro, then Windows. See [ROADMAP.md](ROADMAP.md) for the details.
 
 ## Licence
 
