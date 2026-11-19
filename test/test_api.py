@@ -14,7 +14,9 @@ def call(method, path, doc=None, token="t" * 24):
         with opener.open(req, timeout=5) as r: return r.status, json.loads(r.read())
     except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b"{}")
 try:
-    assert call("GET", "/api/ping") == (200, {"app": "Moodlog", "version": "2.0.0"})
+    import re
+    version = re.search(r'^VERSION = "(.+)"', open(src).read(), re.M).group(1)
+    assert call("GET", "/api/ping") == (200, {"app": "Moodlog", "version": version})
     assert call("GET", "/api/ping", token="nope")[0] == 401 and call("POST", "/api/sync", {}, token="nope")[0] == 401
     # first sync from an empty phone: gets the PC's data
     code, state = call("POST", "/api/sync", {"entries": [], "events": [], "deleted": []})
