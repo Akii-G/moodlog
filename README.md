@@ -27,7 +27,7 @@ you open it.
 - [Install](#install)
 - [Your data](#your-data)
 - [For developers](#for-developers)
-- [Roadmap](#roadmap)
+- [A word from the developer](#a-word-from-the-developer)
 - [Licence](#licence)
 
 ## What you can do
@@ -248,13 +248,18 @@ list anything still missing.
 
 Changes are in [CHANGELOG.md](CHANGELOG.md).
 
-## Roadmap
+## A word from the developer
 
-![Moodlog roadmap](docs/roadmap.png)
+Hi, I'm Giosuè. I wanted to explain briefly why I made this app: I fell into
+depression about 4 years ago, and I could never remember how my days felt. I also
+had a lot of mood swings through the day, and most mood trackers are only for your
+phone and only allow one entry. That's mainly why. Now it has become a project I
+like working on.
 
-Moodlog is for people who track their mood for their health and want to keep that
-data private. Next: accessibility and more languages, then Flathub for every Linux
-distro, then Windows. See [ROADMAP.md](ROADMAP.md) for the details.
+### A word about Claude
+
+Yes, I'm using Claude Opus to code this. I was a developer before, but I lost all
+passion for it.
 
 ## Licence
 

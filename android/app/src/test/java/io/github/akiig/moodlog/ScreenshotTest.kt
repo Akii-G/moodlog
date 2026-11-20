@@ -59,6 +59,18 @@ abstract class Screens(private val lang: String) {
         rule.onAllNodes(hasText(tr(text)))[0].performClick()
     }
 
+    @Test fun kindWord() {
+        val state = AppState.get(ApplicationProvider.getApplicationContext())
+        val t = Day.today
+        rule.runOnUiThread {
+            state.store.entries.filter { Day.between(it.date, t) in 0..2 }.forEach { state.store.delete(it) }
+        }
+        state.store.absorb(SyncState((0..2).map { Entry("hard$it", Day.adding(-it, t), "07:00", 1, 0, 0, "",
+            "2027-01-01T00:00:00.000Z") }, emptyList(), emptyList(), null))
+        rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/screenshots/${lang}_kind.png")
+    }
+
     @Test fun screens() {
         shot("1-log")
         rule.onAllNodes(hasText(tr("Today"), substring = true)).fetchSemanticsNodes()
@@ -104,17 +116,6 @@ abstract class Screens(private val lang: String) {
 }
 
 class ScreensEnglish : Screens("en") {
-    @Test fun kindWord() {
-        val state = AppState.get(ApplicationProvider.getApplicationContext())
-        val t = Day.today
-        rule.runOnUiThread {
-            state.store.entries.filter { Day.between(it.date, t) in 0..2 }.forEach { state.store.delete(it) }
-        }
-        state.store.absorb(SyncState((0..2).map { Entry("hard$it", Day.adding(-it, t), "07:00", 1, 0, 0, "",
-            "2027-01-01T00:00:00.000Z") }, emptyList(), emptyList(), null))
-        rule.waitForIdle()
-        rule.onRoot().captureRoboImage("build/screenshots/en_kind.png")
-    }
 
     init { seed() }
 }
@@ -124,9 +125,14 @@ class ScreensItalian : Screens("it") {
     init { seed() }
 
     @Test fun whatsNew() {
-        rule.onAllNodes(hasText(tr("Settings")))[0].performClick()
-        rule.onAllNodes(hasText(tr("What's new")))[0].performScrollTo().performClick()
         rule.waitForIdle()
+        if (rule.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().size < 2) {
+            rule.onAllNodes(hasText(tr("Settings")))[0].performClick()
+            rule.waitForIdle()
+            val row = rule.onAllNodes(hasText(tr("What's new")))
+            row[row.fetchSemanticsNodes().size - 1].performScrollTo().performClick()
+            rule.waitForIdle()
+        }
         rule.onAllNodes(androidx.compose.ui.test.isRoot())[1].captureRoboImage("build/screenshots/it_whatsnew.png")
     }
 }
