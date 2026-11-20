@@ -104,7 +104,10 @@ struct SettingsView: View {
                     Toggle("Remind me once a day", isOn: $reminderOn)
                         .onChange(of: reminderOn) { _, on in
                             Task {
-                                if on && !(await Reminder.requestPermission()) { reminderOn = false }
+                                if on {
+                                    let allowed = await Reminder.requestPermission()
+                                    if !allowed { reminderOn = false }
+                                }
                                 Reminder.plan(store)
                             }
                         }
