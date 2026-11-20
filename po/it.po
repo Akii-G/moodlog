@@ -1996,3 +1996,6 @@ msgstr "Farmaci: le Impostazioni ora dicono cosa vede Moodlog (farmaci e dosi ne
 
 msgid "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way."
 msgstr "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Moodlog chiede i nomi a Salute in un secondo modo."
+
+msgid "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Moodlog now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone."
+msgstr "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco una volta sola (Impostazioni → Farmaci → Dai un nome ai farmaci). Backup: ora Moodlog sovrascrive il file di backup al suo posto, così può tenerlo aggiornato in iCloud Drive e sull'iPhone."

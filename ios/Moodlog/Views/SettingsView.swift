@@ -45,9 +45,12 @@ struct SettingsView: View {
             try Backup.remember(file: url)
             backupPlace = Backup.placeName
             lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? ""
-            backupMessage = Backup.write(store)
-                ? tr("Backup saved in %@.", Backup.placeName ?? url.lastPathComponent)
-                : tr("The backup was saved, but Moodlog can't update it there. Try another place, for example iCloud Drive.")
+            if let error = Backup.writeError(store) {
+                backupMessage = tr("The backup was saved, but Moodlog can't update it there (%@). Try another place, for example iCloud Drive.", error)
+            } else {
+                backupMessage = tr("Backup saved in %@.", Backup.placeName ?? url.lastPathComponent)
+            }
+            lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? ""
         } catch {
             backupMessage = tr("Couldn't use that place (%@). Try another one, for example iCloud Drive.", error.localizedDescription)
         }
@@ -156,6 +159,9 @@ struct SettingsView: View {
                         if !medicationMessage.isEmpty {
                             Text(medicationMessage).font(.footnote).foregroundStyle(.secondary)
                         }
+                        if medicationsOn {
+                            NavigationLink("Name your medications") { MedicationNamesView() }
+                        }
                     } else {
                         Text("Needs iOS 26 or newer.").foregroundStyle(.secondary)
                     }
@@ -190,7 +196,8 @@ struct SettingsView: View {
                         LabeledContent("File", value: place)
                         LabeledContent("Last backup", value: lastBackup.isEmpty ? tr("not yet") : lastBackup)
                         Button("Back up now") {
-                            backupMessage = Backup.write(store) ? tr("Backup saved in %@.", place) : tr("Couldn't write the backup. Choose the file again.")
+                            backupMessage = Backup.writeError(store).map { tr("Couldn't write the backup (%@). Choose the file again.", $0) } ?? tr("Backup saved in %@.", place)
+                            lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? lastBackup
                         }
                         Button("Choose another file…") { chooseFile() }
                         Button("Stop backing up", role: .destructive) {

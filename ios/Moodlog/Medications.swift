@@ -18,7 +18,7 @@ struct DoseRecord: Hashable, Identifiable {
         guard let amount, amount > 0 else { return name }
         let number = amount == amount.rounded() ? String(Int(amount)) : String(format: "%g", amount)
         let shown = ["", "count", "1"].contains(unit) ? "" : " \(unit)"
-        return "\(name) \(number)\(shown)"
+        return "\(name) · \(number)\(shown)"
     }
 }
 
@@ -151,15 +151,74 @@ enum Medications {
         var names: [HKHealthConceptIdentifier: String] = [:]
         for med in await annotated() { names[med.medication.identifier] = name(of: med) }
         let known = names
+        let unknown = await unnamedIDs(known)
+        let custom = customNames
+        return { id in
+            if let n = known[id] { return n }
+            if let n = custom[key(id)], !n.isEmpty { return n }
+            let i = (unknown.firstIndex(of: id) ?? unknown.count) + 1
+            return tr("Medication %@", "\(i)")
+        }
+    }
+
+    /// Medications with doses but no name from Health, in the order of their first dose.
+    @available(iOS 26.0, *)
+    private static func unnamedIDs(_ known: [HKHealthConceptIdentifier: String]) async -> [HKHealthConceptIdentifier] {
         var missing: [HKHealthConceptIdentifier] = []
         for event in await doseEvents(from: nil, to: Date()) where known[event.medicationConceptIdentifier] == nil {
             if !missing.contains(event.medicationConceptIdentifier) { missing.append(event.medicationConceptIdentifier) }
         }
-        let unknown = missing
-        return { id in
-            if let n = known[id] { return n }
-            let i = (unknown.firstIndex(of: id) ?? unknown.count) + 1
-            return tr("Medication %@", "\(i)")
+        return missing
+    }
+
+    // MARK: names you give in Moodlog (when Health doesn't give them)
+
+    private static let namesKey = "medicationNames"
+
+    static var customNames: [String: String] {
+        (UserDefaults.standard.dictionary(forKey: namesKey) as? [String: String]) ?? [:]
+    }
+
+    static func setName(_ name: String, for key: String) {
+        var all = customNames
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        all[key] = clean.isEmpty ? nil : clean
+        UserDefaults.standard.set(all, forKey: namesKey)
+        UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // the PC gets the new names
+    }
+
+    /// A stable text for a medication (the same on every launch and device).
+    @available(iOS 26.0, *)
+    private static func key(_ id: HKHealthConceptIdentifier) -> String {
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: id, requiringSecureCoding: true) {
+            return data.base64EncodedString()
+        }
+        return String(describing: id)
+    }
+
+    /// One medication Health doesn't name, for the naming screen.
+    struct Unnamed: Identifiable, Hashable {
+        let id: String           // the stable key
+        let number: Int          // "Medication 3"
+        let doses: Int           // in the last 90 days
+        let last: DoseRecord?    // the most recent dose, to recognise it
+    }
+
+    static func unnamed() async -> [Unnamed] {
+        guard isOn, #available(iOS 26.0, *) else { return [] }
+        var known: [HKHealthConceptIdentifier: String] = [:]
+        for med in await annotated() { known[med.medication.identifier] = name(of: med) }
+        let ids = await unnamedIDs(known)
+        let since = Day.calendar.date(byAdding: .day, value: -90, to: Date())
+        let events = await doseEvents(from: since, to: Date())
+        return ids.enumerated().map { i, id in
+            let mine = events.filter { $0.medicationConceptIdentifier == id }
+            let last = mine.last.map { e -> DoseRecord in
+                let amount: Double? = e.doseQuantity
+                return DoseRecord(id: e.uuid.uuidString, name: tr("Medication %@", "\(i + 1)"), time: e.startDate,
+                                  taken: e.logStatus == .taken, amount: amount, unit: e.unit.unitString)
+            }
+            return Unnamed(id: key(id), number: i + 1, doses: mine.count, last: last)
         }
     }
 
@@ -193,7 +252,7 @@ enum Medications {
         }
         var out = trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count) + " "
             + tr("Doses in the last 30 days: %@.", "\(doses.count)")
-        if found == 0 { out += " " + tr("Health didn't give their names, so they're numbered.") }
+        if found == 0 { out += " " + tr("Health doesn't give their names: you can name them below.") }
         return out
     }
 

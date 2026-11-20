@@ -266,8 +266,6 @@
 "Version %@" = "Versione %@";
 "New" = "Nuovo";
 "Backup saved in %@." = "Backup salvato in %@.";
-"Couldn't write the backup. Choose the file again." = "Impossibile scrivere il backup. Scegli di nuovo il file.";
-"The backup was saved, but Moodlog can't update it there. Try another place, for example iCloud Drive." = "Il backup è stato salvato, ma Moodlog non può aggiornarlo lì. Prova un altro posto, per esempio iCloud Drive.";
 "Couldn't use that place (%@). Try another one, for example iCloud Drive." = "Impossibile usare quel posto (%@). Provane un altro, per esempio iCloud Drive.";
 "Save the backup file once where you like, for example in iCloud Drive, and Moodlog keeps it up to date after each change. iCloud Drive uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, Android included." = "Salva il file di backup una volta dove vuoi, per esempio in iCloud Drive, e Moodlog lo tiene aggiornato dopo ogni modifica. Lo carica iCloud Drive; Moodlog non va mai su internet. Puoi ripristinarlo su qualsiasi telefono, anche Android.";
 "File" = "File";
@@ -298,4 +296,15 @@
 "Doses in the last 30 days: %@." = "Dosi negli ultimi 30 giorni: %@.";
 "Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Moodlog." = "Moodlog legge i farmaci che registri nell'app Salute, e se hai preso o saltato ogni dose. Li mostra in ogni giorno e nel resoconto, e li invia al tuo PC insieme ai dati di Salute qui sopra. Non può cambiare niente in Salute. Salute chiede solo dei farmaci su cui non hai ancora deciso; per cambiare la tua scelta vai in Impostazioni → Salute → Accesso dati e dispositivi → Moodlog.";
 "Medication %@" = "Farmaco %@";
-"Health didn't give their names, so they're numbered." = "Salute non ha dato i loro nomi, quindi sono numerati.";
+"No backup file chosen." = "Nessun file di backup scelto.";
+"Health doesn't give their names: you can name them below." = "Salute non dà i loro nomi: puoi dargli un nome qui sotto.";
+"%@ dose in 90 days" = "%@ dose in 90 giorni";
+"%@ doses in 90 days" = "%@ dosi in 90 giorni";
+"Name your medications" = "Dai un nome ai farmaci";
+"No doses in the last 90 days." = "Nessuna dose negli ultimi 90 giorni.";
+"Last dose: %@" = "Ultima dose: %@";
+"Reading Health…" = "Lettura di Salute…";
+"Health gives the names of all your medications: nothing to name here." = "Salute dà i nomi di tutti i tuoi farmaci: qui non c'è niente da nominare.";
+"Health doesn't tell Moodlog the names of these medications. Name each one once, recognising it by its last dose; you can find it in the Health app → Medications. The names stay on this phone and go to your PC with the doses." = "Salute non dice a Moodlog i nomi di questi farmaci. Dai un nome a ciascuno una volta sola, riconoscendolo dall'ultima dose; la trovi nell'app Salute → Farmaci. I nomi restano su questo telefono e vanno al PC insieme alle dosi.";
+"The backup was saved, but Moodlog can't update it there (%@). Try another place, for example iCloud Drive." = "Il backup è stato salvato, ma Moodlog non può aggiornarlo lì (%@). Prova un altro posto, per esempio iCloud Drive.";
+"Couldn't write the backup (%@). Choose the file again." = "Non è stato possibile scrivere il backup (%@). Scegli di nuovo il file.";

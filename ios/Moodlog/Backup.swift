@@ -45,11 +45,16 @@ enum Backup {
         return url
     }
 
+    /// The file picked in this session: used directly, it doesn't depend on the bookmark.
+    nonisolated(unsafe) private static var picked: URL?
+
     /// Remembers the saved file (a security-scoped bookmark), so Moodlog can keep writing to it.
     static func remember(file: URL) throws {
         let ok = file.startAccessingSecurityScopedResource()
         defer { if ok { file.stopAccessingSecurityScopedResource() } }
-        let data = try file.bookmarkData(options: .minimalBookmark, includingResourceValuesForKeys: nil, relativeTo: nil)
+        // No .minimalBookmark: on iPhone that kind of bookmark loses the permission to write.
+        let data = try file.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
+        picked = file
         UserDefaults.standard.set(data, forKey: key)
         UserDefaults.standard.set(file.deletingLastPathComponent().lastPathComponent + " › " + file.lastPathComponent,
                                   forKey: "backupFileName")
@@ -57,6 +62,7 @@ enum Backup {
     }
 
     static func forget() {
+        picked = nil
         UserDefaults.standard.removeObject(forKey: key)
         UserDefaults.standard.removeObject(forKey: "backupFileName")
     }
@@ -65,6 +71,7 @@ enum Backup {
     static var placeName: String? { UserDefaults.standard.string(forKey: "backupFileName") }
 
     private static func file() -> URL? {
+        if let picked { return picked }
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
         var stale = false
         guard let url = try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale) else { return nil }
@@ -75,20 +82,37 @@ enum Backup {
     /// Writes the backup over the saved file; true if it worked.
     @MainActor
     @discardableResult
-    static func write(_ store: AppStore) -> Bool {
-        guard let url = file(), let data = try? content(store) else { return false }
+    static func write(_ store: AppStore) -> Bool { writeError(store) == nil }
+
+    /// Writes the backup over the saved file; nil if it worked, otherwise why not.
+    /// The file is overwritten in place, not replaced: Moodlog may change that one file, but
+    /// not create new ones next to it, which is what an "atomic" save would need.
+    @MainActor
+    static func writeError(_ store: AppStore) -> String? {
+        guard let url = file() else { return tr("No backup file chosen.") }
+        let data: Data
+        do { data = try content(store) } catch { return error.localizedDescription }
         let ok = url.startAccessingSecurityScopedResource()
         defer { if ok { url.stopAccessingSecurityScopedResource() } }
-        var error: NSError?
-        var written = false
-        NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &error) { target in
-            written = (try? data.write(to: target, options: .atomic)) != nil
+        var coordination: NSError?
+        var failure: String?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: [], error: &coordination) { target in
+            do {
+                let handle = try FileHandle(forWritingTo: target)
+                defer { try? handle.close() }
+                try handle.truncate(atOffset: 0)
+                try handle.write(contentsOf: data)
+            } catch {
+                // Last try: a plain (not atomic) write.
+                do { try data.write(to: target, options: []) } catch let second {
+                    failure = second.localizedDescription
+                }
+            }
         }
-        if written && error == nil {
-            UserDefaults.standard.set(Day.today + " " + Day.timeString(Date()), forKey: "lastBackup")
-            return true
-        }
-        return false
+        if let coordination { return coordination.localizedDescription }
+        if let failure { return failure }
+        UserDefaults.standard.set(Day.today + " " + Day.timeString(Date()), forKey: "lastBackup")
+        return nil
     }
 
     static func read(_ url: URL) throws -> SyncState {

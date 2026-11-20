@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.6.3",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Moodlog now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone."
+   ],
+   "it": [
+    "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco una volta sola (Impostazioni → Farmaci → Dai un nome ai farmaci). Backup: ora Moodlog sovrascrive il file di backup al suo posto, così può tenerlo aggiornato in iCloud Drive e sull'iPhone."
+   ]
+  }
+ },
+ {
   "version": "1.6.2",
   "date": "2026-11-20",
   "items": {
