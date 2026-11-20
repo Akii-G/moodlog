@@ -191,8 +191,6 @@ struct SettingsView: View {
                 }, onCancel: { picking = false })
                 .ignoresSafeArea()
             }
-                }
-            }
         }
     }
 }
