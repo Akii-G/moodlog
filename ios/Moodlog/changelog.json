@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.6.4",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed."
+   ],
+   "it": [
+    "Farmaci: Moodlog chiede i nomi a Salute in più modi, e se Salute non li dà comunque, la schermata dei nomi è organizzata come il registro farmaci di Salute: per orario, poi quelli al bisogno."
+   ]
+  }
+ },
+ {
   "version": "1.6.3",
   "date": "2026-11-20",
   "items": {

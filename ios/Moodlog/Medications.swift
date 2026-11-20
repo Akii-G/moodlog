@@ -131,6 +131,17 @@ enum Medications {
         } catch {
             lastError = error.localizedDescription
         }
+        // Asking for active and archived medications separately (some iOS versions answer
+        // these but not the plain request).
+        var split: [HKUserAnnotatedMedication] = []
+        for archived in [false, true] {
+            let predicate = HKQuery.predicateForUserAnnotatedMedications(isArchived: archived)
+            if let found = try? await HKUserAnnotatedMedicationQueryDescriptor(predicate: predicate, limit: nil)
+                .result(for: HealthSender.store) {
+                split += found
+            }
+        }
+        if !split.isEmpty { lastError = nil; return split }
         // The older, callback style query: one medication per call, then done = true.
         let meds: [HKUserAnnotatedMedication] = await withCheckedContinuation { continuation in
             let box = Collected()
@@ -202,6 +213,8 @@ enum Medications {
         let number: Int          // "Medication 3"
         let doses: Int           // in the last 90 days
         let last: DoseRecord?    // the most recent dose, to recognise it
+        let usual: String?       // the time it's usually scheduled for, "21:00" (nil: as needed)
+        let liquid: Bool         // measured in mL
     }
 
     static func unnamed() async -> [Unnamed] {
@@ -218,7 +231,14 @@ enum Medications {
                 return DoseRecord(id: e.uuid.uuidString, name: tr("Medication %@", "\(i + 1)"), time: e.startDate,
                                   taken: e.logStatus == .taken, amount: amount, unit: e.unit.unitString)
             }
-            return Unnamed(id: key(id), number: i + 1, doses: mine.count, last: last)
+            // The usual scheduled time, like the groups in Health's medication log.
+            var times: [String: Int] = [:]
+            for e in mine where e.scheduleType != .asNeeded {
+                times[Day.timeString(e.scheduledDate ?? e.startDate), default: 0] += 1
+            }
+            let usual = times.max { a, b in a.value == b.value ? a.key > b.key : a.value < b.value }?.key
+            let liquid = mine.contains { $0.unit.unitString.lowercased().hasSuffix("ml") }
+            return Unnamed(id: key(id), number: i + 1, doses: mine.count, last: last, usual: usual, liquid: liquid)
         }
     }
 

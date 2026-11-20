@@ -298,13 +298,13 @@
 "Medication %@" = "Farmaco %@";
 "No backup file chosen." = "Nessun file di backup scelto.";
 "Health doesn't give their names: you can name them below." = "Salute non dà i loro nomi: puoi dargli un nome qui sotto.";
-"%@ dose in 90 days" = "%@ dose in 90 giorni";
-"%@ doses in 90 days" = "%@ dosi in 90 giorni";
 "Name your medications" = "Dai un nome ai farmaci";
 "No doses in the last 90 days." = "Nessuna dose negli ultimi 90 giorni.";
 "Last dose: %@" = "Ultima dose: %@";
 "Reading Health…" = "Lettura di Salute…";
 "Health gives the names of all your medications: nothing to name here." = "Salute dà i nomi di tutti i tuoi farmaci: qui non c'è niente da nominare.";
-"Health doesn't tell Moodlog the names of these medications. Name each one once, recognising it by its last dose; you can find it in the Health app → Medications. The names stay on this phone and go to your PC with the doses." = "Salute non dice a Moodlog i nomi di questi farmaci. Dai un nome a ciascuno una volta sola, riconoscendolo dall'ultima dose; la trovi nell'app Salute → Farmaci. I nomi restano su questo telefono e vanno al PC insieme alle dosi.";
 "The backup was saved, but Moodlog can't update it there (%@). Try another place, for example iCloud Drive." = "Il backup è stato salvato, ma Moodlog non può aggiornarlo lì (%@). Prova un altro posto, per esempio iCloud Drive.";
 "Couldn't write the backup (%@). Choose the file again." = "Non è stato possibile scrivere il backup (%@). Scegli di nuovo il file.";
+"Health doesn't tell Moodlog the names of these medications. Open Health → Medications: the groups below are in the same order as its medication log. Type each name once." = "Salute non dice a Moodlog i nomi di questi farmaci. Apri Salute → Farmaci: i gruppi qui sotto sono nello stesso ordine del suo registro farmaci. Scrivi ogni nome una volta sola.";
+"Taken as needed" = "Farmaci assunti al bisogno";
+"No doses in the last 90 days" = "Nessuna dose negli ultimi 90 giorni";
