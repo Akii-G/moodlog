@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.6.2",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way."
+   ],
+   "it": [
+    "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Moodlog chiede i nomi a Salute in un secondo modo."
+   ]
+  }
+ },
+ {
   "version": "1.6.1",
   "date": "2026-11-20",
   "items": {

@@ -294,7 +294,8 @@
 "Read my medications from Apple Health" = "Leggi i miei farmaci da Salute di Apple";
 "Choose which medications…" = "Scegli quali farmaci…";
 "Health said: %@" = "Salute ha risposto: %@";
-"Moodlog sees %@ doses in the last 30 days, but not the medications they belong to." = "Moodlog vede %@ dosi negli ultimi 30 giorni, ma non i farmaci a cui appartengono.";
 "Moodlog can't see any medications. Log them in the Health app, or allow them in Settings → Health → Data Access & Devices → Moodlog." = "Moodlog non vede nessun farmaco. Registrali nell'app Salute, oppure consentili in Impostazioni → Salute → Accesso dati e dispositivi → Moodlog.";
 "Doses in the last 30 days: %@." = "Dosi negli ultimi 30 giorni: %@.";
 "Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Moodlog." = "Moodlog legge i farmaci che registri nell'app Salute, e se hai preso o saltato ogni dose. Li mostra in ogni giorno e nel resoconto, e li invia al tuo PC insieme ai dati di Salute qui sopra. Non può cambiare niente in Salute. Salute chiede solo dei farmaci su cui non hai ancora deciso; per cambiare la tua scelta vai in Impostazioni → Salute → Accesso dati e dispositivi → Moodlog.";
+"Medication %@" = "Farmaco %@";
+"Health didn't give their names, so they're numbered." = "Salute non ha dato i loro nomi, quindi sono numerati.";

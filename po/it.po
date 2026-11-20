@@ -1993,3 +1993,6 @@ msgstr "Passi, frequenza cardiaca a riposo, sonno e, dall'iPhone, i farmaci veng
 
 msgid "Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
 msgstr "Farmaci: le Impostazioni ora dicono cosa vede Moodlog (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."
+
+msgid "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way."
+msgstr "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Moodlog chiede i nomi a Salute in un secondo modo."

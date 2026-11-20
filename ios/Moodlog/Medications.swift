@@ -53,18 +53,32 @@ enum Medications {
 
     static func list() async -> [MedicationInfo] {
         guard isOn, #available(iOS 26.0, *) else { return [] }
-        return await annotated().map { MedicationInfo(name: name(of: $0), archived: $0.isArchived, asNeeded: !$0.hasSchedule) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        let meds = await annotated().map { MedicationInfo(name: name(of: $0), archived: $0.isArchived, asNeeded: !$0.hasSchedule) }
+        if !meds.isEmpty {
+            return meds.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+        // Health gave no list: name them from the doses ("Medication 1", ...).
+        let names = Set(await doses(from: nil, to: Date()).map(\.name))
+        return names.sorted().map { MedicationInfo(name: $0, archived: false, asNeeded: false) }
     }
 
     /// Doses from `start` (nil: all of them) up to `end`, oldest first.
     static func doses(from start: Date?, to end: Date) async -> [DoseRecord] {
         guard isOn, #available(iOS 26.0, *) else { return [] }
-        var out: [DoseRecord] = []
-        for med in await annotated() {
-            out += await doses(of: med, from: start, to: end)
+        let names = await nameLookup()
+        let events = await doseEvents(from: start, to: end)
+        return events.compactMap { event -> DoseRecord? in
+            let taken: Bool
+            switch event.logStatus {
+            case .taken: taken = true
+            case .skipped: taken = false
+            default: return nil
+            }
+            let amount: Double? = event.doseQuantity
+            return DoseRecord(id: event.uuid.uuidString, name: names(event.medicationConceptIdentifier), time: event.startDate,
+                              taken: taken, amount: amount, unit: event.unit.unitString)
         }
-        return out.sorted { $0.time < $1.time }
+        .sorted { $0.time < $1.time }
     }
 
     static func doses(on day: String) async -> [DoseRecord] {
@@ -110,75 +124,95 @@ enum Medications {
 
     @available(iOS 26.0, *)
     private static func annotated() async -> [HKUserAnnotatedMedication] {
+        lastError = nil
         do {
-            let meds = try await HKUserAnnotatedMedicationQueryDescriptor().result(for: HealthSender.store)
-            lastError = nil
-            return meds
+            let meds = try await HKUserAnnotatedMedicationQueryDescriptor(predicate: nil, limit: nil).result(for: HealthSender.store)
+            if !meds.isEmpty { return meds }
         } catch {
             lastError = error.localizedDescription
-            return []
         }
+        // The older, callback style query: one medication per call, then done = true.
+        let meds: [HKUserAnnotatedMedication] = await withCheckedContinuation { continuation in
+            let box = Collected()
+            let query = HKUserAnnotatedMedicationQuery(predicate: nil, limit: HKObjectQueryNoLimit) { _, med, done, error in
+                if let error { lastError = error.localizedDescription }
+                if let result = box.add(med, done: done || error != nil) { continuation.resume(returning: result) }
+            }
+            HealthSender.store.execute(query)
+        }
+        if !meds.isEmpty { lastError = nil }
+        return meds
+    }
+
+    /// Medication concept -> the name you gave it (or Health's). Doses whose medication Health
+    /// doesn't list get "Medication 1", "Medication 2"..., always in the same order.
+    @available(iOS 26.0, *)
+    private static func nameLookup() async -> (HKHealthConceptIdentifier) -> String {
+        var names: [HKHealthConceptIdentifier: String] = [:]
+        for med in await annotated() { names[med.medication.identifier] = name(of: med) }
+        let known = names
+        var missing: [HKHealthConceptIdentifier] = []
+        for event in await doseEvents(from: nil, to: Date()) where known[event.medicationConceptIdentifier] == nil {
+            if !missing.contains(event.medicationConceptIdentifier) { missing.append(event.medicationConceptIdentifier) }
+        }
+        let unknown = missing
+        return { id in
+            if let n = known[id] { return n }
+            let i = (unknown.firstIndex(of: id) ?? unknown.count) + 1
+            return tr("Medication %@", "\(i)")
+        }
+    }
+
+    /// Every dose event Moodlog may read, oldest first.
+    @available(iOS 26.0, *)
+    private static func doseEvents(from start: Date?, to end: Date) async -> [HKMedicationDoseEvent] {
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        let samples: [HKSample] = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: HKSeriesType.medicationDoseEventType(), predicate: predicate,
+                                      limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+                if let error { lastError = error.localizedDescription }
+                continuation.resume(returning: samples ?? [])
+            }
+            HealthSender.store.execute(query)
+        }
+        return samples.compactMap { $0 as? HKMedicationDoseEvent }
     }
 
     /// What Moodlog can see right now, for Settings: medications, doses in the last 30 days,
     /// or the error Health gave.
     static func status() async -> String {
         guard isOn, #available(iOS 26.0, *) else { return "" }
-        let meds = await annotated()
+        let found = await annotated().count
         if let error = lastError { return tr("Health said: %@", error) }
         let end = Date()
-        let start = Day.calendar.date(byAdding: .day, value: -30, to: end)
-        var count = 0
-        for med in meds { count += await doses(of: med, from: start, to: end).count }
-        let all = await anyDoses(from: start, to: end)
+        let doses = await doses(from: Day.calendar.date(byAdding: .day, value: -30, to: end), to: end)
+        let meds = await list()
         if meds.isEmpty {
-            return all > 0
-                ? tr("Moodlog sees %@ doses in the last 30 days, but not the medications they belong to.", "\(all)")
-                : tr("Moodlog can't see any medications. Log them in the Health app, or allow them in Settings → Health → Data Access & Devices → Moodlog.")
+            return tr("Moodlog can't see any medications. Log them in the Health app, or allow them in Settings → Health → Data Access & Devices → Moodlog.")
         }
-        return trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count) + " "
-            + tr("Doses in the last 30 days: %@.", "\(count)")
+        var out = trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count) + " "
+            + tr("Doses in the last 30 days: %@.", "\(doses.count)")
+        if found == 0 { out += " " + tr("Health didn't give their names, so they're numbered.") }
+        return out
     }
 
-    /// Every dose Moodlog may read in the period, whatever medication (to tell problems apart).
-    @available(iOS 26.0, *)
-    private static func anyDoses(from start: Date?, to end: Date) async -> Int {
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
-        return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(sampleType: HKSeriesType.medicationDoseEventType(), predicate: predicate,
-                                      limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
-                if let error { lastError = error.localizedDescription }
-                continuation.resume(returning: samples?.count ?? 0)
-            }
-            HealthSender.store.execute(query)
-        }
-    }
+}
 
+/// Collects the medications the callback query hands over one by one (from HealthKit's queue).
+private final class Collected: @unchecked Sendable {
+    private let lock = NSLock()
+    private var items: [AnyObject] = []
+    private var finished = false
+
+    /// Adds one; returns everything once, when the query says it's done.
     @available(iOS 26.0, *)
-    private static func doses(of med: HKUserAnnotatedMedication, from start: Date?, to end: Date) async -> [DoseRecord] {
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForMedicationDoseEvent(medicationConceptIdentifier: med.medication.identifier),
-            HKQuery.predicateForSamples(withStart: start, end: end, options: []),
-        ])
-        let label = name(of: med)
-        let samples: [HKSample] = await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(sampleType: HKSeriesType.medicationDoseEventType(), predicate: predicate,
-                                      limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
-                continuation.resume(returning: samples ?? [])
-            }
-            HealthSender.store.execute(query)
-        }
-        return samples.compactMap { sample -> DoseRecord? in
-            guard let event = sample as? HKMedicationDoseEvent else { return nil }
-            let taken: Bool
-            switch event.logStatus {
-            case .taken: taken = true
-            case .skipped: taken = false
-            default: return nil
-            }
-            let amount: Double? = event.doseQuantity
-            return DoseRecord(id: event.uuid.uuidString, name: label, time: event.startDate, taken: taken,
-                              amount: amount, unit: event.unit.unitString)
-        }
+    func add(_ med: HKUserAnnotatedMedication?, done: Bool) -> [HKUserAnnotatedMedication]? {
+        lock.lock(); defer { lock.unlock() }
+        if finished { return nil }
+        if let med { items.append(med) }
+        if !done { return nil }
+        finished = true
+        return items.compactMap { $0 as? HKUserAnnotatedMedication }
     }
 }
