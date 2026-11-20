@@ -1800,3 +1800,6 @@ msgid "Moodlog for Android synced (%d change)."
 msgid_plural "Moodlog for Android synced (%d changes)."
 msgstr[0] "Moodlog per Android sincronizzato (%d modifica)."
 msgstr[1] "Moodlog per Android sincronizzato (%d modifiche)."
+
+msgid "Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC."
+msgstr "È uscito Moodlog per Android 1.1.0: un nuovo aspetto come l'app per iPhone, un calendario più alto, e trova questo PC in modo più affidabile quando pop-os.local non funziona sul telefono. Sul PC non cambia niente."
