@@ -1934,3 +1934,6 @@ msgstr "Sonno, passi e frequenza cardiaca a riposo da Connessione Salute, inviat
 
 msgid "What's new: this list, shown once after each update and any time from Settings."
 msgstr "Novità: questo elenco, mostrato una volta dopo ogni aggiornamento e quando vuoi dalle Impostazioni."
+
+msgid "Backup to a file in iCloud Drive or anywhere in Files, kept up to date after each change, and restore from it. The same file works on Android."
+msgstr "Backup in un file su iCloud Drive o ovunque in File, aggiornato dopo ogni modifica, e ripristino da lì. Lo stesso file funziona su Android."

@@ -124,7 +124,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.
 - The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).
 - Sleep and mood: a new chart with your sleep from Apple Health and the mood after shorter and longer nights.
-- Backup to iCloud Drive or any folder in Files, kept up to date after each change, and restore from it. The same file works on Android.
+- Backup to a file in iCloud Drive or anywhere in Files, kept up to date after each change, and restore from it. The same file works on Android.
 - A kind word on hard days, with a helpline.
 - What's new: this list, shown once after each update and any time from Settings.
 

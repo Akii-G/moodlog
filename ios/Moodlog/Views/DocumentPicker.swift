@@ -2,17 +2,18 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// iOS's own document picker, for a folder (the backup) or a file (restore). Used instead of
-/// SwiftUI's .fileImporter, which on some iOS versions closes without reporting a picked folder.
+/// iOS's own document picker: to save a file where you choose (`saving`), or to open one.
 struct DocumentPicker: UIViewControllerRepresentable {
-    let types: [UTType]
+    var types: [UTType] = []
+    var saving: URL? = nil
     let onPick: (URL) -> Void
     let onCancel: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: false)
+        let picker = saving.map { UIDocumentPickerViewController(forExporting: [$0], asCopy: false) }
+            ?? UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: false)
         picker.allowsMultipleSelection = false
         picker.delegate = context.coordinator
         return picker

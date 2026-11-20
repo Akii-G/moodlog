@@ -15,22 +15,30 @@ struct SettingsView: View {
     @AppStorage("reminderTime") private var reminderTime = "20:30"
     @AppStorage("kindWord") private var kindWord = true
     @AppStorage("lastBackup") private var lastBackup = ""
-    @State private var backupFolder = Backup.folderName
+    @State private var backupPlace = Backup.placeName
     @State private var picking = false
-    @State private var pickingFolder = true   // false: picking a backup file to restore
+    @State private var savingTo: URL?          // set: saving the backup file; nil: picking one to restore
     @State private var backupMessage = ""
 
-    private func useFolder(_ url: URL) {
+    private func chooseFile() {
         do {
-            try Backup.remember(folder: url)
-            backupFolder = Backup.folderName
-            if Backup.write(store) {
-                backupMessage = tr("Backup saved in %@.", Backup.folderName ?? url.lastPathComponent)
-            } else {
-                backupMessage = tr("Couldn't write the backup. Pick the folder again.")
-            }
+            savingTo = try Backup.draft(store)
+            picking = true
         } catch {
-            backupMessage = tr("Couldn't use that folder (%@). Try another one, for example in iCloud Drive.", error.localizedDescription)
+            backupMessage = error.localizedDescription
+        }
+    }
+
+    private func useFile(_ url: URL) {
+        do {
+            try Backup.remember(file: url)
+            backupPlace = Backup.placeName
+            lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? ""
+            backupMessage = Backup.write(store)
+                ? tr("Backup saved in %@.", Backup.placeName ?? url.lastPathComponent)
+                : tr("The backup was saved, but Moodlog can't update it there. Try another place, for example iCloud Drive.")
+        } catch {
+            backupMessage = tr("Couldn't use that place (%@). Try another one, for example iCloud Drive.", error.localizedDescription)
         }
     }
 
@@ -144,25 +152,25 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    if let folder = backupFolder {
-                        LabeledContent("Folder", value: folder)
+                    if let place = backupPlace {
+                        LabeledContent("File", value: place)
                         LabeledContent("Last backup", value: lastBackup.isEmpty ? tr("not yet") : lastBackup)
                         Button("Back up now") {
-                            backupMessage = Backup.write(store) ? "" : tr("Couldn't write the backup. Pick the folder again.")
+                            backupMessage = Backup.write(store) ? tr("Backup saved in %@.", place) : tr("Couldn't write the backup. Choose the file again.")
                         }
-                        Button("Choose another folder…") { pickingFolder = true; picking = true }
+                        Button("Choose another file…") { chooseFile() }
                         Button("Stop backing up", role: .destructive) {
-                            Backup.forget(); backupFolder = nil
+                            Backup.forget(); backupPlace = nil
                         }
                     } else {
-                        Button("Choose a backup folder…") { pickingFolder = true; picking = true }
+                        Button("Choose a backup file…") { chooseFile() }
                     }
-                    Button("Restore from a backup…") { pickingFolder = false; picking = true }
+                    Button("Restore from a backup…") { savingTo = nil; picking = true }
                     if !backupMessage.isEmpty { Text(backupMessage).font(.footnote).foregroundStyle(.secondary) }
                 } header: {
                     Text("Backup")
                 } footer: {
-                    Text("Pick a folder once, for example in iCloud Drive, and Moodlog keeps a copy of everything there after each change. iCloud Drive uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, Android included.")
+                    Text("Save the backup file once where you like, for example in iCloud Drive, and Moodlog keeps it up to date after each change. iCloud Drive uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, Android included.")
                 }
 
                 Section {
@@ -185,9 +193,9 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .sheet(isPresented: $picking) {
-                DocumentPicker(types: pickingFolder ? [.folder] : [.json, .data], onPick: { url in
+                DocumentPicker(types: [.json, .data], saving: savingTo, onPick: { url in
                     picking = false
-                    if pickingFolder { useFolder(url) } else { restore(from: url) }
+                    if savingTo != nil { useFile(url) } else { restore(from: url) }
                 }, onCancel: { picking = false })
                 .ignoresSafeArea()
             }

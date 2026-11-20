@@ -69,7 +69,7 @@ extension MoodlogApp {
     /// Writes the backup a few seconds after the last change (if a folder was picked).
     @MainActor
     func backupSoon(_ store: AppStore) {
-        guard Backup.folderName != nil else { return }
+        guard Backup.placeName != nil else { return }
         backupTask?.cancel()
         backupTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 4_000_000_000)
