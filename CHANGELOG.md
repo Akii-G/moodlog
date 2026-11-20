@@ -4,6 +4,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.8.0 (2026-11-20)
+
+- Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.
+
 ### 2.7.0 (2026-11-20)
 
 - A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet.
@@ -118,6 +122,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file.
 
 ## Moodlog for iPhone
+
+### 1.6.0 (2026-11-20)
+
+- Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health.
 
 ### 1.5.0 (2026-11-20)
 

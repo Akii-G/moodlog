@@ -11,6 +11,7 @@ struct DayView: View {
     @State private var addingEvent = false
     @State private var editingDream: Dream?
     @State private var addingDream = false
+    @State private var doses: [DoseRecord] = []
 
     var body: some View {
         let entries = store.entries(on: day)
@@ -64,6 +65,28 @@ struct DayView: View {
                     Label("Add an event, e.g. a medication change", systemImage: "flag")
                 }
             }
+            if Medications.isOn {
+                Section {
+                    if doses.isEmpty {
+                        Text("No doses logged in Apple Health on this day.").foregroundStyle(.secondary)
+                    }
+                    ForEach(doses) { dose in
+                        HStack(spacing: 12) {
+                            Text(dose.clock).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
+                            Image(systemName: "pills.fill").foregroundStyle(Palette.health)
+                            Text(dose.what)
+                            Spacer(minLength: 4)
+                            Text(dose.taken ? tr("Taken") : tr("Skipped"))
+                                .font(.subheadline)
+                                .foregroundStyle(dose.taken ? Palette.health : .secondary)
+                        }
+                    }
+                } header: {
+                    Text("Medication")
+                } footer: {
+                    Text("From the Health app.")
+                }
+            }
             Section("Dreams") {
                 ForEach(dreams) { dream in
                     Button {
@@ -85,6 +108,7 @@ struct DayView: View {
         }
         .navigationTitle(day == Day.today ? tr("Today") : Day.pretty(day, style: "EEE d MMM"))
         .onAppear { if startAdding { adding = true } }
+        .task(id: day) { doses = await Medications.doses(on: day) }
         .sheet(isPresented: $adding) {
             EntryEditor(day: day, original: nil)
         }

@@ -1937,3 +1937,56 @@ msgstr "Novità: questo elenco, mostrato una volta dopo ogni aggiornamento e qua
 
 msgid "Backup to a file in iCloud Drive or anywhere in Files, kept up to date after each change, and restore from it. The same file works on Android."
 msgstr "Backup in un file su iCloud Drive o ovunque in File, aggiornato dopo ogni modifica, e ripristino da lì. Lo stesso file funziona su Android."
+
+msgid "Medication"
+msgstr "Farmaci"
+
+msgid "As logged in Apple Health. Doses that were neither ticked as taken nor as skipped are not counted."
+msgstr "Come registrato in Salute di Apple. Le dosi non segnate né come prese né come saltate non sono contate."
+
+msgid "Taken"
+msgstr "Prese"
+
+msgid "Skipped"
+msgstr "Saltate"
+
+msgid "First in period"
+msgstr "Prima nel periodo"
+
+msgid "Last in period"
+msgstr "Ultima nel periodo"
+
+msgid "as needed"
+msgstr "al bisogno"
+
+msgid "no longer taken"
+msgstr "non più assunto"
+
+msgid "medication (no doses in this period)"
+msgstr "farmaci (nessuna dose in questo periodo)"
+
+msgid "Include medication from Apple Health"
+msgstr "Includi i farmaci da Salute di Apple"
+
+msgid "skipped"
+msgstr "saltata"
+
+msgid "Medication: %s"
+msgstr "Farmaci: %s"
+
+msgid "From Apple Health, sent by Moodlog for iPhone"
+msgstr "Da Salute di Apple, inviati da Moodlog per iPhone"
+
+msgid "medication for %d day"
+msgid_plural "medication for %d days"
+msgstr[0] "farmaci per %d giorno"
+msgstr[1] "farmaci per %d giorni"
+
+msgid "Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section."
+msgstr "Farmaci da Salute di Apple: con Moodlog per iPhone 1.6, i farmaci che registri nell'app Salute e le dosi prese o saltate arrivano insieme ai dati di salute. Compaiono in ogni giorno, e il resoconto per il medico ha una sezione Farmaci."
+
+msgid "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health."
+msgstr "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazioni, e ogni giorno mostra le dosi prese o saltate. Il resoconto per il medico ha una sezione Farmaci, e il tuo PC le riceve insieme ai dati di Salute. Moodlog si limita a leggerli: non cambia mai niente in Salute."
+
+msgid "Steps, resting heart rate, sleep and, from the iPhone, medication are read only if you turn it on in the phone app, and only to show them next to your mood."
+msgstr "Passi, frequenza cardiaca a riposo, sonno e, dall'iPhone, i farmaci vengono letti solo se lo attivi nell'app per il telefono, e solo per mostrarli accanto al tuo umore."

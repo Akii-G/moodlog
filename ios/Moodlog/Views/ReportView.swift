@@ -9,6 +9,7 @@ struct ReportView: View {
     @State private var period = ReportPeriod.threeMonths
     @State private var notes = false
     @State private var sleep = true
+    @State private var medication = true
     @State private var dreams = false
     @State private var dreamText = false
     @State private var busy = false
@@ -32,6 +33,7 @@ struct ReportView: View {
                 Section {
                     Toggle("Include my notes", isOn: $notes)
                     if HealthSender.isAvailable { Toggle("Include sleep from Apple Health", isOn: $sleep) }
+                    if Medications.isOn { Toggle("Include medication from Apple Health", isOn: $medication) }
                     Toggle("Include dreams (how many, and nightmare nights)", isOn: $dreams)
                         .onChange(of: dreams) { _, on in if !on { dreamText = false } }
                     Toggle("Also what the dreams were about", isOn: $dreamText)
@@ -68,11 +70,18 @@ struct ReportView: View {
         message = ""
         let (start, end) = period.range(store)
         let nights = sleep && HealthSender.isAvailable ? (await HealthSender.nightlySleep(from: start, to: end) ?? [:]) : [:]
+        var doses: [DoseRecord] = []
+        var meds: [MedicationInfo] = []
+        if medication && Medications.isOn, let from = Day.date(start), let last = Day.date(end),
+           let to = Day.calendar.date(byAdding: .day, value: 1, to: last) {
+            doses = await Medications.doses(from: from, to: to)
+            meds = await Medications.list()
+        }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(tr("Moodlog report") + " \(start) – \(end).pdf")
         do {
             try Report(store: store, start: start, end: end, includeNotes: notes, sleep: nights,
-                       includeDreams: dreams, dreamText: dreams && dreamText).write(to: url)
+                       includeDreams: dreams, dreamText: dreams && dreamText, doses: doses, meds: meds).write(to: url)
             file = url
         } catch {
             message = error.localizedDescription

@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.7.0"
+VERSION = "2.8.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -1339,7 +1339,7 @@ def _avg(values):
 
 
 def export_report(path, store, events, health, start, end, include_notes=False,
-                  include_health=True, dreams=None, dream_mode="off"):
+                  include_health=True, dreams=None, dream_mode="off", meds=None):
     """A printable summary for a doctor or therapist. Returns the number of pages.
 
     dream_mode: "off" (default: dreams are private), "summary" (counts, nightmare nights
@@ -1646,6 +1646,47 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             cr.stroke()
         pdf.y += 12
 
+    # ---- medication (from Apple Health)
+    med_rows = meds.summary(start, end) if meds else []
+    if med_rows:
+        pdf.ensure(80)
+        pdf.text(tr("Medication"), M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 20
+        note = tr("As logged in Apple Health. Doses that were neither ticked as taken nor as "
+                  "skipped are not counted.")
+        _w, h = pdf.text(note, M, 0, 8, measure=True, width=W - 2 * M)
+        pdf.text(note, M, pdf.y, 8, ink["muted"], width=W - 2 * M)
+        pdf.y += h + 8
+        colx = [M, M + 210, M + 270, M + 330, M + 420]
+        heads = [tr("Medication"), tr("Taken"), tr("Skipped"), tr("First in period"),
+                 tr("Last in period")]
+
+        def med_head():
+            for x, h_ in zip(colx, heads):
+                pdf.text(h_, x, pdf.y, 7.5, ink["muted"], bold=True)
+            pdf.y += 14
+            src(cr, ink["axis"])
+            cr.set_line_width(0.6)
+            cr.move_to(M, pdf.y - 3)
+            cr.line_to(W - M, pdf.y - 3)
+            cr.stroke()
+        med_head()
+        for name, taken, skipped, first, last in med_rows:
+            info = meds.meds.get(name, {})
+            label = name + (" · " + tr("as needed") if info.get("as_needed") else "") + \
+                (" · " + tr("no longer taken") if info.get("archived") else "")
+            _w, h = pdf.text(label, colx[0], 0, 8.5, measure=True, width=200)
+            if pdf.ensure(h + 8):
+                med_head()
+            y = pdf.y
+            pdf.text(label, colx[0], y, 8.5, ink["ink"], width=200)
+            pdf.text(str(taken), colx[1], y, 8.5, ink["ink"])
+            pdf.text(str(skipped), colx[2], y, 8.5, ink["ink"])
+            pdf.text(fmt_date(first, "%-d %b %Y"), colx[3], y, 8.5, ink["ink"])
+            pdf.text(fmt_date(last, "%-d %b %Y"), colx[4], y, 8.5, ink["ink"])
+            pdf.y += max(h, 12) + 6
+        pdf.y += 10
+
     # ---- dreams
     dream_text = dream_summary_text(store, dreams, start, end) if dream_mode != "off" else None
     if dream_text:
@@ -1757,8 +1798,9 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 
 # ----------------------------------------------------------------- backup, restore, merging
 
-DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "sync.json", "sync-last.txt"]
-CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv"]
+DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json", "sync.json",
+              "sync-last.txt"]
+CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json"]
 MANIFEST = "moodlog-backup.json"
 
 
@@ -2220,6 +2262,135 @@ def parse_payload(body):
     return incoming, problems
 
 
+# ----------------------------------------------------------------- medications (from Apple Health)
+
+DOSE_STATUSES = ("taken", "skipped")
+
+
+class MedicationStore:
+    """Medications and doses logged in Apple Health, sent by Moodlog for iPhone:
+    medications.json. Moodlog only keeps this record; it never suggests anything about it."""
+
+    def __init__(self, path=None):
+        self.path = path or os.path.join(data_dir(), "medications.json")
+        self.meds = {}    # name -> {"archived": bool, "as_needed": bool}
+        self.doses = []   # (date, "HH:MM", "taken"|"skipped", amount or None, unit, name)
+        self.mtime = 0
+        self.load()
+
+    def load(self):
+        self.meds, self.doses = {}, []
+        try:
+            self.mtime = os.path.getmtime(self.path)
+            with open(self.path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            self.mtime = 0
+            return
+        for name, info in (doc.get("medications") or {}).items():
+            if isinstance(name, str) and isinstance(info, dict):
+                self.meds[name] = {"archived": bool(info.get("archived")),
+                                   "as_needed": bool(info.get("as_needed"))}
+        for d in doc.get("doses") or []:
+            try:
+                day = dt.date.fromisoformat(d["date"])
+                time, status, name = str(d.get("time", "")), d["status"], str(d["name"])
+                amount = float(d["amount"]) if d.get("amount") is not None else None
+            except (KeyError, TypeError, ValueError):
+                continue
+            if status in DOSE_STATUSES and name and (not time or TIME_RE.match(time)):
+                self.doses.append((day, time, status, amount, str(d.get("unit") or ""), name))
+        self.doses.sort()
+
+    def changed_on_disk(self):
+        try:
+            return os.path.getmtime(self.path) != self.mtime
+        except OSError:
+            return False
+
+    def save(self):
+        doc = {"medications": self.meds,
+               "doses": [{"date": d.isoformat(), "time": t, "status": st, "amount": a, "unit": u,
+                          "name": n} for d, t, st, a, u, n in sorted(self.doses)]}
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, self.path)
+        self.mtime = os.path.getmtime(self.path)
+
+    def replace(self, start, end, doses, meds=None):
+        """The phone sends every dose between start and end: those replace what was kept for
+        those days, so doses deleted or changed in Health go away here too."""
+        self.doses = [x for x in self.doses if not start <= x[0] <= end] + list(doses)
+        self.doses.sort()
+        if meds:
+            self.meds = dict(meds)
+
+    def on(self, day):
+        return [x for x in self.doses if x[0] == day]
+
+    def between(self, start, end):
+        return [x for x in self.doses if start <= x[0] <= end]
+
+    def summary(self, start, end):
+        """[(name, taken, skipped, first day, last day)] for the doses in the period."""
+        out = {}
+        for day, _t, status, _a, _u, name in self.between(start, end):
+            row = out.setdefault(name, [0, 0, day, day])
+            row[0 if status == "taken" else 1] += 1
+            row[2], row[3] = min(row[2], day), max(row[3], day)
+        return [(name, *row) for name, row in sorted(out.items(), key=lambda kv: kv[0].lower())]
+
+
+def dose_text(dose):
+    """'08:10 Sertraline 50 mg' (the amount only when Health has one)."""
+    _day, time, _status, amount, unit, name = dose
+    what = name
+    if amount:
+        what += " " + ("%g" % amount) + (" " + unit if unit and unit not in ("count", "1") else "")
+    return ("%s %s" % (time, what)).strip()
+
+
+def take_medication_lines(text):
+    """Pull the medication lines Moodlog for iPhone adds to its health data:
+         med_range;FIRST DAY;LAST DAY          the period the doses below cover (all of it)
+         med;active|archived;scheduled|as_needed;NAME
+         dose;WHEN;taken|skipped;AMOUNT;UNIT;NAME
+    Returns (the other lines, (start, end, doses, meds) or None)."""
+    rest, doses, meds, span = [], [], {}, None
+    for raw in str(text).replace("\r", "\n").split("\n"):
+        line = raw.strip()
+        head = line.split(";", 1)[0].strip().lower()
+        if head == "med_range":
+            parts = line.split(";")
+            try:
+                span = (dt.date.fromisoformat(parts[1].strip()), dt.date.fromisoformat(parts[2].strip()))
+            except (IndexError, ValueError):
+                pass
+        elif head == "med":
+            parts = line.split(";", 3)
+            if len(parts) == 4 and parts[3].strip():
+                meds[parts[3].strip()] = {"archived": parts[1].strip() == "archived",
+                                          "as_needed": parts[2].strip() == "as_needed"}
+        elif head == "dose":
+            parts = line.split(";", 5)
+            if len(parts) < 6 or not parts[5].strip() or parts[2].strip() not in DOSE_STATUSES:
+                continue
+            when = parse_when(parts[1])
+            if when is None:
+                continue
+            amount = parse_number(parts[3]) if parts[3].strip() else None
+            doses.append((when.date(), when.strftime("%H:%M") if has_clock(parts[1]) else "",
+                          parts[2].strip(), amount, parts[4].strip(), parts[5].strip()))
+        else:
+            rest.append(raw)
+    if span is None:
+        if not doses:
+            return "\n".join(rest), None
+        span = (min(d[0] for d in doses), max(d[0] for d in doses))
+    return "\n".join(rest), (span[0], span[1], doses, meds)
+
+
 # ----------------------------------------------------------------- iPhone app sync (JSON)
 
 def stores_from_json(doc):
@@ -2432,13 +2603,31 @@ def crypto_available():
 def store_health_lines(body):
     """Store health data sent as text or JSON (the Shortcut or the iPhone app).
     Returns (stored anything, message for the sender)."""
+    text_body = body.decode("utf-8", "replace") if isinstance(body, (bytes, bytearray)) else str(body)
+    medication = None
+    if "\ndose;" in "\n" + text_body or "\nmed_range;" in "\n" + text_body:
+        text_body, medication = take_medication_lines(text_body)
+        body = text_body.encode("utf-8")
+    parts = []
+    if medication:
+        start, end, doses, meds = medication
+        meds_store = MedicationStore()
+        meds_store.replace(start, end, doses, meds)
+        meds_store.save()
+        n = len({d[0] for d in doses})
+        if n:
+            parts.append(trn("medication for %d day", "medication for %d days", n) % n)
+        else:
+            parts.append(tr("medication (no doses in this period)"))
+        if not text_body.strip():
+            return True, tr("OK. Stored ") + ", ".join(parts) + "."
     incoming, problems = parse_payload(body)
     store = HealthStore()
     stored = store.merge(incoming)
     if stored:
         store.save()
     parts = [trn("%s for %d day", "%s for %d days", n) % (metric_info(m)[0].lower(), n)
-             for m, n in stored.items()]
+             for m, n in stored.items()] + parts
     message = (tr("OK. Stored ") + ", ".join(parts) + ".") if parts else \
         tr("Nothing stored: no health values found in what was sent.")
     if problems:
@@ -4341,6 +4530,8 @@ class ReportWindow(Gtk.Window):
         notes_hint.set_margin_start(28)
         self.health_check = Gtk.CheckButton(label=tr("Include sleep from my phone"), active=True)
         self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
+        self.meds_check = Gtk.CheckButton(label=tr("Include medication from Apple Health"), active=True)
+        self.meds_check.set_visible(bool(win.meds.doses))
         self.dreams_check = Gtk.CheckButton(label=tr("Include dreams (how many, and nightmare nights)"))
         self.dream_text_check = Gtk.CheckButton(label=tr("Also what the dreams were about"))
         self.dream_text_check.set_margin_start(28)
@@ -4350,8 +4541,8 @@ class ReportWindow(Gtk.Window):
         has_dreams = bool(win.dreams.items)
         self.dreams_check.set_visible(has_dreams)
         self.dream_text_check.set_visible(has_dreams)
-        for wdg in (self.notes_check, notes_hint, self.health_check, self.dreams_check,
-                    self.dream_text_check):
+        for wdg in (self.notes_check, notes_hint, self.health_check, self.meds_check,
+                    self.dreams_check, self.dream_text_check):
             col.append(wdg)
         self.error = Gtk.Label(xalign=0, wrap=True)
         self.error.add_css_class("error")
@@ -4419,6 +4610,7 @@ class ReportWindow(Gtk.Window):
             pages = export_report(path, win.store, win.events, win.health, start, end,
                                   include_notes=self.notes_check.get_active(),
                                   include_health=self.health_check.get_active(),
+                                  meds=win.meds if self.meds_check.get_active() else None,
                                   dreams=win.dreams, dream_mode=(
                                       "off" if not self.dreams_check.get_active() else
                                       "text" if self.dream_text_check.get_active() else "summary"))
@@ -4439,6 +4631,9 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.8.0", "2026-11-20", [
+        "Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.",
+    ]),
     ("2.7.0", "2026-11-20", [
         "A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet.",
         "A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off.",
@@ -4587,6 +4782,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("1.6.0", "2026-11-20", [
+        "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health.",
+    ]),
     ("1.5.0", "2026-11-20", [
         "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
         "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).",
@@ -4666,8 +4864,8 @@ PRIVACY_POINTS = [
      tr("Your phone sends your entries straight to this PC over your own network, "
      "encrypted with your token. The token itself is never sent.")),
     (tr("Health data only if you choose"),
-     tr("Steps, resting heart rate and sleep are read only if you turn it on in the "
-     "phone app, and only to show them next to your mood.")),
+     tr("Steps, resting heart rate, sleep and, from the iPhone, medication are read only "
+     "if you turn it on in the phone app, and only to show them next to your mood.")),
     (tr("No internet"),
      tr("Moodlog never connects to the internet. Only a link you click, like the one "
      "below, opens a page in your browser.")),
@@ -5557,6 +5755,7 @@ class Window(Adw.ApplicationWindow):
         self.set_default_size(940, 680)
         self.store = Store()
         self.health = HealthStore()
+        self.meds = MedicationStore()
         self.events = EventStore()
         self.dreams = DreamStore()
         self.link = GridgetsLink(self.store)
@@ -6067,7 +6266,19 @@ class Window(Adw.ApplicationWindow):
             btn.set_child(box)
             btn.connect("clicked", lambda _b, d=dream: self.open_dream(d))
             self.day_events.append(btn)
-        self.day_events.set_visible(bool(events or dreams))
+        doses = self.meds.on(self.selected)
+        if doses:
+            label = Gtk.Label(xalign=0, wrap=True)
+            label.set_margin_start(10)
+            label.set_margin_top(2)
+            label.set_margin_bottom(2)
+            parts = [dose_text(d) + ("" if d[2] == "taken" else " (%s)" % tr("skipped"))
+                     for d in doses]
+            label.set_text(tr("Medication: %s") % ", ".join(parts))
+            label.set_tooltip_text(tr("From Apple Health, sent by Moodlog for iPhone"))
+            label.add_css_class("dim-label")
+            self.day_events.append(label)
+        self.day_events.set_visible(bool(events or dreams or doses))
 
     # -- dreams
 
@@ -6610,6 +6821,9 @@ class Window(Adw.ApplicationWindow):
             self.health.load()
             if self.stack.get_visible_child_name() == "charts":
                 self.refresh_charts()
+        if self.meds.changed_on_disk():
+            self.meds.load()
+            self.rebuild_day_events()
         return True
 
     def insight(self):
@@ -6865,6 +7079,7 @@ class Window(Adw.ApplicationWindow):
         self.events = EventStore()
         self.dreams = DreamStore()
         self.health = HealthStore()
+        self.meds = MedicationStore()
         self.link.store = self.store
         items = self.store.entries(self.selected)
         self.current = items[index] if index is not None and index < len(items) else None

@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.6.0",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health."
+   ],
+   "it": [
+    "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazioni, e ogni giorno mostra le dosi prese o saltate. Il resoconto per il medico ha una sezione Farmaci, e il tuo PC le riceve insieme ai dati di Salute. Moodlog si limita a leggerli: non cambia mai niente in Salute."
+   ]
+  }
+ },
+ {
   "version": "1.5.0",
   "date": "2026-11-20",
   "items": {

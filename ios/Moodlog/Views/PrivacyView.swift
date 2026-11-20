@@ -19,7 +19,7 @@ struct PrivacyView: View {
                 point(tr("Sync is encrypted"),
                       tr("Your entries go straight to your PC over your own Wi-Fi, encrypted with your token. The token itself is never sent."))
                 point(tr("Health data only if you choose"),
-                      tr("Steps, resting heart rate and sleep are read only if you allow it and turn it on in Settings → Apple Health, and only to show them next to your mood on your PC. Moodlog never writes to Apple Health."))
+                      tr("Sleep, steps, resting heart rate and, from iOS 26, your medications are read only if you allow it and turn it on in Settings, and only to show them next to your mood here and on your PC. Moodlog never writes to Apple Health."))
                 point(tr("No internet"),
                       tr("Moodlog never connects to the internet. Only the link below opens a page in Safari."))
             } header: {

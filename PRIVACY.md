@@ -2,7 +2,7 @@
 
 *Leggi in italiano: [PRIVACY.it.md](PRIVACY.it.md)*
 
-Last updated: 20 November 2026. This covers Moodlog for the PC 2.7.0, Moodlog for iPhone 1.5.0 and Moodlog for Android 1.2.0, and newer.
+Last updated: 20 November 2026. This covers Moodlog for the PC 2.8.0, Moodlog for iPhone 1.6.0 and Moodlog for Android 1.2.0, and newer.
 
 ## The short version
 
@@ -19,7 +19,7 @@ Moodlog is a free, open-source personal project by Giosuè ([Akii-G on GitHub](h
 
 Everything you enter: moods and their notes, tags, events (such as a medication change), dreams, and, if you turn it on, health data from your phone.
 
-- **On the PC**, it lives in plain files in your data folder: `~/.local/share/moodlog/` unless you chose another folder. The files are `moods.csv`, `events.csv`, `dreams.csv` and `health.csv`. Your settings are in `~/.config/moodlog/config.json`. The phone sync token is in `sync.json`, and a one-line note about the last sync is in `sync-last.txt`.
+- **On the PC**, it lives in plain files in your data folder: `~/.local/share/moodlog/` unless you chose another folder. The files are `moods.csv`, `events.csv`, `dreams.csv`, `health.csv` and, if you use medication from Apple Health, `medications.json`. Your settings are in `~/.config/moodlog/config.json`. The phone sync token is in `sync.json`, and a one-line note about the last sync is in `sync-last.txt`.
 - **On the iPhone and on Android**, it lives in the app's private storage, which other apps can't read.
 
 The files on the PC aren't encrypted by Moodlog. They are protected by your user account, and by disk encryption if you turned it on when you installed your system. If you keep your data folder in a folder that another program syncs (for example Syncthing, Nextcloud or Dropbox), that program, and any server it uses, will hold a copy under its own privacy policy.
@@ -41,6 +41,8 @@ If your iPhone backs up to iCloud or to a computer, the backup includes Moodlog'
 - your sleep,
 
 all for the last 7 days, and sends them to your PC with phone sync. Moodlog never writes to Apple Health.
+
+**Medication (optional, off by default, iPhone with iOS 26 or newer).** If you turn on "Read my medications from Apple Health" (iPhone Settings → Medication), Apple Health asks you which medications Moodlog may read. Moodlog then reads those medications and whether you took or skipped each dose, and shows them on each day and in the report for your doctor. When it sends health data to your PC, it also sends the medication doses (the whole history the first time, then the last 30 days). Moodlog never writes to Apple Health and never suggests anything about a medication. You can change which medications it may read in the Health app.
 
 On Android it works the same way with Health Connect: the app reads steps, resting heart rate and sleep for the last 7 days only after you allow it in Health Connect, and only when you turn on "Send with each sync" or tap "Send the last 7 days now" (Settings → Health Connect). It never writes to Health Connect. Health data is used only to show it next to your mood. It is never used for ads, never sold and never given to anyone.
 

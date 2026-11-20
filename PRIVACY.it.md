@@ -2,7 +2,7 @@
 
 *Read in English: [PRIVACY.md](PRIVACY.md)*
 
-Ultimo aggiornamento: 20 novembre 2026. Vale per Moodlog per PC 2.7.0, Moodlog per iPhone 1.5.0 e Moodlog per Android 1.2.0, e per le versioni successive.
+Ultimo aggiornamento: 20 novembre 2026. Vale per Moodlog per PC 2.8.0, Moodlog per iPhone 1.6.0 e Moodlog per Android 1.2.0, e per le versioni successive.
 
 ## In breve
 
@@ -19,7 +19,7 @@ Moodlog è un progetto personale gratuito e open source di Giosuè ([Akii-G su G
 
 Tutto quello che inserisci: umori e le loro note, tag, eventi (come un cambio di farmaco), sogni e, se lo attivi, i dati di salute dal tuo telefono.
 
-- **Sul PC** sta in semplici file nella tua cartella dei dati: `~/.local/share/moodlog/`, se non ne hai scelta un'altra. I file sono `moods.csv`, `events.csv`, `dreams.csv` e `health.csv`. Le impostazioni sono in `~/.config/moodlog/config.json`. Il token della sincronizzazione è in `sync.json`, e una riga sull'ultima sincronizzazione è in `sync-last.txt`.
+- **Sul PC** sta in semplici file nella tua cartella dei dati: `~/.local/share/moodlog/`, se non ne hai scelta un'altra. I file sono `moods.csv`, `events.csv`, `dreams.csv`, `health.csv` e, se usi i farmaci da Salute di Apple, `medications.json`. Le impostazioni sono in `~/.config/moodlog/config.json`. Il token della sincronizzazione è in `sync.json`, e una riga sull'ultima sincronizzazione è in `sync-last.txt`.
 - **Su iPhone e su Android** sta nello spazio privato dell'app, che le altre app non possono leggere.
 
 Moodlog non cifra i file sul PC. Li proteggono il tuo account utente e, se l'hai attivata quando hai installato il sistema, la cifratura del disco. Se tieni la cartella dei dati in una cartella sincronizzata da un altro programma (per esempio Syncthing, Nextcloud o Dropbox), quel programma, e qualsiasi server usi, ne terrà una copia secondo la sua informativa.
@@ -41,6 +41,8 @@ Se il tuo iPhone fa il backup su iCloud o su un computer, il backup contiene i d
 - il sonno,
 
 tutto degli ultimi 7 giorni, e li invia al tuo PC con la sincronizzazione. Moodlog non scrive mai in Salute.
+
+**Farmaci (facoltativi, disattivati all'inizio, iPhone con iOS 26 o successivo).** Se attivi "Leggi i miei farmaci da Salute di Apple" (Impostazioni dell'app → Farmaci), Salute ti chiede quali farmaci Moodlog può leggere. Moodlog legge allora quei farmaci e se hai preso o saltato ogni dose, e li mostra in ogni giorno e nel resoconto per il medico. Quando invia i dati di salute al tuo PC, invia anche le dosi dei farmaci (tutta la storia la prima volta, poi gli ultimi 30 giorni). Moodlog non scrive mai in Salute e non suggerisce mai niente su un farmaco. Puoi cambiare quali farmaci può leggere nell'app Salute.
 
 Su Android funziona allo stesso modo con Connessione Salute: l'app legge passi, frequenza cardiaca a riposo e sonno degli ultimi 7 giorni solo dopo che glielo permetti in Connessione Salute, e solo quando attivi "Invia a ogni sincronizzazione" o tocchi "Invia ora gli ultimi 7 giorni" (Impostazioni → Connessione Salute). Non scrive mai in Connessione Salute. I dati di salute servono solo a mostrarli accanto al tuo umore. Non sono mai usati per la pubblicità, non vengono mai venduti né dati a nessuno.
 

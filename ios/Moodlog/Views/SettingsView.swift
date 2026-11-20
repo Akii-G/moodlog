@@ -9,6 +9,8 @@ struct SettingsView: View {
     @AppStorage("token") private var token = ""
     @AppStorage("autoSync") private var autoSync = true
     @AppStorage("sendHealth") private var sendHealth = false
+    @AppStorage("medicationsOn") private var medicationsOn = false
+    @State private var medicationMessage = ""
     @State private var testResult = ""
     @State private var testing = false
     @AppStorage("reminderOn") private var reminderOn = false
@@ -19,6 +21,18 @@ struct SettingsView: View {
     @State private var picking = false
     @State private var savingTo: URL?          // set: saving the backup file; nil: picking one to restore
     @State private var backupMessage = ""
+
+    private func chooseMedications() async {
+        if let error = await Medications.choose() {
+            medicationMessage = error
+            return
+        }
+        let meds = await Medications.list()
+        medicationMessage = meds.isEmpty
+            ? tr("Moodlog can't see any medications. Log them in the Health app, or tap Choose which medications… and allow them.")
+            : trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count)
+        UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // send the whole history again
+    }
 
     private func chooseFile() {
         do {
@@ -129,6 +143,28 @@ struct SettingsView: View {
                     Text("Apple Health")
                 } footer: {
                     Text("Sends sleep, steps and resting heart rate to Moodlog on your PC, like the shortcut does. You can stop using the shortcut once this works.")
+                }
+
+                Section {
+                    if Medications.isSupported {
+                        Toggle("Read my medications from Apple Health", isOn: $medicationsOn)
+                            .onChange(of: medicationsOn) { _, on in
+                                medicationMessage = ""
+                                if on { Task { await chooseMedications() } }
+                            }
+                        if medicationsOn {
+                            Button("Choose which medications…") { Task { await chooseMedications() } }
+                        }
+                        if !medicationMessage.isEmpty {
+                            Text(medicationMessage).font(.footnote).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text("Needs iOS 26 or newer.").foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("Medication")
+                } footer: {
+                    Text("Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health.")
                 }
 
                 Section {

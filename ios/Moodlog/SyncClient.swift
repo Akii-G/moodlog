@@ -177,13 +177,15 @@ final class SyncCoordinator {
             return
         }
         do {
-            let lines = try await HealthSender.lines(days: 7)
+            let meds = await Medications.lines()
+            let lines = try await HealthSender.lines(days: 7) + meds.lines
             if lines.isEmpty {
                 healthStatus = tr("No Health data found for the last 7 days (or access wasn't allowed in Settings → Health → Data Access).")
                 return
             }
             let answer = try await SyncClient.sendHealth(lines: lines)
             UserDefaults.standard.set(Date(), forKey: "lastHealth")
+            if meds.all { UserDefaults.standard.set(true, forKey: "medicationsSentAll") }
             healthStatus = answer
         } catch {
             healthStatus = error.localizedDescription

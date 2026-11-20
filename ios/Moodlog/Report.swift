@@ -16,15 +16,17 @@ final class Report {
     private let start: String, end: String
     private let includeNotes: Bool, sleep: [String: Double], includeDreams: Bool, dreamText: Bool
     private let days: [String]
+    private let doses: [DoseRecord], meds: [MedicationInfo]
     private var ctx: UIGraphicsPDFRendererContext!
     private var pageNo = 0
     private var y: CGFloat = 42
     private var weekly: Bool { days.count > 92 }
 
     init(store: AppStore, start: String, end: String, includeNotes: Bool, sleep: [String: Double],
-         includeDreams: Bool, dreamText: Bool) {
+         includeDreams: Bool, dreamText: Bool, doses: [DoseRecord] = [], meds: [MedicationInfo] = []) {
         self.store = store; self.start = start; self.end = end; self.includeNotes = includeNotes
         self.sleep = sleep; self.includeDreams = includeDreams; self.dreamText = dreamText
+        self.doses = doses.filter { $0.day >= start && $0.day <= end }; self.meds = meds
         var out: [String] = []
         var d = start
         while d <= end { out.append(d); d = Day.adding(1, to: d) }
@@ -141,6 +143,7 @@ final class Report {
         if !en.isEmpty || !an.isEmpty { scaleChart() }
         if !sleep.isEmpty { sleepChart() }
         eventsTable()
+        medicationTable()
         if includeDreams { dreamsSection() }
         dayTable()
     }
@@ -290,6 +293,47 @@ final class Report {
             y += rowH
         }
         if anyOpen { y += text("* " + tr("so far"), M, y, 7, muted, italic: true) }
+        y += 6
+    }
+
+    /// The same section as the PC's report: per medication, doses taken and skipped in the period.
+    private func medicationTable() {
+        let M = Report.M, W = Report.W
+        if doses.isEmpty { return }
+        var rows: [String: (taken: Int, skipped: Int, first: String, last: String)] = [:]
+        for d in doses {
+            var r = rows[d.name] ?? (0, 0, d.day, d.day)
+            if d.taken { r.taken += 1 } else { r.skipped += 1 }
+            r.first = min(r.first, d.day); r.last = max(r.last, d.day)
+            rows[d.name] = r
+        }
+        heading(tr("Medication"))
+        y += text(tr("As logged in Apple Health. Doses that were neither ticked as taken nor as skipped are not counted."),
+                  M, y, 8, muted, width: W - 2 * M) + 6
+        var widths: [CGFloat] = [0, 52, 52, 86, 86]
+        widths[0] = W - 2 * M - widths.reduce(0, +)
+        let heads = [tr("Medication"), tr("Doses taken"), tr("Doses skipped"), tr("First in period"), tr("Last in period")]
+        func head() {
+            var x = M
+            for (i, h) in heads.enumerated() { text(h, x, y, 7.5, muted, bold: true, width: widths[i] - 4); x += widths[i] }
+            y += 14
+            line(CGPoint(x: M, y: y - 3), CGPoint(x: W - M, y: y - 3), grid, 0.6)
+        }
+        head()
+        for name in rows.keys.sorted(by: { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }) {
+            let r = rows[name]!
+            let info = meds.first { $0.name == name }
+            var label = name
+            if info?.asNeeded == true { label += " · " + tr("as needed") }
+            if info?.archived == true { label += " · " + tr("no longer taken") }
+            let cells = [label, "\(r.taken)", "\(r.skipped)", Day.pretty(r.first, style: "d MMM yyyy"),
+                         Day.pretty(r.last, style: "d MMM yyyy")]
+            let rowH = max(measure(label, 8.5, widths[0] - 4), 12) + 6
+            if y + rowH > Report.H - 48 { newPage(); head() }
+            var x = M
+            for (i, c) in cells.enumerated() { text(c, x, y, 8.5, ink, width: widths[i] - 4); x += widths[i] }
+            y += rowH
+        }
         y += 6
     }
 

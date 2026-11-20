@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.5.0"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "1.6.0"
+    CURRENT_PROJECT_VERSION: "11"
 targets:
   Moodlog:
     type: application
@@ -36,7 +36,7 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSHealthShareUsageDescription: Moodlog sends your sleep, steps and resting heart rate to Moodlog on your PC, so you can compare them with your mood.
+        NSHealthShareUsageDescription: Moodlog shows your sleep and the medications you log in Health next to your mood, and can send them, with your steps and resting heart rate, to Moodlog on your PC.
         NSLocalNetworkUsageDescription: Moodlog syncs your moods with Moodlog on your PC over your home Wi-Fi.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true

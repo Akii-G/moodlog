@@ -179,7 +179,7 @@
 "Sync is encrypted" = "La sincronizzazione è cifrata";
 "Your entries go straight to your PC over your own Wi-Fi, encrypted with your token. The token itself is never sent." = "Le tue voci vanno direttamente al tuo PC sulla tua rete Wi-Fi, cifrate con il tuo token. Il token stesso non viene mai inviato.";
 "Health data only if you choose" = "Dati di salute solo se lo scegli tu";
-"Steps, resting heart rate and sleep are read only if you allow it and turn it on in Settings → Apple Health, and only to show them next to your mood on your PC. Moodlog never writes to Apple Health." = "Passi, frequenza cardiaca a riposo e sonno vengono letti solo se lo permetti e lo attivi in Impostazioni → Salute di Apple, e solo per mostrarli accanto al tuo umore sul PC. Moodlog non scrive mai in Salute.";
+"Sleep, steps, resting heart rate and, from iOS 26, your medications are read only if you allow it and turn it on in Settings, and only to show them next to your mood here and on your PC. Moodlog never writes to Apple Health." = "Sonno, passi, frequenza cardiaca a riposo e, da iOS 26, i tuoi farmaci vengono letti solo se lo permetti e lo attivi in Impostazioni, e solo per mostrarli accanto al tuo umore qui e sul PC. Moodlog non scrive mai in Salute.";
 "No internet" = "Niente internet";
 "Moodlog never connects to the internet. Only the link below opens a page in Safari." = "Moodlog non si collega mai a internet. Solo il link qui sotto apre una pagina in Safari.";
 "Read the full policy" = "Leggi l'informativa completa";
@@ -273,3 +273,25 @@
 "File" = "File";
 "Choose another file…" = "Scegli un altro file…";
 "Choose a backup file…" = "Scegli un file di backup…";
+
+/* Medication from Apple Health */
+"Needs iOS 26 or newer." = "Serve iOS 26 o successivo.";
+"Medication" = "Farmaci";
+"As logged in Apple Health. Doses that were neither ticked as taken nor as skipped are not counted." = "Come registrato in Salute di Apple. Le dosi non segnate né come prese né come saltate non sono contate.";
+"Taken" = "Presa";
+"Doses taken" = "Prese";
+"Skipped" = "Saltata";
+"Doses skipped" = "Saltate";
+"First in period" = "Prima nel periodo";
+"Last in period" = "Ultima nel periodo";
+"as needed" = "al bisogno";
+"no longer taken" = "non più assunto";
+"No doses logged in Apple Health on this day." = "Nessuna dose registrata in Salute di Apple in questo giorno.";
+"From the Health app." = "Dall'app Salute.";
+"Include medication from Apple Health" = "Includi i farmaci da Salute di Apple";
+"Moodlog can read %@ medication." = "Moodlog può leggere %@ farmaco.";
+"Moodlog can read %@ medications." = "Moodlog può leggere %@ farmaci.";
+"Moodlog can't see any medications. Log them in the Health app, or tap Choose which medications… and allow them." = "Moodlog non vede nessun farmaco. Registrali nell'app Salute, oppure tocca Scegli quali farmaci… e consentili.";
+"Read my medications from Apple Health" = "Leggi i miei farmaci da Salute di Apple";
+"Choose which medications…" = "Scegli quali farmaci…";
+"Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health." = "Moodlog legge i farmaci che registri nell'app Salute, e se hai preso o saltato ogni dose. Li mostra in ogni giorno e nel resoconto, e li invia al tuo PC insieme ai dati di Salute qui sopra. Non può cambiare niente in Salute.";

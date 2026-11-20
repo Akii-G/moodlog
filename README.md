@@ -108,6 +108,11 @@ it with SideStore or AltStore.
 To connect it, open **Phone sync** on the PC, switch the receiver on, and enter the
 address and token shown there in the iPhone app's Settings.
 
+On iOS 26 or newer, Moodlog for iPhone can also read the medications you log in the
+Health app (**Settings → Medication**): each day shows the doses you took or skipped,
+the report for your doctor gets a Medication section, and your PC receives them with
+the health data. Moodlog only reads them and never changes anything in Health.
+
 On both phones, **Charts** also shows your sleep night by night next to your mood,
 and **Settings → Backup** keeps a copy of everything in iCloud Drive or Google Drive
 (or any folder you pick), so the phone app works on its own, without a PC. A backup
@@ -170,7 +175,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.7.0_all.deb
+    sudo apt install ./moodlog_2.8.0_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).
