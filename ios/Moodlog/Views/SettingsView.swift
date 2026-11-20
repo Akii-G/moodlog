@@ -20,6 +20,29 @@ struct SettingsView: View {
     @State private var pickingFolder = true   // false: picking a backup file to restore
     @State private var backupMessage = ""
 
+    private func useFolder(_ url: URL) {
+        do {
+            try Backup.remember(folder: url)
+            backupFolder = Backup.folderName
+            if Backup.write(store) {
+                backupMessage = tr("Backup saved in %@.", Backup.folderName ?? url.lastPathComponent)
+            } else {
+                backupMessage = tr("Couldn't write the backup. Pick the folder again.")
+            }
+        } catch {
+            backupMessage = tr("Couldn't use that folder (%@). Try another one, for example in iCloud Drive.", error.localizedDescription)
+        }
+    }
+
+    private func restore(from url: URL) {
+        do {
+            let n = store.absorb(try Backup.read(url))
+            backupMessage = trn("Restored: %@ change.", "Restored: %@ changes.", n)
+        } catch {
+            backupMessage = tr("That file isn't a Moodlog backup.")
+        }
+    }
+
     private var reminderDate: Binding<Date> {
         Binding(get: {
             let parts = reminderTime.split(separator: ":").compactMap { Int($0) }
@@ -161,23 +184,13 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .fileImporter(isPresented: $picking, allowedContentTypes: pickingFolder ? [.folder] : [.json, .data]) { result in
-                guard case .success(let url) = result else { return }
-                if pickingFolder {
-                    do {
-                        try Backup.remember(folder: url)
-                        backupFolder = Backup.folderName
-                        backupMessage = Backup.write(store) ? "" : tr("Couldn't write the backup. Pick the folder again.")
-                    } catch {
-                        backupMessage = error.localizedDescription
-                    }
-                } else {
-                    do {
-                        let n = store.absorb(try Backup.read(url))
-                        backupMessage = trn("Restored: %@ change.", "Restored: %@ changes.", n)
-                    } catch {
-                        backupMessage = tr("That file isn't a Moodlog backup.")
-                    }
+            .sheet(isPresented: $picking) {
+                DocumentPicker(types: pickingFolder ? [.folder] : [.json, .data], onPick: { url in
+                    picking = false
+                    if pickingFolder { useFolder(url) } else { restore(from: url) }
+                }, onCancel: { picking = false })
+                .ignoresSafeArea()
+            }
                 }
             }
         }

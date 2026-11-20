@@ -270,3 +270,5 @@
 "Done" = "Fine";
 "Version %@" = "Versione %@";
 "New" = "Nuovo";
+"Backup saved in %@." = "Backup salvato in %@.";
+"Couldn't use that folder (%@). Try another one, for example in iCloud Drive." = "Impossibile usare quella cartella (%@). Provane un'altra, per esempio in iCloud Drive.";
