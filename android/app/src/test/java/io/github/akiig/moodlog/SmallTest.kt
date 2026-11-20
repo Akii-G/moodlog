@@ -31,6 +31,32 @@ class SmallTest {
         assertNull(Mdns.parse(byteArrayOf(0, 0, 0, 0)))
     }
 
+    /** A fake PC answers like avahi does: a direct reply to the asking port, echoing the
+     *  question, with the answer for pop-os.local (and an unrelated one first). */
+    @Test fun mdnsResolveEndToEnd() {
+        val responder = java.net.DatagramSocket(0, java.net.InetAddress.getByName("127.0.0.1"))
+        val port = responder.localPort
+        kotlin.concurrent.thread(isDaemon = true) {
+            val buf = ByteArray(1500)
+            repeat(2) {
+                val p = java.net.DatagramPacket(buf, buf.size)
+                responder.receive(p)
+                val q = buf.copyOfRange(0, p.length)
+                if (q[2].toInt() and 0x80 != 0) return@repeat
+                val question = q.copyOfRange(12, q.size)
+                val other = Mdns.query("printer.local").copyOfRange(12, Mdns.query("printer.local").size - 4)
+                val answer = byteArrayOf(q[0], q[1], 0x84.toByte(), 0, 0, 1, 0, 2, 0, 0, 0, 0) + question +
+                    other + byteArrayOf(0, 1, 0, 1, 0, 0, 0, 120, 0, 4, 10, 0, 0, 9) +
+                    byteArrayOf(0xc0.toByte(), 12, 0, 1, 0x80.toByte(), 1, 0, 0, 0, 120, 0, 4, 192.toByte(), 168.toByte(), 1, 42)
+                responder.send(java.net.DatagramPacket(answer, answer.size, p.socketAddress))
+            }
+        }
+        val ip = Mdns.resolve("pop-os.local", timeoutMs = 3000, iface = null, port = port,
+            target = java.net.InetAddress.getByName("127.0.0.1"))
+        responder.close()
+        assertEquals("192.168.1.42", ip?.hostAddress)
+    }
+
     @Test fun sleepLines() {
         val a = Instant.parse("2026-11-12T23:40:12.5Z")
         val b = Instant.parse("2026-11-13T00:55:00Z")

@@ -3,6 +3,8 @@
 
     <!-- Only used to reach Moodlog on your own PC over your Wi-Fi. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- To find pop-os.local on your Wi-Fi when the phone can't by itself. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <!-- Health Connect: read only, and only after you allow it. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />

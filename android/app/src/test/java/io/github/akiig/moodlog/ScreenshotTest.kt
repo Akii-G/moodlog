@@ -89,3 +89,9 @@ class ScreensEnglish : Screens("en") {
 class ScreensItalian : Screens("it") {
     init { seed() }
 }
+
+/** Large text, as on a phone with a bigger font size in its settings. */
+@Config(qualifiers = "it-w392dp-h872dp-xxhdpi", fontScale = 1.3f)
+class ScreensLargeText : Screens("it-large") {
+    init { seed() }
+}

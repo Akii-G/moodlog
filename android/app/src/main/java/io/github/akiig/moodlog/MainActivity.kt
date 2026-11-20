@@ -25,6 +25,13 @@ class AppState private constructor(app: Application) {
 
     init {
         store.onChange = { sync.syncSoon(store, 2_000) }
+        client.remember = { host, ip -> prefs.p.edit().putString("ip:$host", ip).apply() }
+        client.recall = { host -> prefs.p.getString("ip:$host", null) }
+        client.multicastLock = {
+            val wifi = app.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            val lock = wifi.createMulticastLock("moodlog-find-pc").apply { setReferenceCounted(false); acquire() }
+            ({ lock.release() })
+        }
     }
 
     companion object {

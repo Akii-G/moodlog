@@ -140,6 +140,13 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for Android
 
+### 1.1.0 (2026-11-20)
+
+- A new look, like the iPhone app: big titles, white cards on a light grey page, a floating tab bar, iPhone-style switches and choices.
+- The calendar is taller, and the date, flag and moon have their own strip at the top of each day, so they no longer cover the faces.
+- Finding your PC: if pop-os.local doesn't work, the app now asks your Wi-Fi itself in more ways, and remembers the PC's address once it has found it.
+- With large text, the tour's buttons no longer get squeezed, and the tab names fit.
+
 ### 1.0.0 (2026-11-19)
 
 - The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian.

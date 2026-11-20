@@ -25,15 +25,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -132,11 +134,14 @@ fun TourOverlay(tour: TourState, onTab: (Int) -> Unit, onFinish: () -> Unit) {
         var cardHeight by remember { mutableStateOf(0) }
         val centred = step.target == null && !step.pointsAtTabs
         val margin = with(density) { 16.dp.toPx() }
+        val top = with(density) { 40.dp.toPx() }
         val cardTop = when {
             centred -> (h - cardHeight) / 2
             hole != Rect.Zero && hole.bottom + cardHeight + 2 * margin < barTop -> hole.bottom + margin
-            else -> barTop - cardHeight - with(density) { 90.dp.toPx() }
-        }.coerceAtLeast(margin)
+            hole != Rect.Zero && hole.top - cardHeight - margin > top -> hole.top - cardHeight - margin
+            hole != Rect.Zero -> barTop - cardHeight - margin       // no room: cover the least
+            else -> barTop - cardHeight - with(density) { 70.dp.toPx() }
+        }.coerceIn(top.coerceAtMost(h / 2), (barTop - cardHeight - margin).coerceAtLeast(top))
         val animatedTop by animateFloatAsState(cardTop, spring(dampingRatio = 0.86f, stiffness = 300f), label = "top")
 
         // the dimmed screen with a hole; the tab bar stays lit. Taps stay on the tour.
@@ -162,11 +167,13 @@ fun TourOverlay(tour: TourState, onTab: (Int) -> Unit, onFinish: () -> Unit) {
         ) { i ->
             val s = steps[i]
             Surface(
-                Modifier.widthIn(max = 380.dp).onSizeChanged { cardHeight = it.height },
-                shape = RoundedCornerShape(22.dp),
-                tonalElevation = 6.dp, shadowElevation = 12.dp,
+                Modifier.widthIn(max = 420.dp)
+                    .heightIn(max = with(density) { (barTop - top - margin).coerceAtLeast(200f).toDp() })
+                    .onSizeChanged { cardHeight = it.height },
+                shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surfaceContainer,
+                shadowElevation = 12.dp,
             ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (s.target == null && !s.pointsAtTabs) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TourFace() }
                     }
@@ -179,16 +186,16 @@ fun TourOverlay(tour: TourState, onTab: (Int) -> Unit, onFinish: () -> Unit) {
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)))
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    // the main button on its own line, so it never gets squeezed (large text)
+                    Button(onClick = { if (i == steps.size - 1) onFinish() else tour.step = i + 1 },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) {
+                        Text(if (i == steps.size - 1) tr("Let's start") else tr("Next"),
+                            style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (i > 0 || i < steps.size - 1) Row(verticalAlignment = Alignment.CenterVertically) {
                         if (i < steps.size - 1) TextButton(onClick = onFinish) { Text(tr("Skip tour")) }
                         Spacer(Modifier.weight(1f))
-                        if (i > 0) {
-                            OutlinedButton(onClick = { tour.step = i - 1 }) { Text(tr("Back")) }
-                            Spacer(Modifier.size(8.dp))
-                        }
-                        Button(onClick = { if (i == steps.size - 1) onFinish() else tour.step = i + 1 }) {
-                            Text(if (i == steps.size - 1) tr("Let's start") else tr("Next"))
-                        }
+                        if (i > 0) TextButton(onClick = { tour.step = i - 1 }) { Text(tr("Back")) }
                     }
                 }
             }

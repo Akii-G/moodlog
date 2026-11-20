@@ -91,7 +91,6 @@
 "Details (optional)" = "Dettagli (facoltativo)";
 "Details" = "Dettagli";
 "Delete this event" = "Elimina questo evento";
-"Address, e.g. http://pop-os.local:8765" = "Indirizzo, es. http://pop-os.local:8765";
 "Token" = "Token";
 "Test connection" = "Prova il collegamento";
 "Your PC" = "Il tuo PC";
@@ -186,3 +185,8 @@
 "Show token" = "Mostra token";
 "Your PC and Health Connect" = "Il tuo PC e Connessione Salute";
 "Here you can connect to Moodlog on your PC and send sleep and steps from Health Connect. All optional: the app works on its own too. You can watch this tour again from here." = "Qui puoi collegarti a Moodlog sul PC e inviare sonno e passi da Connessione Salute. Tutto facoltativo: l'app funziona anche da sola. Da qui puoi anche rivedere questa guida.";
+"Can't find %@ on your Wi-Fi. Is the PC on and on the same Wi-Fi? If it still fails, use the other address Phone sync shows on the PC (If that fails)." = "%@ non si trova sulla tua rete Wi-Fi. Il PC è acceso e sulla stessa rete Wi-Fi? Se non funziona ancora, usa l'altro indirizzo mostrato in Sincronizza telefono sul PC (Se non funziona).";
+"On" = "Attivo";
+"Off" = "Disattivo";
+"Address" = "Indirizzo";
+"From Phone sync on your PC" = "Da Sincronizza telefono sul PC";

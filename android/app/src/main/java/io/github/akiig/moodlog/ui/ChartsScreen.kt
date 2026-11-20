@@ -23,7 +23,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +48,6 @@ import io.github.akiig.moodlog.tr
 import io.github.akiig.moodlog.trn
 import java.time.LocalDate
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChartsScreen() {
     val store = LocalApp.current.store
@@ -62,10 +60,9 @@ fun ChartsScreen() {
     val eventDays = store.events.mapNotNull { e -> days.indexOf(e.date).takeIf { it >= 0 } }
     val allMoods = days.flatMap { store.moodsOn(it) }
 
-    Column(Modifier.fillMaxSize()) {
-        TopAppBar(title = { Text(tr("Charts")) })
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        LargeTitle(tr("Charts"))
+        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             MonthHeader(month, month < Day.monthStart(), { monthText = month.minusMonths(1).toString() },
                 { monthText = month.plusMonths(1).toString() })
             Tiles(store, moodPoints.map { it.second }, allMoods)
@@ -90,6 +87,7 @@ fun ChartsScreen() {
                 if (allMoods.isEmpty()) EmptyText(tr("Nothing logged this month yet"))
                 else Bars(allMoods)
             }
+            Spacer(Modifier.height(TabBarSpace))
         }
     }
 }
@@ -113,10 +111,10 @@ private fun Tiles(store: AppStore, averages: List<Double>, allMoods: List<Int>) 
 
 @Composable
 private fun androidx.compose.foundation.layout.RowScope.Tile(title: String, value: String, sub: String) {
-    Card(Modifier.weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-        Column(Modifier.padding(12.dp)) {
+    Card(Modifier.weight(1f), shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.padding(14.dp)) {
             Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(value, style = MaterialTheme.typography.headlineSmall, maxLines = 1)
             Text(sub, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -124,10 +122,10 @@ private fun androidx.compose.foundation.layout.RowScope.Tile(title: String, valu
 
 @Composable
 private fun ChartCard(title: String, content: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(title, style = MaterialTheme.typography.titleMedium)
             content()
         }
     }

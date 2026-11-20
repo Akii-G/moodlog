@@ -20,7 +20,6 @@ import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.URI
 import java.net.URL
-import java.net.UnknownHostException
 
 class SyncException(message: String) : Exception(message)
 
@@ -73,50 +72,71 @@ class SyncClient(
         return uri!!
     }
 
-    private val resolved = HashMap<String, InetAddress>()
+    /** Where pop-os.local was last found, so the next sync is quick. */
+    var remember: ((host: String, ip: String) -> Unit)? = null
+    var recall: ((host: String) -> String?)? = null
+    /** Lets the phone receive network-wide (multicast) answers while looking a name up. */
+    var multicastLock: (() -> (() -> Unit))? = null
 
-    /** pop-os.local -> its address, asking the network ourselves if the phone can't. */
-    private fun hostFor(uri: URI): String {
-        val host = uri.host
-        if (!host.lowercase().endsWith(".local")) return host
-        try {
-            InetAddress.getByName(host)
-            return host
-        } catch (e: UnknownHostException) {
-            // many Android phones can't look up .local names: do it here
+    /** The addresses to try, in order. For pop-os.local: where it was last found, the name
+     *  itself, "pop-os" on the router's own DNS, then asking the network ourselves (many
+     *  Android phones can't look up .local names). Each later one is only tried if the
+     *  earlier ones fail. */
+    private fun candidates(host: String): Sequence<String> = sequence {
+        if (!host.lowercase().endsWith(".local")) {
+            yield(host); return@sequence
         }
-        val ip = resolved[host] ?: Mdns.resolve(host)?.also { resolved[host] = it }
-        return ip?.hostAddress ?: host
+        val tried = mutableSetOf<String>()
+        recall?.invoke(host)?.let { if (tried.add(it)) yield(it) }
+        val system = try { InetAddress.getByName(host).hostAddress } catch (e: Exception) { null }
+        if (system != null && tried.add(system)) yield(system)
+        val short = host.dropLast(".local".length)
+        val router = try { InetAddress.getByName(short).takeIf { !it.isLoopbackAddress }?.hostAddress } catch (e: Exception) { null }
+        if (router != null && tried.add(router)) yield(router)
+        val release = try { multicastLock?.invoke() } catch (e: Exception) { null }
+        val asked = try { Mdns.resolve(host)?.hostAddress } finally { release?.invoke() }
+        if (asked != null && tried.add(asked)) yield(asked)
+        if (tried.isEmpty()) throw SyncException(tr("Can't find %@ on your Wi-Fi. Is the PC on and on the same Wi-Fi? If it still fails, use the other address Phone sync shows on the PC (If that fails).", host))
+    }
+
+    private fun send(url: URL, sealed: ByteArray, timeout: Int): Pair<Int, String> {
+        val conn = url.openConnection() as HttpURLConnection
+        try {
+            conn.requestMethod = "POST"
+            conn.connectTimeout = timeout
+            conn.readTimeout = 20_000
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.setFixedLengthStreamingMode(sealed.size)
+            conn.outputStream.use { it.write(sealed) }
+            val code = conn.responseCode
+            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+            return code to (stream?.bufferedReader()?.use { it.readText() } ?: "")
+        } finally {
+            conn.disconnect()
+        }
     }
 
     /** Sends `payload` encrypted to `path` (e.g. "/api/e/sync") and returns the decrypted reply.
      *  The token is only used as the key: it is never sent. */
     fun request(path: String, payload: ByteArray): ByteArray {
         val base = baseUrl()
-        val host = hostFor(base)
         val port = if (base.port > 0) ":${base.port}" else ""
-        val url = URL("${base.scheme}://$host$port${base.rawPath ?: ""}$path")
-        val conn = url.openConnection() as HttpURLConnection
-        val code: Int
-        val body: String
-        try {
-            conn.requestMethod = "POST"
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 20_000
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json")
-            val sealed = SyncCrypto.seal(payload, token, path).toByteArray()
-            conn.setFixedLengthStreamingMode(sealed.size)
-            conn.outputStream.use { it.write(sealed) }
-            code = conn.responseCode
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            body = stream?.bufferedReader()?.use { it.readText() } ?: ""
-        } catch (e: IOException) {
-            throw SyncException(tr("Can't reach your PC. Is it on, with Phone sync switched on, and is your phone on the same Wi-Fi? (%@)",
-                e.localizedMessage ?: e.javaClass.simpleName))
-        } finally {
-            conn.disconnect()
+        val sealed = SyncCrypto.seal(payload, token, path).toByteArray()
+        var result: Pair<Int, String>? = null
+        var failure: IOException? = null
+        for (host in candidates(base.host)) {
+            val shown = if (host.contains(':')) "[$host]" else host
+            try {
+                result = send(URL("${base.scheme}://$shown$port${base.rawPath ?: ""}$path"), sealed, 5_000)
+                if (host != base.host) remember?.invoke(base.host, host)
+                break
+            } catch (e: IOException) {
+                failure = e   // try the next address
+            }
         }
+        val (code, body) = result ?: throw SyncException(tr("Can't reach your PC. Is it on, with Phone sync switched on, and is your phone on the same Wi-Fi? (%@)",
+            failure?.localizedMessage ?: failure?.javaClass?.simpleName ?: ""))
         if (code == 401) throw SyncException(tr("Wrong token. Copy it again from Moodlog on your PC (Phone sync)."))
         if (code == 404) throw SyncException(tr("Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted."))
         if (code !in 200..299) {
