@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.Period
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 /**
@@ -67,8 +68,45 @@ class HealthReader(private val context: Context) {
         return out
     }
 
+    /** Hours asleep per night, keyed by the day you woke up, from `start` to `end` (days).
+     *  Null when Health Connect isn't there or Moodlog may not read sleep. */
+    suspend fun nightlySleep(start: String, end: String): Map<String, Double>? {
+        if (!hasPermissions()) return null
+        val from = LocalDate.parse(start).minusDays(1).atStartOfDay()
+        val to = LocalDate.parse(end).plusDays(1).atStartOfDay()
+        val sessions = client.readRecords(ReadRecordsRequest(SleepSessionRecord::class,
+            TimeRangeFilter.between(from, to))).records
+        val segments = sessions.flatMap { s ->
+            if (s.stages.isEmpty()) listOf(s.startTime to s.endTime)
+            else s.stages.filter { stageName(it.stage) != "Awake" }.map { it.startTime to it.endTime }
+        }
+        return sleepHours(segments, ZoneId.systemDefault()).filterKeys { it in start..end }
+    }
+
     companion object {
         private fun iso(t: Instant) = t.truncatedTo(ChronoUnit.SECONDS).toString()
+
+        /** Asleep segments -> {wake-up day: hours}, overlaps merged. The same rule as the PC
+         *  (_sleep_hours in src/moodlog): a night belongs to the day of (end + 9 hours). */
+        fun sleepHours(segments: List<Pair<Instant, Instant>>, zone: ZoneId): Map<String, Double> {
+            val nights = segments.filter { it.second > it.first }
+                .groupBy { it.second.atZone(zone).plusHours(9).toLocalDate().toString() }
+            val out = sortedMapOf<String, Double>()
+            for ((day, spans) in nights) {
+                var total = 0L
+                var curS: Instant? = null
+                var curE: Instant? = null
+                for ((s, e) in spans.sortedBy { it.first }) {
+                    if (curE == null || s > curE) {
+                        if (curE != null) total += curE.epochSecond - curS!!.epochSecond
+                        curS = s; curE = e
+                    } else if (e > curE) curE = e
+                }
+                total += curE!!.epochSecond - curS!!.epochSecond
+                if (total in 1..24 * 3600) out[day] = Math.round(total / 36.0) / 100.0
+            }
+            return out
+        }
 
         /** The same stage names as Apple Health, which the PC understands. */
         fun stageName(stage: Int): String = when (stage) {

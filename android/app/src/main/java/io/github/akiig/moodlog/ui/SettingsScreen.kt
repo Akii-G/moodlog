@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -34,7 +35,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.PermissionController
+import io.github.akiig.moodlog.Backup
 import io.github.akiig.moodlog.BuildConfigVersion
+import io.github.akiig.moodlog.Day
+import io.github.akiig.moodlog.Reminder
+import io.github.akiig.moodlog.trn
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.SyncException
 import io.github.akiig.moodlog.tr
@@ -43,7 +48,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun SettingsScreen(onPrivacy: () -> Unit) {
+fun SettingsScreen(onPrivacy: () -> Unit, onWhatsNew: () -> Unit = {}) {
     val app = LocalApp.current
     val prefs = app.prefs
     val context = LocalContext.current
@@ -64,6 +69,41 @@ fun SettingsScreen(onPrivacy: () -> Unit) {
         allowed = granted.containsAll(app.health.permissions)
     }
     LaunchedEffect(Unit) { allowed = app.health.hasPermissions() }
+
+    // reminder
+    var remind by remember { mutableStateOf(prefs.reminderOn && Reminder.canNotify(context)) }
+    var remindAt by remember { mutableStateOf(Reminder.parse(prefs.reminderTime)) }
+    var pickRemind by remember { mutableStateOf(false) }
+    fun setRemind(on: Boolean) {
+        remind = on; prefs.reminderOn = on; Reminder.schedule(context)
+    }
+    val notifyPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> setRemind(ok) }
+
+    // backup
+    var backupName by remember { mutableStateOf(prefs.backupName) }
+    var backupPlace by remember { mutableStateOf(prefs.backupUri.takeIf { it.isNotEmpty() }?.let { Backup.place(Uri.parse(it)) } ?: "") }
+    var lastBackup by remember { mutableStateOf(prefs.lastBackup) }
+    var backupBusy by remember { mutableStateOf(false) }
+    var restoreMessage by remember { mutableStateOf("") }
+    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(Backup.MIME)) { uri ->
+        if (uri != null) {
+            Backup.remember(context, uri, prefs)
+            backupName = prefs.backupName; backupPlace = Backup.place(uri)
+            scope.launch { backupBusy = true; app.backupNow(); lastBackup = prefs.lastBackup; backupBusy = false }
+        }
+    }
+    val pickRestore = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            restoreMessage = try {
+                val state = withContext(Dispatchers.IO) { Backup.read(context, uri) }
+                val n = app.store.absorb(state)
+                trn("Restored: %@ change.", "Restored: %@ changes.", n)
+            } catch (e: Exception) {
+                tr("That file isn't a Moodlog backup.")
+            }
+        }
+    }
+    var kindWord by remember { mutableStateOf(prefs.kindWord) }
 
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         LargeTitle(tr("Settings"))
@@ -141,6 +181,50 @@ fun SettingsScreen(onPrivacy: () -> Unit) {
                 }
             }
 
+            Section(tr("Reminder"), tr("Only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge.")) {
+                SwitchRow(tr("Remind me once a day"), remind) { on ->
+                    if (on && !Reminder.canNotify(context) && Build.VERSION.SDK_INT >= 33)
+                        notifyPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    else setRemind(on)
+                }
+                if (remind) {
+                    Line()
+                    ValueRow(tr("At"), Day.timeString(remindAt)) { pickRemind = true }
+                }
+            }
+
+            Section(tr("Backup"), if (backupName.isEmpty())
+                tr("Pick a file once, for example in Google Drive, and Moodlog keeps a copy of everything there after each change. The Drive app uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, iPhone included.")
+                else (app.backupStatus.ifEmpty { restoreMessage }.ifEmpty { null })) {
+                if (backupName.isEmpty()) {
+                    ActionRow(tr("Choose a backup file…")) { pickBackup.launch(Backup.fileName()) }
+                } else {
+                    ValueRow(tr("File"), listOf(backupName, backupPlace).filter { it.isNotEmpty() }.joinToString(" · "))
+                    Line()
+                    ValueRow(tr("Last backup"), lastBackup.ifEmpty { tr("not yet") })
+                    Line()
+                    ActionRow(tr("Back up now"), busy = backupBusy) {
+                        scope.launch { backupBusy = true; app.backupNow(); lastBackup = prefs.lastBackup; backupBusy = false }
+                    }
+                    Line()
+                    ActionRow(tr("Choose another file…")) { pickBackup.launch(Backup.fileName()) }
+                    Line()
+                    ActionRow(tr("Stop backing up"), destructive = true) {
+                        prefs.backupUri = ""; prefs.backupName = ""; backupName = ""; backupPlace = ""
+                    }
+                }
+                Line()
+                ActionRow(tr("Restore from a backup…")) { pickRestore.launch(arrayOf(Backup.MIME, "text/plain", "application/octet-stream")) }
+                if (backupName.isEmpty() && restoreMessage.isNotEmpty()) {
+                    Text(restoreMessage, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
+                }
+            }
+
+            Section(footer = tr("After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time.")) {
+                SwitchRow(tr("A kind word on hard days"), kindWord) { kindWord = it; prefs.kindWord = it }
+            }
+
             Section {
                 LinkRow(tr("Show the tour")) { app.tour.start() }
                 if (Build.VERSION.SDK_INT >= 33) {
@@ -152,6 +236,8 @@ fun SettingsScreen(onPrivacy: () -> Unit) {
                 }
                 Line()
                 LinkRow(tr("Privacy"), onClick = onPrivacy)
+                Line()
+                LinkRow(tr("What's new"), onClick = onWhatsNew)
             }
             Section(tr("About")) {
                 ValueRow(tr("Version"), BuildConfigVersion.name(context))
@@ -164,5 +250,8 @@ fun SettingsScreen(onPrivacy: () -> Unit) {
             }
             Spacer(Modifier.height(TabBarSpace))
         }
+    }
+    if (pickRemind) TimePickerDialog(remindAt, { pickRemind = false }) {
+        remindAt = it; prefs.reminderTime = Day.timeString(it); Reminder.schedule(context)
     }
 }

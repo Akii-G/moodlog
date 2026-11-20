@@ -39,10 +39,10 @@ import io.github.akiig.moodlog.tr
 import java.time.LocalTime
 
 @Composable
-fun DayScreen(day: String, onBack: () -> Unit) {
+fun DayScreen(day: String, startAdding: Boolean = false, onBack: () -> Unit) {
     val store = LocalApp.current.store
     var editing by remember { mutableStateOf<Entry?>(null) }
-    var adding by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf(startAdding) }
     var editingEvent by remember { mutableStateOf<MoodEvent?>(null) }
     var addingEvent by remember { mutableStateOf(false) }
     var editingDream by remember { mutableStateOf<Dream?>(null) }

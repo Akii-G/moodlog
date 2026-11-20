@@ -71,16 +71,40 @@ fun MoodlogApp() {
         Tab(tr("Settings"), Icons.Filled.Settings),
     )
 
-    // a brand-new install (nothing logged yet): show the welcome tour once
+    // after an update: "What's new" once. A brand-new install (nothing logged yet) gets the tour.
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var whatsNewSince by remember { mutableStateOf<String?>(null) }
+    var showWhatsNew by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         val s = app.store
-        if (!app.prefs.tourDone && s.entries.isEmpty() && s.events.isEmpty() && s.dreams.isEmpty()) tour.start()
+        val fresh = s.entries.isEmpty() && s.events.isEmpty() && s.dreams.isEmpty()
+        val current = io.github.akiig.moodlog.BuildConfigVersion.name(context)
+        val since = io.github.akiig.moodlog.WhatsNew.since(app.prefs.lastSeenVersion, current, app.prefs.tourDone || !fresh)
+        app.prefs.lastSeenVersion = current
+        if (!app.prefs.tourDone && fresh) tour.start()
+        else if (since != null && !app.openToday) {
+            // coming from a version that didn't record this: mark only this version as new
+            whatsNewSince = if (since == "0") io.github.akiig.moodlog.WhatsNew.load(context).getOrNull(1)?.version ?: "0" else since
+            showWhatsNew = true
+        }
+    }
+
+    // the reminder notification was tapped: today's page, with a new entry open
+    var addNow by remember { mutableStateOf(false) }
+    LaunchedEffect(app.openToday) {
+        if (app.openToday) {
+            app.openToday = false
+            tour.step = null
+            tab = 0; showPrivacy = false
+            openDay = io.github.akiig.moodlog.Day.today
+            addNow = true
+        }
     }
 
     BackHandler(enabled = openDay != null || showPrivacy || tab != 0) {
         when {
             showPrivacy -> showPrivacy = false
-            openDay != null -> openDay = null
+            openDay != null -> { openDay = null; addNow = false }
             else -> tab = 0
         }
     }
@@ -88,18 +112,22 @@ fun MoodlogApp() {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Box(Modifier.fillMaxSize()) {
             when (tab) {
-                0 -> if (openDay != null) DayScreen(openDay!!) { openDay = null }
-                     else LogScreen { openDay = it }
+                0 -> if (openDay != null) androidx.compose.runtime.key(openDay, addNow) {
+                        DayScreen(openDay!!, startAdding = addNow) { openDay = null; addNow = false }
+                     }
+                     else LogScreen { addNow = false; openDay = it }
                 1 -> ChartsScreen()
                 2 -> DreamsScreen()
                 3 -> EventsScreen()
                 else -> if (showPrivacy) PrivacyScreen(back = tr("Settings")) { showPrivacy = false }
-                        else SettingsScreen(onPrivacy = { showPrivacy = true })
+                        else SettingsScreen(onPrivacy = { showPrivacy = true },
+                                            onWhatsNew = { whatsNewSince = null; showWhatsNew = true })
             }
             TabBar(tabs, tab, Modifier.align(Alignment.BottomCenter).onGloballyPositioned { tour.tabBar = it.boundsInRoot() }) {
                 if (tab == it) { openDay = null; showPrivacy = false }
                 tab = it
             }
+            if (showWhatsNew) WhatsNewDialog(whatsNewSince) { showWhatsNew = false }
             if (tour.step != null) {
                 TourOverlay(tour, onTab = { tab = it; openDay = null; showPrivacy = false }) {
                     tour.step = null

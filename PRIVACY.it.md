@@ -2,13 +2,13 @@
 
 *Read in English: [PRIVACY.md](PRIVACY.md)*
 
-Ultimo aggiornamento: 19 novembre 2026. Vale per Moodlog per PC 2.5.1, Moodlog per iPhone 1.4.1 e Moodlog per Android 1.0.0, e per le versioni successive.
+Ultimo aggiornamento: 20 novembre 2026. Vale per Moodlog per PC 2.7.0, Moodlog per iPhone 1.5.0 e Moodlog per Android 1.2.0, e per le versioni successive.
 
 ## In breve
 
 - **Nessuno raccoglie i tuoi dati.** Moodlog non ha account, server, statistiche d'uso, pubblicità né tracciamento. Io, lo sviluppatore, non vedo mai niente di quello che scrivi.
 - **I tuoi dati restano sui tuoi dispositivi:** il tuo PC e, se ne usi uno, il tuo telefono.
-- **L'unica cosa che viaggia è la sincronizzazione del telefono**, dal tuo telefono direttamente al tuo PC sulla tua rete, cifrata.
+- **Viaggiano solo due cose, e solo se le attivi tu:** la sincronizzazione del telefono, direttamente al tuo PC sulla tua rete, cifrata; e un file di backup nel posto che scegli, come Google Drive o iCloud Drive.
 - **Nessuna delle due app si collega a internet.**
 
 ## Chi fa Moodlog
@@ -46,7 +46,11 @@ Su Android funziona allo stesso modo con Connessione Salute: l'app legge passi, 
 
 **Il Comando rapido di Apple (facoltativo, il vecchio modo di inviare i dati di salute).** I Comandi rapidi non possono cifrare. Se lo usi, i suoi dati e il token attraversano la rete in chiaro, quindi usalo solo su una rete di cui ti fidi. La sincronizzazione dell'app per iPhone è il modo cifrato.
 
+**Backup (facoltativo).** Sui telefoni puoi scegliere un file o una cartella, per esempio in Google Drive o iCloud Drive. Moodlog ci tiene una copia di tutto dopo ogni modifica. Moodlog scrive solo il file; lo carica l'app Drive o iCloud Drive, secondo l'informativa di Google o di Apple. Puoi smettere quando vuoi in Impostazioni → Backup.
+
 **Report ed esportazioni.** Il report PDF, il foglio di calcolo e il file CSV vengono salvati dove scegli tu. Cosa farne dopo (per esempio mandarli al tuo medico) lo decidi tu.
+
+**Promemoria e parola gentile.** Il promemoria giornaliero è una notifica creata sul tuo dispositivo; non viene inviato niente da nessuna parte. La parola gentile nei giorni difficili viene calcolata sul tuo dispositivo da ciò che hai registrato; non avvisa nessuno, e toccare una linea di ascolto apre solo il telefono o il browser.
 
 **Link.** Alcuni pulsanti, come "Leggi l'informativa completa", aprono una pagina nel tuo browser. Succede solo quando li clicchi, e da lì valgono le regole del browser e del sito.
 

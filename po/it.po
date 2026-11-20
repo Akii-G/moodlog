@@ -1803,3 +1803,134 @@ msgstr[1] "Moodlog per Android sincronizzato (%d modifiche)."
 
 msgid "Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC."
 msgstr "È uscito Moodlog per Android 1.1.0: un nuovo aspetto come l'app per iPhone, un calendario più alto, e trova questo PC in modo più affidabile quando pop-os.local non funziona sul telefono. Sul PC non cambia niente."
+
+msgid "One click on a face is enough."
+msgstr "Basta un clic su una faccina."
+
+msgid "Open Moodlog"
+msgstr "Apri Moodlog"
+
+msgid "Reminder and kind word"
+msgstr "Promemoria e parola gentile"
+
+msgid "Reminder and kind word…"
+msgstr "Promemoria e parola gentile…"
+
+msgid "At"
+msgstr "Alle"
+
+msgid "A quiet desktop notification, only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge."
+msgstr "Una notifica discreta sul desktop, solo nei giorni in cui non hai ancora registrato un umore. Niente serie, niente sensi di colpa: solo un piccolo promemoria."
+
+msgid "Could not set up the reminder (%s)."
+msgstr "Impossibile impostare il promemoria (%s)."
+
+msgid "Every day, free and anonymous. Also on WhatsApp: 324 011 7252."
+msgstr "Ogni giorno, gratuito e anonimo. Anche su WhatsApp: 324 011 7252."
+
+msgid "Emergency"
+msgstr "Emergenza"
+
+msgid "If you're in danger right now."
+msgstr "Se sei in pericolo adesso."
+
+msgid "Free, confidential helplines in your country."
+msgstr "Linee di ascolto gratuite e riservate nel tuo paese."
+
+msgid "If you're in danger right now: 112 in Europe, or your local emergency number."
+msgstr "Se sei in pericolo adesso: 112 in Europa, o il numero di emergenza del tuo paese."
+
+msgid "How are you today?"
+msgstr "Come stai oggi?"
+
+msgid "Remind me once a day"
+msgstr "Ricordamelo una volta al giorno"
+
+msgid "A kind word on hard days"
+msgstr "Una parola gentile nei giorni difficili"
+
+msgid "After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time."
+msgstr "Dopo alcuni giorni molto difficili ravvicinati, il Diario mostra una breve nota gentile con una linea di ascolto. Non avvisa nessuno; puoi nasconderla quando vuoi."
+
+msgid "Some hard days lately"
+msgstr "Qualche giorno difficile ultimamente"
+
+msgid "That sounds heavy. You don't have to carry it alone: talking to someone can help, even just once."
+msgstr "Sembra pesante. Non devi affrontarlo in solitudine: parlarne con qualcuno può aiutare, anche solo una volta."
+
+msgid "Thanks, hide this for now"
+msgstr "Grazie, nascondi per ora"
+
+msgid "A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet."
+msgstr "Un promemoria giornaliero (☰ → Promemoria e parola gentile): una notifica discreta sul desktop all'ora che scegli, solo nei giorni in cui non hai ancora registrato un umore."
+
+msgid "A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off."
+msgstr "Una parola gentile nei giorni difficili: dopo alcuni giorni molto difficili ravvicinati, il Diario mostra una breve nota gentile con una linea di ascolto. Non avvisa nessuno, e puoi nasconderla o disattivarla."
+
+# Moodlog for iPhone and Android: their "What's new" (tools/phone_changelog.py)
+
+msgid "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry."
+msgstr "Un promemoria giornaliero, solo nei giorni in cui non hai ancora registrato un umore; toccandolo si apre una nuova voce."
+
+msgid "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab)."
+msgstr "Il resoconto per il medico, ora anche sul telefono: un PDF da condividere, stampare o salvare (scheda Grafici)."
+
+msgid "Sleep and mood: a new chart with your sleep from Apple Health and the mood after shorter and longer nights."
+msgstr "Sonno e umore: un nuovo grafico con il tuo sonno da Salute di Apple e l'umore dopo notti più corte e più lunghe."
+
+msgid "Backup to iCloud Drive or any folder in Files, kept up to date after each change, and restore from it. The same file works on Android."
+msgstr "Backup su iCloud Drive o in qualsiasi cartella di File, aggiornato dopo ogni modifica, e ripristino da lì. Lo stesso file funziona su Android."
+
+msgid "A kind word on hard days, with a helpline."
+msgstr "Una parola gentile nei giorni difficili, con una linea di ascolto."
+
+msgid "A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy."
+msgstr "Un'informativa sulla privacy: Impostazioni → Privacy mostra in breve cosa fa Moodlog con i tuoi dati, con un link all'informativa completa."
+
+msgid "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC."
+msgstr "Sincronizzazione cifrata: tutto ciò che viene inviato al PC è cifrato con il tuo token (AES-256-GCM), e il token stesso non lascia mai il telefono. Serve Moodlog 2.5 o successivo sul PC."
+
+msgid "A welcome tour for new users: it switches to each tab by itself and explains it, with a spotlight on the calendar and a line pointing at the tab. Watch it again from Settings → Show the tour."
+msgstr "Una guida di benvenuto per chi inizia: passa da sola a ogni scheda e la spiega, con un riflettore sul calendario e una linea che indica la scheda. Rivedila da Impostazioni → Mostra la guida."
+
+msgid "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC."
+msgstr "Diario dei sogni: una nuova scheda Sogni, una luna nel calendario nelle notti con un sogno, e i sogni della notte in ogni giorno. I sogni si sincronizzano con Moodlog 2.3 sul PC."
+
+msgid "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Moodlog → Language."
+msgstr "Moodlog per iPhone parla italiano. Segue la lingua dell'iPhone, oppure scegline una in Impostazioni → Moodlog → Lingua."
+
+msgid "Days with several moods show a face on each tile of the calendar, like on the PC."
+msgstr "I giorni con più umori mostrano una faccina su ogni riquadro del calendario, come sul PC."
+
+msgid "First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi."
+msgstr "Prima versione: registra gli umori con energia, ansia e una nota, aggiungi eventi, sfoglia il calendario e sincronizza tutto con Moodlog sul PC tramite il Wi-Fi di casa."
+
+msgid "Sleep and mood: a new chart with your sleep from Health Connect and the mood after shorter and longer nights."
+msgstr "Sonno e umore: un nuovo grafico con il tuo sonno da Connessione Salute e l'umore dopo notti più corte e più lunghe."
+
+msgid "Backup to Google Drive or any file you pick, kept up to date after each change, and restore from it. The same file works on the iPhone."
+msgstr "Backup su Google Drive o in qualsiasi file tu scelga, aggiornato dopo ogni modifica, e ripristino da lì. Lo stesso file funziona su iPhone."
+
+msgid "A new look, like the iPhone app: big titles, white cards on a light grey page, a floating tab bar, iPhone-style switches and choices."
+msgstr "Un nuovo aspetto, come l'app per iPhone: titoli grandi, schede bianche su sfondo grigio chiaro, una barra delle schede fluttuante, interruttori e scelte in stile iPhone."
+
+msgid "The calendar is taller, and the date, flag and moon have their own strip at the top of each day, so they no longer cover the faces."
+msgstr "Il calendario è più alto, e data, bandierina e luna hanno una striscia tutta loro in cima a ogni giorno, così non coprono più le faccine."
+
+msgid "Finding your PC: if pop-os.local doesn't work, the app now asks your Wi-Fi itself in more ways, and remembers the PC's address once it has found it."
+msgstr "Trovare il PC: se pop-os.local non funziona, l'app ora lo chiede da sola alla rete Wi-Fi in più modi, e ricorda l'indirizzo del PC una volta trovato."
+
+msgid "With large text, the tour's buttons no longer get squeezed, and the tab names fit."
+msgstr "Con il testo grande, i pulsanti della guida non vengono più schiacciati, e i nomi delle schede ci stanno."
+
+msgid "The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian."
+msgstr "La prima versione: registra umore, energia, ansia e una nota, un calendario mensile, grafici, eventi, un diario dei sogni, la guida di benvenuto, inglese e italiano."
+
+msgid "Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi."
+msgstr "Sincronizzazione cifrata con Moodlog sul PC (2.5 o successivo), sulla tua rete Wi-Fi."
+
+msgid "Sleep, steps and resting heart rate from Health Connect, sent to your PC if you turn it on."
+msgstr "Sonno, passi e frequenza cardiaca a riposo da Connessione Salute, inviati al PC se lo attivi."
+
+msgid "What's new: this list, shown once after each update and any time from Settings."
+msgstr "Novità: questo elenco, mostrato una volta dopo ogni aggiornamento e quando vuoi dalle Impostazioni."

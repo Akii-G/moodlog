@@ -29,7 +29,7 @@ fun PrivacyScreen(back: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val points = listOf(
         tr("Nobody collects your data") to tr("Moodlog has no account, no server, no analytics and no ads. The developer never sees anything you write."),
-        tr("It stays on your devices") to tr("Everything is saved inside this app and, if you sync, on your own PC."),
+        tr("It stays on your devices") to tr("Everything is saved inside this app, on your own PC if you sync, and in the backup file if you pick one."),
         tr("Sync is encrypted") to tr("Your entries go straight to your PC over your own Wi-Fi, encrypted with your token. The token itself is never sent."),
         tr("Health data only if you choose") to tr("Steps, resting heart rate and sleep are read from Health Connect only if you allow it and turn it on in Settings, and only to show them next to your mood on your PC. Moodlog never writes to Health Connect."),
         tr("No internet") to tr("Moodlog never connects to the internet. Only the link below opens a page in your browser."),

@@ -23,6 +23,14 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
+import io.github.akiig.moodlog.Care
 import androidx.compose.material.icons.outlined.Computer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -76,6 +84,10 @@ fun LogScreen(onDay: (String) -> Unit) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             LargeTitle("Moodlog") { CircleButton(Icons.Filled.Add, tr("Today")) { onDay(Day.today) } }
             Column(Modifier.padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                var hidden by remember { mutableStateOf(false) }
+                if (!hidden && Care.shouldShow(store, app.prefs)) KindWord {
+                    app.prefs.kindDismissed = Day.today; hidden = true
+                }
                 if (app.prefs.server.isBlank()) {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp),
@@ -114,6 +126,44 @@ fun LogScreen(onDay: (String) -> Unit) {
                 Spacer(Modifier.height(TabBarSpace))
             }
         }
+    }
+}
+
+/** After several very hard days: a calm note with a helpline. Hidden for a week when dismissed. */
+@Composable
+fun KindWord(onHide: () -> Unit) {
+    val context = LocalContext.current
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+        .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.Favorite, null, tint = Palette.mood(1).copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
+            Spacer(Modifier.size(10.dp))
+            Text(tr("Some hard days lately"), style = MaterialTheme.typography.titleMedium)
+        }
+        Text(tr("That sounds heavy. You don't have to carry it alone: talking to someone can help, even just once."),
+            style = MaterialTheme.typography.bodyMedium)
+        for (h in Care.helplines()) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .clickable {
+                    val intent = if (h.number != null) Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + h.number.replace(" ", "")))
+                                 else Intent(Intent.ACTION_VIEW, Uri.parse(h.link))
+                    try { context.startActivity(intent) } catch (e: Exception) { }
+                }
+                .padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(h.name + (h.number?.let { "  ·  $it" } ?: ""), style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold)
+                    Text(h.note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Icon(if (h.number != null) Icons.Filled.Call else Icons.AutoMirrored.Filled.OpenInNew, null,
+                    tint = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Text(tr("Thanks, hide this for now"), color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onHide).padding(vertical = 6.dp))
     }
 }
 

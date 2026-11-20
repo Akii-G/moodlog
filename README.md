@@ -60,8 +60,21 @@ dreams are left out unless you tick them.
 
 <img src="docs/screenshots/report.png" alt="First page of the doctor report" width="600">
 
+The phone apps make the same report (the document button in **Charts**), to share,
+print or save straight from the phone.
+
 The **Export** menu also saves everything as a spreadsheet (.xlsx, with colours and
 charts) or a plain CSV file, which open in LibreOffice Calc, Excel or Google Sheets.
+
+### A gentle reminder, and a kind word
+
+If you like, Moodlog reminds you once a day at the time you choose, only on days you
+haven't logged a mood yet: a quiet notification on the PC (☰ → **Reminder and kind
+word**) or the phone (**Settings → Reminder**). No streaks, no guilt.
+
+After a few very hard days close together, the Log shows a short, kind note with a
+helpline (Telefono Amico in Italian, Find A Helpline in English). It never tells
+anyone, and you can hide it or turn it off.
 
 ### Use it on your iPhone too
 
@@ -76,6 +89,11 @@ it with SideStore or AltStore.
 
 To connect it, open **Phone sync** on the PC, switch the receiver on, and enter the
 address and token shown there in the iPhone app's Settings.
+
+On both phones, **Charts** also shows your sleep night by night next to your mood,
+and **Settings → Backup** keeps a copy of everything in iCloud Drive or Google Drive
+(or any folder you pick), so the phone app works on its own, without a PC. A backup
+from one phone restores on the other.
 
 ### Or on your Android phone
 
@@ -134,7 +152,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.6.1_all.deb
+    sudo apt install ./moodlog_2.7.0_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).

@@ -2,13 +2,13 @@
 
 *Leggi in italiano: [PRIVACY.it.md](PRIVACY.it.md)*
 
-Last updated: 19 November 2026. This covers Moodlog for the PC 2.5.1, Moodlog for iPhone 1.4.1 and Moodlog for Android 1.0.0, and newer.
+Last updated: 20 November 2026. This covers Moodlog for the PC 2.7.0, Moodlog for iPhone 1.5.0 and Moodlog for Android 1.2.0, and newer.
 
 ## The short version
 
 - **Nobody collects your data.** Moodlog has no account, no server, no analytics, no ads and no tracking. I, the developer, never see anything you write.
 - **Your data stays on your own devices:** your PC and, if you use one, your phone.
-- **The only thing that travels is phone sync**, from your phone straight to your PC on your own network, encrypted.
+- **Only two things travel, and only if you turn them on:** phone sync, from your phone straight to your PC on your own network, encrypted; and a backup file in a place you pick, such as Google Drive or iCloud Drive.
 - **Neither app connects to the internet.**
 
 ## Who makes Moodlog
@@ -46,7 +46,11 @@ On Android it works the same way with Health Connect: the app reads steps, resti
 
 **The Apple Shortcut (optional, older way of sending health data).** Shortcuts can't encrypt. If you use it, its data and token travel across your network unencrypted, so use it only on a network you trust. The iPhone app's own sync is the encrypted way.
 
+**Backup (optional).** On the phones you can pick a file or folder, for example in Google Drive or iCloud Drive. Moodlog then keeps a copy of everything there after each change. Moodlog only writes the file; the Drive app or iCloud Drive uploads it, under Google's or Apple's privacy policy. Stop it any time in Settings → Backup.
+
 **Reports and exports.** The PDF report, the spreadsheet and the CSV file are saved where you choose. What happens to them next (sending them to your doctor, for example) is up to you.
+
+**Reminder and kind word.** The daily reminder is a notification made on your own device; nothing is sent anywhere. The kind word on hard days is worked out on your device from what you logged; it never tells anyone, and tapping a helpline only opens your phone app or browser.
 
 **Links.** A few buttons, such as "Read the full policy", open a page in your web browser. That only happens when you click them, and then the browser and the website's own policies apply.
 

@@ -4,6 +4,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.7.0 (2026-11-20)
+
+- A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet.
+- A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off.
+
 ### 2.6.1 (2026-11-20)
 
 - Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC.
@@ -114,6 +119,15 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.5.0 (2026-11-20)
+
+- A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.
+- The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).
+- Sleep and mood: a new chart with your sleep from Apple Health and the mood after shorter and longer nights.
+- Backup to iCloud Drive or any folder in Files, kept up to date after each change, and restore from it. The same file works on Android.
+- A kind word on hard days, with a helpline.
+- What's new: this list, shown once after each update and any time from Settings.
+
 ### 1.4.1 (2026-11-19)
 
 - A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy.
@@ -143,6 +157,15 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.
 
 ## Moodlog for Android
+
+### 1.2.0 (2026-11-20)
+
+- A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.
+- The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).
+- Sleep and mood: a new chart with your sleep from Health Connect and the mood after shorter and longer nights.
+- Backup to Google Drive or any file you pick, kept up to date after each change, and restore from it. The same file works on the iPhone.
+- A kind word on hard days, with a helpline.
+- What's new: this list, shown once after each update and any time from Settings.
 
 ### 1.1.0 (2026-11-20)
 

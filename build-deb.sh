@@ -9,6 +9,7 @@ install -Dm755 src/moodlog "$PKG/usr/bin/moodlog"
 install -Dm644 data/app.moodlog.Moodlog.desktop "$PKG/usr/share/applications/app.moodlog.Moodlog.desktop"
 install -Dm644 data/app.moodlog.Moodlog.svg "$PKG/usr/share/icons/hicolor/scalable/apps/app.moodlog.Moodlog.svg"
 install -Dm644 data/moodlog-sync.service "$PKG/usr/lib/systemd/user/moodlog-sync.service"
+install -Dm644 data/moodlog-reminder.service "$PKG/usr/lib/systemd/user/moodlog-reminder.service"
 for po in po/*.po; do install -Dm644 "$po" "$PKG/usr/share/moodlog/po/$(basename "$po")"; done
 install -Dm644 LICENSE "$PKG/usr/share/doc/moodlog/copyright"
 install -Dm644 README.md "$PKG/usr/share/doc/moodlog/README.md"

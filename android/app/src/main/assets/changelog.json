@@ -1,0 +1,58 @@
+[
+ {
+  "version": "1.2.0",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
+    "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).",
+    "Sleep and mood: a new chart with your sleep from Health Connect and the mood after shorter and longer nights.",
+    "Backup to Google Drive or any file you pick, kept up to date after each change, and restore from it. The same file works on the iPhone.",
+    "A kind word on hard days, with a helpline.",
+    "What's new: this list, shown once after each update and any time from Settings."
+   ],
+   "it": [
+    "Un promemoria giornaliero, solo nei giorni in cui non hai ancora registrato un umore; toccandolo si apre una nuova voce.",
+    "Il resoconto per il medico, ora anche sul telefono: un PDF da condividere, stampare o salvare (scheda Grafici).",
+    "Sonno e umore: un nuovo grafico con il tuo sonno da Connessione Salute e l'umore dopo notti più corte e più lunghe.",
+    "Backup su Google Drive o in qualsiasi file tu scelga, aggiornato dopo ogni modifica, e ripristino da lì. Lo stesso file funziona su iPhone.",
+    "Una parola gentile nei giorni difficili, con una linea di ascolto.",
+    "Novità: questo elenco, mostrato una volta dopo ogni aggiornamento e quando vuoi dalle Impostazioni."
+   ]
+  }
+ },
+ {
+  "version": "1.1.0",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "A new look, like the iPhone app: big titles, white cards on a light grey page, a floating tab bar, iPhone-style switches and choices.",
+    "The calendar is taller, and the date, flag and moon have their own strip at the top of each day, so they no longer cover the faces.",
+    "Finding your PC: if pop-os.local doesn't work, the app now asks your Wi-Fi itself in more ways, and remembers the PC's address once it has found it.",
+    "With large text, the tour's buttons no longer get squeezed, and the tab names fit."
+   ],
+   "it": [
+    "Un nuovo aspetto, come l'app per iPhone: titoli grandi, schede bianche su sfondo grigio chiaro, una barra delle schede fluttuante, interruttori e scelte in stile iPhone.",
+    "Il calendario è più alto, e data, bandierina e luna hanno una striscia tutta loro in cima a ogni giorno, così non coprono più le faccine.",
+    "Trovare il PC: se pop-os.local non funziona, l'app ora lo chiede da sola alla rete Wi-Fi in più modi, e ricorda l'indirizzo del PC una volta trovato.",
+    "Con il testo grande, i pulsanti della guida non vengono più schiacciati, e i nomi delle schede ci stanno."
+   ]
+  }
+ },
+ {
+  "version": "1.0.0",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian.",
+    "Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi.",
+    "Sleep, steps and resting heart rate from Health Connect, sent to your PC if you turn it on."
+   ],
+   "it": [
+    "La prima versione: registra umore, energia, ansia e una nota, un calendario mensile, grafici, eventi, un diario dei sogni, la guida di benvenuto, inglese e italiano.",
+    "Sincronizzazione cifrata con Moodlog sul PC (2.5 o successivo), sulla tua rete Wi-Fi.",
+    "Sonno, passi e frequenza cardiaca a riposo da Connessione Salute, inviati al PC se lo attivi."
+   ]
+  }
+ }
+]

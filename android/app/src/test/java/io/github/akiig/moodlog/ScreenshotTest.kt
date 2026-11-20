@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -78,16 +79,56 @@ abstract class Screens(private val lang: String) {
         shot("9-day")
         rule.onAllNodes(hasText(tr("How do you feel now?")))[0].performClick()
         shot("10-editor")
+        report()
+    }
+
+    /** The doctor report's pages, drawn onto images instead of a PDF. */
+    private fun report() {
+        val store = AppState.get(ApplicationProvider.getApplicationContext()).store
+        val sleep = (0 until 20).associate { Day.adding(-it, Day.today) to listOf(6.2, 7.5, 8.1, 5.4, 7.0)[it % 5] }
+        val bitmaps = mutableListOf<android.graphics.Bitmap>()
+        Report(store, Day.adding(-29, Day.today), Day.today, includeNotes = true, sleep = sleep,
+            includeDreams = true, dreamText = true).draw(object : Report.Pages {
+            override fun start(number: Int): android.graphics.Canvas {
+                val b = android.graphics.Bitmap.createBitmap(1190, 1684, android.graphics.Bitmap.Config.ARGB_8888)
+                bitmaps.add(b)
+                return android.graphics.Canvas(b).apply { scale(2f, 2f) }
+            }
+            override fun end() {}
+        })
+        java.io.File("build/screenshots").mkdirs()
+        bitmaps.forEachIndexed { i, b ->
+            java.io.FileOutputStream("build/screenshots/${lang}_report-${i + 1}.png").use { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
     }
 }
 
 class ScreensEnglish : Screens("en") {
+    @Test fun kindWord() {
+        val state = AppState.get(ApplicationProvider.getApplicationContext())
+        val t = Day.today
+        rule.runOnUiThread {
+            state.store.entries.filter { Day.between(it.date, t) in 0..2 }.forEach { state.store.delete(it) }
+        }
+        state.store.absorb(SyncState((0..2).map { Entry("hard$it", Day.adding(-it, t), "07:00", 1, 0, 0, "",
+            "2027-01-01T00:00:00.000Z") }, emptyList(), emptyList(), null))
+        rule.waitForIdle()
+        rule.onRoot().captureRoboImage("build/screenshots/en_kind.png")
+    }
+
     init { seed() }
 }
 
 @Config(qualifiers = "it-w411dp-h891dp-xxhdpi")
 class ScreensItalian : Screens("it") {
     init { seed() }
+
+    @Test fun whatsNew() {
+        rule.onAllNodes(hasText(tr("Settings")))[0].performClick()
+        rule.onAllNodes(hasText(tr("What's new")))[0].performScrollTo().performClick()
+        rule.waitForIdle()
+        rule.onAllNodes(androidx.compose.ui.test.isRoot())[1].captureRoboImage("build/screenshots/it_whatsnew.png")
+    }
 }
 
 /** Large text, as on a phone with a bigger font size in its settings. */

@@ -28,6 +28,8 @@ object Palette {
     val energy @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xffc08418) else Color(0xffb87c10)
     val anxiety @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xff9a7ef0) else Color(0xff7b5ad6)
 
+    val health @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xff30c58c) else Color(0xff1baf7a)
+
     /** iOS's switch green. */
     val on @Composable @ReadOnlyComposable get() = if (isSystemInDarkTheme()) Color(0xff30d158) else Color(0xff34c759)
 }

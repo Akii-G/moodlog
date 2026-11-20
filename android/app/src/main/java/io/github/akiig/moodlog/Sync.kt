@@ -46,6 +46,38 @@ class Prefs(context: Context) {
         get() = p.getLong("lastHealth", 0)
         set(v) = p.edit().putLong("lastHealth", v).apply()
 
+    // the daily reminder
+    var reminderOn: Boolean
+        get() = p.getBoolean("reminderOn", false)
+        set(v) = p.edit().putBoolean("reminderOn", v).apply()
+    var reminderTime: String
+        get() = p.getString("reminderTime", "20:30") ?: "20:30"
+        set(v) = p.edit().putString("reminderTime", v).apply()
+
+    // backup to a file the person picked (Google Drive, the phone, a memory card)
+    var backupUri: String
+        get() = p.getString("backupUri", "") ?: ""
+        set(v) = p.edit().putString("backupUri", v).apply()
+    var backupName: String
+        get() = p.getString("backupName", "") ?: ""
+        set(v) = p.edit().putString("backupName", v).apply()
+    var lastBackup: String
+        get() = p.getString("lastBackup", "") ?: ""
+        set(v) = p.edit().putString("lastBackup", v).apply()
+
+    // the kind word on hard stretches
+    var kindWord: Boolean
+        get() = p.getBoolean("kindWord", true)
+        set(v) = p.edit().putBoolean("kindWord", v).apply()
+    var kindDismissed: String
+        get() = p.getString("kindDismissed", "") ?: ""
+        set(v) = p.edit().putString("kindDismissed", v).apply()
+
+    /** The version whose "What's new" was last shown. */
+    var lastSeenVersion: String
+        get() = p.getString("lastSeenVersion", "") ?: ""
+        set(v) = p.edit().putString("lastSeenVersion", v).apply()
+
     val isConfigured get() = server.isNotBlank() && token.isNotBlank()
 }
 

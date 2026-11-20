@@ -6,13 +6,22 @@ struct CalendarView: View {
     @Environment(TourState.self) private var tour
     @AppStorage("server") private var server = ""
     @State private var month = Day.monthStart(Date())
+    @State private var path = NavigationPath()
+    @State private var kindHidden = false
+    @Environment(Launch.self) private var launch
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if !kindHidden && Care.shouldShow(store) {
+                        KindWord {
+                            UserDefaults.standard.set(Day.today, forKey: "kindHidden")
+                            withAnimation { kindHidden = true }
+                        }
+                    }
                     if server.isEmpty {
                         Label("Connect to Moodlog on your PC in Settings to sync.", systemImage: "desktopcomputer")
                             .font(.subheadline)
@@ -49,7 +58,18 @@ struct CalendarView: View {
             }
             .navigationTitle("Moodlog")
             .navigationDestination(for: String.self) { day in
-                DayView(day: day)
+                if day.hasPrefix("add:") {
+                    DayView(day: String(day.dropFirst(4)), startAdding: true)
+                } else {
+                    DayView(day: day)
+                }
+            }
+            .onChange(of: launch.openToday) { _, open in
+                if open {
+                    launch.openToday = false
+                    path = NavigationPath()
+                    path.append("add:" + Day.today)
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -195,5 +215,39 @@ struct MoodTile: View {
             }
             .frame(width: geo.size.width, height: geo.size.height)
         }
+    }
+}
+
+/// After several very hard days: a calm note with a helpline. Hidden for a week when dismissed.
+struct KindWord: View {
+    let onHide: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Some hard days lately", systemImage: "heart.fill")
+                .font(.headline)
+                .symbolRenderingMode(.multicolor)
+            Text("That sounds heavy. You don't have to carry it alone: talking to someone can help, even just once.")
+                .font(.subheadline)
+            ForEach(Care.helplines) { h in
+                Link(destination: URL(string: h.number.map { "tel:" + $0.replacingOccurrences(of: " ", with: "") } ?? h.link!)!) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(h.name + (h.number.map { "  ·  " + $0 } ?? "")).font(.body.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(h.note).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: h.number == nil ? "arrow.up.right.square" : "phone.fill")
+                    }
+                    .padding(12)
+                    .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+            Button("Thanks, hide this for now", action: onHide).font(.subheadline)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

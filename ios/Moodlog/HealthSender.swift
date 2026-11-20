@@ -84,6 +84,51 @@ enum HealthSender {
         return "Asleep"
     }
 
+    /// Asleep segments -> [wake-up day: hours], overlaps merged. The same rule as the PC
+    /// (_sleep_hours in src/moodlog) and Android: a night belongs to the day of end + 9 hours.
+    static func sleepHours(_ segments: [(Date, Date)]) -> [String: Double] {
+        var nights: [String: [(Date, Date)]] = [:]
+        for (s, e) in segments where e > s {
+            nights[Day.string(e.addingTimeInterval(9 * 3600)), default: []].append((s, e))
+        }
+        var out: [String: Double] = [:]
+        for (day, spans) in nights {
+            var total = 0.0
+            var cur: (Date, Date)?
+            for (s, e) in spans.sorted(by: { $0.0 < $1.0 }) {
+                if let c = cur, s <= c.1 {
+                    cur = (c.0, max(c.1, e))
+                } else {
+                    if let c = cur { total += c.1.timeIntervalSince(c.0) }
+                    cur = (s, e)
+                }
+            }
+            if let c = cur { total += c.1.timeIntervalSince(c.0) }
+            if total > 0 && total <= 24 * 3600 { out[day] = (total / 36).rounded() / 100 }
+        }
+        return out
+    }
+
+    /// Hours asleep per night from `start` to `end` (days), or nil if Moodlog can't read sleep.
+    static func nightlySleep(from start: String, to end: String) async -> [String: Double]? {
+        guard isAvailable, let first = Day.date(start), let last = Day.date(end),
+              let type = HKCategoryType.categoryType(forIdentifier: .sleepAnalysis) else { return nil }
+        try? await authorize()
+        let from = Calendar.current.date(byAdding: .day, value: -1, to: first) ?? first
+        let to = Calendar.current.date(byAdding: .day, value: 2, to: last) ?? last
+        let predicate = HKQuery.predicateForSamples(withStart: from, end: to, options: [])
+        let samples: [HKCategorySample] = await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit,
+                                      sortDescriptors: nil) { _, samples, _ in
+                continuation.resume(returning: (samples as? [HKCategorySample]) ?? [])
+            }
+            store.execute(query)
+        }
+        let asleep = samples.filter { ["Core", "Deep", "REM", "Asleep"].contains(stage($0.value)) }
+            .map { ($0.startDate, $0.endDate) }
+        return sleepHours(asleep).filter { $0.key >= start && $0.key <= end }
+    }
+
     static func lines(days: Int) async throws -> [String] {
         try await authorize()
         var out: [String] = []

@@ -3,6 +3,7 @@ import SwiftUI
 struct DayView: View {
     @Environment(AppStore.self) private var store
     let day: String
+    var startAdding = false
 
     @State private var editing: Entry?
     @State private var adding = false
@@ -83,6 +84,7 @@ struct DayView: View {
             }
         }
         .navigationTitle(day == Day.today ? tr("Today") : Day.pretty(day, style: "EEE d MMM"))
+        .onAppear { if startAdding { adding = true } }
         .sheet(isPresented: $adding) {
             EntryEditor(day: day, original: nil)
         }

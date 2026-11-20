@@ -15,7 +15,7 @@ struct PrivacyView: View {
                 point(tr("Nobody collects your data"),
                       tr("Moodlog has no account, no server, no analytics and no ads. The developer never sees anything you write."))
                 point(tr("It stays on your devices"),
-                      tr("Everything is saved inside this app and, if you sync, on your own PC."))
+                      tr("Everything is saved inside this app, on your own PC if you sync, and in the backup file if you pick one."))
                 point(tr("Sync is encrypted"),
                       tr("Your entries go straight to your PC over your own Wi-Fi, encrypted with your token. The token itself is never sent."))
                 point(tr("Health data only if you choose"),

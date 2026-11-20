@@ -1,0 +1,108 @@
+[
+ {
+  "version": "1.5.0",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
+    "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).",
+    "Sleep and mood: a new chart with your sleep from Apple Health and the mood after shorter and longer nights.",
+    "Backup to iCloud Drive or any folder in Files, kept up to date after each change, and restore from it. The same file works on Android.",
+    "A kind word on hard days, with a helpline.",
+    "What's new: this list, shown once after each update and any time from Settings."
+   ],
+   "it": [
+    "Un promemoria giornaliero, solo nei giorni in cui non hai ancora registrato un umore; toccandolo si apre una nuova voce.",
+    "Il resoconto per il medico, ora anche sul telefono: un PDF da condividere, stampare o salvare (scheda Grafici).",
+    "Sonno e umore: un nuovo grafico con il tuo sonno da Salute di Apple e l'umore dopo notti più corte e più lunghe.",
+    "Backup su iCloud Drive o in qualsiasi cartella di File, aggiornato dopo ogni modifica, e ripristino da lì. Lo stesso file funziona su Android.",
+    "Una parola gentile nei giorni difficili, con una linea di ascolto.",
+    "Novità: questo elenco, mostrato una volta dopo ogni aggiornamento e quando vuoi dalle Impostazioni."
+   ]
+  }
+ },
+ {
+  "version": "1.4.1",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy."
+   ],
+   "it": [
+    "Un'informativa sulla privacy: Impostazioni → Privacy mostra in breve cosa fa Moodlog con i tuoi dati, con un link all'informativa completa."
+   ]
+  }
+ },
+ {
+  "version": "1.4.0",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC."
+   ],
+   "it": [
+    "Sincronizzazione cifrata: tutto ciò che viene inviato al PC è cifrato con il tuo token (AES-256-GCM), e il token stesso non lascia mai il telefono. Serve Moodlog 2.5 o successivo sul PC."
+   ]
+  }
+ },
+ {
+  "version": "1.3.0",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "A welcome tour for new users: it switches to each tab by itself and explains it, with a spotlight on the calendar and a line pointing at the tab. Watch it again from Settings → Show the tour."
+   ],
+   "it": [
+    "Una guida di benvenuto per chi inizia: passa da sola a ogni scheda e la spiega, con un riflettore sul calendario e una linea che indica la scheda. Rivedila da Impostazioni → Mostra la guida."
+   ]
+  }
+ },
+ {
+  "version": "1.2.0",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC."
+   ],
+   "it": [
+    "Diario dei sogni: una nuova scheda Sogni, una luna nel calendario nelle notti con un sogno, e i sogni della notte in ogni giorno. I sogni si sincronizzano con Moodlog 2.3 sul PC."
+   ]
+  }
+ },
+ {
+  "version": "1.1.0",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Moodlog → Language."
+   ],
+   "it": [
+    "Moodlog per iPhone parla italiano. Segue la lingua dell'iPhone, oppure scegline una in Impostazioni → Moodlog → Lingua."
+   ]
+  }
+ },
+ {
+  "version": "1.0.1",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "Days with several moods show a face on each tile of the calendar, like on the PC."
+   ],
+   "it": [
+    "I giorni con più umori mostrano una faccina su ogni riquadro del calendario, come sul PC."
+   ]
+  }
+ },
+ {
+  "version": "1.0.0",
+  "date": "2026-11-19",
+  "items": {
+   "en": [
+    "First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi."
+   ],
+   "it": [
+    "Prima versione: registra gli umori con energia, ansia e una nota, aggiungi eventi, sfoglia il calendario e sincronizza tutto con Moodlog sul PC tramite il Wi-Fi di casa."
+   ]
+  }
+ }
+]

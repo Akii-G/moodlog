@@ -24,12 +24,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -50,7 +54,9 @@ import java.time.LocalDate
 
 @Composable
 fun ChartsScreen() {
-    val store = LocalApp.current.store
+    val app = LocalApp.current
+    val store = app.store
+    var report by remember { mutableStateOf(false) }
     var monthText by rememberSaveable { mutableStateOf(Day.monthStart().toString()) }
     val month = LocalDate.parse(monthText)
     val days = Day.days(month)
@@ -61,7 +67,9 @@ fun ChartsScreen() {
     val allMoods = days.flatMap { store.moodsOn(it) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        LargeTitle(tr("Charts"))
+        LargeTitle(tr("Charts")) {
+            CircleButton(Icons.Outlined.Description, tr("Report for your doctor")) { report = true }
+        }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             MonthHeader(month, month < Day.monthStart(), { monthText = month.minusMonths(1).toString() },
                 { monthText = month.plusMonths(1).toString() })
@@ -83,11 +91,77 @@ fun ChartsScreen() {
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            SleepAndMood(month, days)
             ChartCard(tr("How often you logged each mood")) {
                 if (allMoods.isEmpty()) EmptyText(tr("Nothing logged this month yet"))
                 else Bars(allMoods)
             }
             Spacer(Modifier.height(TabBarSpace))
+        }
+    }
+    if (report) ReportDialog { report = false }
+}
+
+/** Sleep from Health Connect night by night, with the day's mood on top of each bar, and the
+ *  mood after shorter vs longer nights. */
+@Composable
+private fun SleepAndMood(month: LocalDate, days: List<String>) {
+    val app = LocalApp.current
+    val store = app.store
+    var sleep by remember(month) { mutableStateOf<Map<String, Double>?>(null) }
+    var asked by remember(month) { mutableStateOf(false) }
+    LaunchedEffect(month) {
+        sleep = try { app.health.nightlySleep(days.first(), days.last()) } catch (e: Exception) { null }
+        asked = true
+    }
+    if (!asked) return
+    ChartCard(tr("Sleep and mood")) {
+        val nights = sleep
+        when {
+            nights == null -> Text(tr("Allow Health Connect in Settings to see your sleep here, next to your mood."),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            nights.isEmpty() -> EmptyText(tr("No sleep in Health Connect this month"))
+            else -> {
+                val top = (nights.values.max().coerceAtLeast(9.0) / 3).let { kotlin.math.ceil(it) * 3 }
+                val bar = Palette.health
+                val ringColor = MaterialTheme.colorScheme.surfaceContainer
+                val grid = MaterialTheme.colorScheme.outlineVariant
+                val moodColors = (1..5).associateWith { Palette.mood(it) }
+                Row(Modifier.fillMaxWidth().height(170.dp)) {
+                    Column(Modifier.fillMaxHeight().padding(vertical = 8.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                        for (h in listOf(top, top * 2 / 3, top / 3, 0.0)) Text("${h.toInt()} h", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Canvas(Modifier.weight(1f).fillMaxHeight().padding(vertical = 14.dp)) {
+                        val y = { v: Double -> (size.height - v / top * size.height).toFloat() }
+                        for (k in 0..3) drawLine(grid, Offset(0f, y(top * k / 3)), Offset(size.width, y(top * k / 3)), 1f)
+                        val step = size.width / days.size
+                        val w = (step * 0.62f).coerceAtMost(14.dp.toPx())
+                        days.forEachIndexed { i, d ->
+                            val h = nights[d] ?: return@forEachIndexed
+                            val x = step * (i + 0.5f)
+                            drawRoundRect(bar, Offset(x - w / 2, y(h)), androidx.compose.ui.geometry.Size(w, y(0.0) - y(h)),
+                                androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx()))
+                            store.average(d)?.let { m ->
+                                drawCircle(ringColor, 5.5.dp.toPx(), Offset(x, y(h) - 7.dp.toPx()))
+                                drawCircle(moodColors[Mood.level(m)]!!, 4.dp.toPx(), Offset(x, y(h) - 7.dp.toPx()))
+                            }
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Legend(bar, tr("Hours asleep"))
+                    Legend(Palette.mood(4), tr("Mood that day"))
+                }
+                val short = nights.filter { it.value < 7 }.keys.mapNotNull { store.average(it) }
+                val long = nights.filter { it.value >= 7 }.keys.mapNotNull { store.average(it) }
+                val avg = tr("Average %@ h a night (%@ nights).", one(nights.values.average()), nights.size)
+                val compare = if (short.size >= 3 && long.size >= 3)
+                    " " + tr("Mood after nights under 7 h: %@; after 7 h or more: %@. A pattern in your data, not a cause.",
+                        one(short.average()), one(long.average())) else ""
+                Text(avg + compare, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @Environment(AppStore.self) private var store
@@ -10,6 +11,24 @@ struct SettingsView: View {
     @AppStorage("sendHealth") private var sendHealth = false
     @State private var testResult = ""
     @State private var testing = false
+    @AppStorage("reminderOn") private var reminderOn = false
+    @AppStorage("reminderTime") private var reminderTime = "20:30"
+    @AppStorage("kindWord") private var kindWord = true
+    @AppStorage("lastBackup") private var lastBackup = ""
+    @State private var backupFolder = Backup.folderName
+    @State private var picking = false
+    @State private var pickingFolder = true   // false: picking a backup file to restore
+    @State private var backupMessage = ""
+
+    private var reminderDate: Binding<Date> {
+        Binding(get: {
+            let parts = reminderTime.split(separator: ":").compactMap { Int($0) }
+            return Calendar.current.date(bySettingHour: parts.first ?? 20, minute: parts.count > 1 ? parts[1] : 30, second: 0, of: Date()) ?? Date()
+        }, set: { date in
+            reminderTime = Day.timeString(date)
+            Reminder.plan(store)
+        })
+    }
 
     var body: some View {
         NavigationStack {
@@ -82,16 +101,82 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("Remind me once a day", isOn: $reminderOn)
+                        .onChange(of: reminderOn) { _, on in
+                            Task {
+                                if on && !(await Reminder.requestPermission()) { reminderOn = false }
+                                Reminder.plan(store)
+                            }
+                        }
+                    if reminderOn {
+                        DatePicker("At", selection: reminderDate, displayedComponents: .hourAndMinute)
+                    }
+                } header: {
+                    Text("Reminder")
+                } footer: {
+                    Text("Only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge.")
+                }
+
+                Section {
+                    if let folder = backupFolder {
+                        LabeledContent("Folder", value: folder)
+                        LabeledContent("Last backup", value: lastBackup.isEmpty ? tr("not yet") : lastBackup)
+                        Button("Back up now") {
+                            backupMessage = Backup.write(store) ? "" : tr("Couldn't write the backup. Pick the folder again.")
+                        }
+                        Button("Choose another folder…") { pickingFolder = true; picking = true }
+                        Button("Stop backing up", role: .destructive) {
+                            Backup.forget(); backupFolder = nil
+                        }
+                    } else {
+                        Button("Choose a backup folder…") { pickingFolder = true; picking = true }
+                    }
+                    Button("Restore from a backup…") { pickingFolder = false; picking = true }
+                    if !backupMessage.isEmpty { Text(backupMessage).font(.footnote).foregroundStyle(.secondary) }
+                } header: {
+                    Text("Backup")
+                } footer: {
+                    Text("Pick a folder once, for example in iCloud Drive, and Moodlog keeps a copy of everything there after each change. iCloud Drive uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, Android included.")
+                }
+
+                Section {
+                    Toggle("A kind word on hard days", isOn: $kindWord)
+                } footer: {
+                    Text("After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time.")
+                }
+
+                Section {
                     Button("Show the tour") { tour.start() }
                     NavigationLink("Privacy") { PrivacyView() }
+                    NavigationLink("What's new") { WhatsNewView(since: nil) }
                 }
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
                     LabeledContent("Entries on this iPhone", value: "\(store.entries.count)")
                     LabeledContent("Events", value: "\(store.events.count)")
+                    LabeledContent("Dreams", value: "\(store.dreams.count)")
                 }
             }
             .navigationTitle("Settings")
+            .fileImporter(isPresented: $picking, allowedContentTypes: pickingFolder ? [.folder] : [.json, .data]) { result in
+                guard case .success(let url) = result else { return }
+                if pickingFolder {
+                    do {
+                        try Backup.remember(folder: url)
+                        backupFolder = Backup.folderName
+                        backupMessage = Backup.write(store) ? "" : tr("Couldn't write the backup. Pick the folder again.")
+                    } catch {
+                        backupMessage = error.localizedDescription
+                    }
+                } else {
+                    do {
+                        let n = store.absorb(try Backup.read(url))
+                        backupMessage = trn("Restored: %@ change.", "Restored: %@ changes.", n)
+                    } catch {
+                        backupMessage = tr("That file isn't a Moodlog backup.")
+                    }
+                }
+            }
         }
     }
 }

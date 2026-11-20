@@ -1,0 +1,6 @@
+[Unit]
+Description=Moodlog daily reminder (only if no mood is logged today)
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/moodlog --remind

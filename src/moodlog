@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.6.1"
+VERSION = "2.7.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -3056,7 +3056,9 @@ def apply_style(name):
         base = Gtk.CssProvider()
         css = ("headerbar stackswitcher > button { min-width: 0; padding-left: 14px; padding-right: 14px; }\n"
                ".tour-card { background-color: @window_bg_color; color: @window_fg_color; "
-               "border-radius: 18px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }")
+               "border-radius: 18px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }\n"
+               ".kind-word { background-color: alpha(@accent_bg_color, 0.10); border-radius: 12px; "
+               "padding: 14px; }")
         try:
             base.load_from_string(css)
         except AttributeError:
@@ -3910,6 +3912,122 @@ Other names you can send the same way: heart_rate, hrv, active_energy.
 If the iPhone cannot connect and this PC has a firewall on, allow the port: sudo ufw allow 8765/tcp""")
 
 SERVICE = "moodlog-sync.service"
+REMINDER_SERVICE = "moodlog-reminder.service"
+REMINDER_TIMER = "moodlog-reminder.timer"
+
+
+# ----------------------------------------------------------------- reminder and kind word
+
+def hard_stretch(store, today=None):
+    """Three logged days averaging 1.75 or lower within the last five, the latest of them
+    today or yesterday. The same rule as Moodlog for iPhone and Android."""
+    today = today or dt.date.today()
+    days = [today - dt.timedelta(days=i) for i in range(5)]
+    hard = [d for d in days if (store.day_avg(d) or 9) <= 1.75]
+    return len(hard) >= 3 and (today in hard or today - dt.timedelta(days=1) in hard)
+
+
+def show_kind_word(store, cfg, today=None):
+    today = today or dt.date.today()
+    if not cfg.get("kind_word", True):
+        return False
+    hidden = cfg.get("kind_hidden")
+    try:
+        if hidden and (today - dt.date.fromisoformat(hidden)).days < 7:
+            return False
+    except ValueError:
+        pass
+    return hard_stretch(store, today)
+
+
+def helplines():
+    """(name, number or link, note), in the app's language. Checked on 20 November 2026:
+    Telefono Amico Italia 02 2327 2327 (WhatsApp 324 011 7252); 112 is the emergency number
+    across Europe; findahelpline.com lists helplines in 130+ countries."""
+    if LANG_CODE == "it":
+        return [("Telefono Amico Italia", "02 2327 2327",
+                 tr("Every day, free and anonymous. Also on WhatsApp: 324 011 7252.")),
+                (tr("Emergency"), "112", tr("If you're in danger right now."))]
+    return [("Find A Helpline", "https://findahelpline.com", tr("Free, confidential helplines in your country.")),
+            (tr("Emergency"), "112", tr("If you're in danger right now: 112 in Europe, or your local emergency number."))]
+
+
+def reminder_settings(cfg=None):
+    r = (cfg or load_config()).get("reminder") or {}
+    time = r.get("time", "20:30")
+    if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", time):
+        time = "20:30"
+    return bool(r.get("on")), time
+
+
+def timer_text(time):
+    return ("[Unit]\nDescription=Moodlog daily reminder at %s\n\n"
+            "[Timer]\nOnCalendar=*-*-* %s:00\nAccuracySec=1min\n\n"
+            "[Install]\nWantedBy=timers.target\n" % (time, time))
+
+
+def apply_reminder(on, time):
+    """Saves the choice and (re)installs the systemd user timer. Returns (ok, error)."""
+    cfg = load_config()
+    cfg["reminder"] = {"on": bool(on), "time": time}
+    save_config(cfg)
+    unit_dir = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "systemd", "user")
+    path = os.path.join(unit_dir, REMINDER_TIMER)
+    if not on:
+        ok, err = systemctl("disable", "--now", REMINDER_TIMER)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        systemctl("daemon-reload")
+        return True, ""
+    os.makedirs(unit_dir, exist_ok=True)
+    with open(path, "w") as f:
+        f.write(timer_text(time))
+    systemctl("daemon-reload")
+    ok, err = systemctl("enable", "--now", REMINDER_TIMER)
+    if ok:
+        systemctl("restart", REMINDER_TIMER)    # picks up a changed time
+    return ok, err
+
+
+def remind():
+    """`moodlog --remind` (run by the timer): one quiet desktop notification, only if
+    nothing is logged today. Clicking it opens Moodlog."""
+    on, _time = reminder_settings()
+    if not on or Store().day_avg(dt.date.today()):
+        return 0
+    try:
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        reply = bus.call_sync(
+            "org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications",
+            "Notify", GLib.Variant("(susssasa{sv}i)", (
+                "Moodlog", 0, APP_ID, tr("How are you today?"), tr("One click on a face is enough."),
+                ["default", tr("Open Moodlog")],
+                {"desktop-entry": GLib.Variant("s", APP_ID), "urgency": GLib.Variant("y", 1)}, -1)),
+            GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, 10000, None)
+    except GLib.Error as err:
+        print("moodlog: could not show the reminder (%s)" % err.message, file=sys.stderr)
+        return 1
+    note_id = reply.unpack()[0]
+    loop = GLib.MainLoop()
+
+    def on_signal(_conn, _sender, _path, _iface, signal, params):
+        args = params.unpack()
+        if args[0] != note_id:
+            return
+        if signal == "ActionInvoked":
+            subprocess.Popen([os.path.realpath(os.path.abspath(sys.argv[0]))], start_new_session=True,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        loop.quit()
+
+    for name in ("ActionInvoked", "NotificationClosed"):
+        bus.signal_subscribe("org.freedesktop.Notifications", "org.freedesktop.Notifications", name,
+                             "/org/freedesktop/Notifications", None, Gio.DBusSignalFlags.NONE, on_signal)
+    GLib.timeout_add_seconds(3600, loop.quit)    # stop waiting after an hour
+    loop.run()
+    return 0
+
 
 
 def systemctl(*args):
@@ -4321,6 +4439,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.7.0", "2026-11-20", [
+        "A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet.",
+        "A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off.",
+    ]),
     ("2.6.1", "2026-11-20", [
         "Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC.",
     ]),
@@ -4438,6 +4560,14 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("1.2.0", "2026-11-20", [
+        "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
+        "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).",
+        "Sleep and mood: a new chart with your sleep from Health Connect and the mood after shorter and longer nights.",
+        "Backup to Google Drive or any file you pick, kept up to date after each change, and restore from it. The same file works on the iPhone.",
+        "A kind word on hard days, with a helpline.",
+        "What's new: this list, shown once after each update and any time from Settings.",
+    ]),
     ("1.1.0", "2026-11-20", [
         "A new look, like the iPhone app: big titles, white cards on a light grey page, "
         "a floating tab bar, iPhone-style switches and choices.",
@@ -4457,6 +4587,14 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("1.5.0", "2026-11-20", [
+        "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
+        "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).",
+        "Sleep and mood: a new chart with your sleep from Apple Health and the mood after shorter and longer nights.",
+        "Backup to iCloud Drive or any folder in Files, kept up to date after each change, and restore from it. The same file works on Android.",
+        "A kind word on hard days, with a helpline.",
+        "What's new: this list, shown once after each update and any time from Settings.",
+    ]),
     ("1.4.1", "2026-11-19", [
         "A privacy policy: Settings \u2192 Privacy shows in short what Moodlog does with your "
         "data, with a link to the full policy.",
@@ -4538,6 +4676,94 @@ PRIVACY_POINTS = [
 
 def privacy_url():
     return PRIVACY_URL_IT if LANG_CODE == "it" else PRIVACY_URL
+
+
+class ReminderWindow(Gtk.Window):
+    """The daily reminder and the kind word on hard days."""
+
+    def __init__(self, parent):
+        super().__init__(title=tr("Reminder and kind word"), transient_for=parent, modal=True)
+        self.parent_window = parent
+        self.set_default_size(460, -1)
+        cfg = load_config()
+        on, time = reminder_settings(cfg)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        row = Gtk.Box(spacing=12)
+        label = Gtk.Label(label=tr("Remind me once a day"), xalign=0, hexpand=True)
+        label.add_css_class("heading")
+        self.on_switch = Gtk.Switch(active=on, valign=Gtk.Align.CENTER)
+        row.append(label)
+        row.append(self.on_switch)
+        box.append(row)
+        trow = Gtk.Box(spacing=6)
+        trow.append(Gtk.Label(label=tr("At"), xalign=0, hexpand=True))
+        h, m = (int(x) for x in time.split(":"))
+        self.hour = Gtk.SpinButton.new_with_range(0, 23, 1)
+        self.minute = Gtk.SpinButton.new_with_range(0, 59, 5)
+        for spin, value in ((self.hour, h), (self.minute, m)):
+            spin.set_value(value)
+            spin.set_numeric(True)
+            spin.set_width_chars(2)
+            spin.connect("output", self._two_digits)
+        trow.append(self.hour)
+        trow.append(Gtk.Label(label=":"))
+        trow.append(self.minute)
+        box.append(trow)
+        note = Gtk.Label(label=tr("A quiet desktop notification, only on days you haven't logged a mood yet. "
+                                  "No streaks, no guilt: just a gentle nudge."), xalign=0, wrap=True)
+        note.add_css_class("dim-label")
+        box.append(note)
+        col.append(card(box))
+
+        kbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        krow = Gtk.Box(spacing=12)
+        klabel = Gtk.Label(label=tr("A kind word on hard days"), xalign=0, hexpand=True)
+        klabel.add_css_class("heading")
+        self.kind_switch = Gtk.Switch(active=cfg.get("kind_word", True), valign=Gtk.Align.CENTER)
+        krow.append(klabel)
+        krow.append(self.kind_switch)
+        kbox.append(krow)
+        knote = Gtk.Label(label=tr("After a few very hard days close together, the Log shows a short, kind note "
+                                   "with a helpline. It never tells anyone; you can hide it any time."),
+                          xalign=0, wrap=True)
+        knote.add_css_class("dim-label")
+        kbox.append(knote)
+        col.append(card(kbox))
+
+        self.status = Gtk.Label(xalign=0, wrap=True)
+        self.status.add_css_class("dim-label")
+        col.append(self.status)
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        cancel = Gtk.Button(label=tr("Cancel"))
+        cancel.connect("clicked", lambda *_: self.close())
+        save = Gtk.Button(label=tr("Save"))
+        save.add_css_class("suggested-action")
+        save.connect("clicked", self.on_save)
+        buttons.append(cancel)
+        buttons.append(save)
+        col.append(buttons)
+        self.set_child(col)
+
+    @staticmethod
+    def _two_digits(spin):
+        spin.set_text("%02d" % spin.get_value_as_int())
+        return True
+
+    def on_save(self, *_):
+        time = "%02d:%02d" % (self.hour.get_value_as_int(), self.minute.get_value_as_int())
+        ok, err = apply_reminder(self.on_switch.get_active(), time)
+        cfg = load_config()
+        cfg["kind_word"] = self.kind_switch.get_active()
+        save_config(cfg)
+        self.parent_window.refresh_kind_word()
+        if not ok:
+            self.status.set_text(tr("Could not set up the reminder (%s).") % (err or tr("systemctl failed")))
+            return
+        self.close()
 
 
 class PrivacyWindow(Gtk.Window):
@@ -5405,6 +5631,10 @@ class Window(Adw.ApplicationWindow):
         news_menu.append(tr("Show the tour"), "win.tour")
         news_menu.append(tr("What's new"), "win.changelog")
         news_menu.append(tr("Privacy"), "win.privacy")
+        remind_action = Gio.SimpleAction.new("reminder", None)
+        remind_action.connect("activate", lambda *_: ReminderWindow(self).present())
+        self.add_action(remind_action)
+        news_menu.prepend(tr("Reminder and kind word…"), "win.reminder")
         main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
         menu_btn.set_tooltip_text(tr("Style, language and what's new"))
@@ -5511,6 +5741,42 @@ class Window(Adw.ApplicationWindow):
 
     # -- log page
 
+    def build_kind_word(self):
+        """After several very hard days: a calm note with a helpline (see hard_stretch)."""
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.add_css_class("kind-word")
+        title = Gtk.Label(label="\u2665  " + tr("Some hard days lately"), xalign=0, wrap=True)
+        title.add_css_class("heading")
+        box.append(title)
+        text = Gtk.Label(label=tr("That sounds heavy. You don't have to carry it alone: talking to someone "
+                                  "can help, even just once."), xalign=0, wrap=True)
+        box.append(text)
+        for name, contact, note in helplines():
+            if contact.startswith("http"):
+                line = '<b>%s</b>  ·  <a href="%s">%s</a>' % (GLib.markup_escape_text(name), contact,
+                                                             GLib.markup_escape_text(contact.split("//")[1]))
+            else:
+                line = "<b>%s</b>  ·  %s" % (GLib.markup_escape_text(name), GLib.markup_escape_text(contact))
+            lbl = Gtk.Label(xalign=0, wrap=True, selectable=True)
+            lbl.set_markup(line + "\n<small>%s</small>" % GLib.markup_escape_text(note))
+            box.append(lbl)
+        hide = Gtk.Button(label=tr("Thanks, hide this for now"), halign=Gtk.Align.START)
+        hide.add_css_class("flat")
+        hide.connect("clicked", self.on_hide_kind_word)
+        box.append(hide)
+        box.set_visible(False)
+        return box
+
+    def on_hide_kind_word(self, *_):
+        cfg = load_config()
+        cfg["kind_hidden"] = dt.date.today().isoformat()
+        save_config(cfg)
+        self.kind_card.set_visible(False)
+
+    def refresh_kind_word(self):
+        if hasattr(self, "kind_card"):
+            self.kind_card.set_visible(show_kind_word(self.store, load_config()))
+
     def build_log_page(self):
         prev_b = Gtk.Button.new_from_icon_name("go-previous-symbolic")
         prev_b.set_tooltip_text(tr("Previous month"))
@@ -5531,6 +5797,8 @@ class Window(Adw.ApplicationWindow):
         self.month_summary = Gtk.Label(xalign=0)
         self.month_summary.add_css_class("dim-label")
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        self.kind_card = self.build_kind_word()
+        left.append(self.kind_card)
         left.append(nav)
         left.append(self.calendar)
         left.append(self.month_summary)
@@ -6646,6 +6914,7 @@ class Window(Adw.ApplicationWindow):
         else:
             self.month_summary.set_text(tr("Nothing logged this month yet"))
         self.calendar.queue_draw()
+        self.refresh_kind_word()
 
         visible = self.stack.get_visible_child_name()
         if visible == "charts":
@@ -6783,6 +7052,8 @@ def main(argv):
     if "--version" in argv:
         print("Moodlog", VERSION)
         return 0
+    if "--remind" in argv:
+        return remind()
     if "--sync-server" in argv:
         return run_sync_server()
     if "--changelog" in argv:
