@@ -105,9 +105,53 @@ enum Medications {
         return med.medication.displayText
     }
 
+    /// The last error Health gave when reading medications (shown in Settings).
+    nonisolated(unsafe) static var lastError: String?
+
     @available(iOS 26.0, *)
     private static func annotated() async -> [HKUserAnnotatedMedication] {
-        (try? await HKUserAnnotatedMedicationQueryDescriptor().result(for: HealthSender.store)) ?? []
+        do {
+            let meds = try await HKUserAnnotatedMedicationQueryDescriptor().result(for: HealthSender.store)
+            lastError = nil
+            return meds
+        } catch {
+            lastError = error.localizedDescription
+            return []
+        }
+    }
+
+    /// What Moodlog can see right now, for Settings: medications, doses in the last 30 days,
+    /// or the error Health gave.
+    static func status() async -> String {
+        guard isOn, #available(iOS 26.0, *) else { return "" }
+        let meds = await annotated()
+        if let error = lastError { return tr("Health said: %@", error) }
+        let end = Date()
+        let start = Day.calendar.date(byAdding: .day, value: -30, to: end)
+        var count = 0
+        for med in meds { count += await doses(of: med, from: start, to: end).count }
+        let all = await anyDoses(from: start, to: end)
+        if meds.isEmpty {
+            return all > 0
+                ? tr("Moodlog sees %@ doses in the last 30 days, but not the medications they belong to.", "\(all)")
+                : tr("Moodlog can't see any medications. Log them in the Health app, or allow them in Settings → Health → Data Access & Devices → Moodlog.")
+        }
+        return trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count) + " "
+            + tr("Doses in the last 30 days: %@.", "\(count)")
+    }
+
+    /// Every dose Moodlog may read in the period, whatever medication (to tell problems apart).
+    @available(iOS 26.0, *)
+    private static func anyDoses(from start: Date?, to end: Date) async -> Int {
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: end, options: [])
+        return await withCheckedContinuation { continuation in
+            let query = HKSampleQuery(sampleType: HKSeriesType.medicationDoseEventType(), predicate: predicate,
+                                      limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                if let error { lastError = error.localizedDescription }
+                continuation.resume(returning: samples?.count ?? 0)
+            }
+            HealthSender.store.execute(query)
+        }
     }
 
     @available(iOS 26.0, *)

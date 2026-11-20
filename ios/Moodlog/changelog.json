@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.6.1",
+  "date": "2026-11-20",
+  "items": {
+   "en": [
+    "Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
+   ],
+   "it": [
+    "Farmaci: le Impostazioni ora dicono cosa vede Moodlog (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."
+   ]
+  }
+ },
+ {
   "version": "1.6.0",
   "date": "2026-11-20",
   "items": {

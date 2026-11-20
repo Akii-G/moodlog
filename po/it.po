@@ -1990,3 +1990,6 @@ msgstr "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazio
 
 msgid "Steps, resting heart rate, sleep and, from the iPhone, medication are read only if you turn it on in the phone app, and only to show them next to your mood."
 msgstr "Passi, frequenza cardiaca a riposo, sonno e, dall'iPhone, i farmaci vengono letti solo se lo attivi nell'app per il telefono, e solo per mostrarli accanto al tuo umore."
+
+msgid "Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
+msgstr "Farmaci: le Impostazioni ora dicono cosa vede Moodlog (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."

@@ -27,10 +27,7 @@ struct SettingsView: View {
             medicationMessage = error
             return
         }
-        let meds = await Medications.list()
-        medicationMessage = meds.isEmpty
-            ? tr("Moodlog can't see any medications. Log them in the Health app, or tap Choose which medications… and allow them.")
-            : trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count)
+        medicationMessage = await Medications.status()
         UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // send the whole history again
     }
 
@@ -148,6 +145,7 @@ struct SettingsView: View {
                 Section {
                     if Medications.isSupported {
                         Toggle("Read my medications from Apple Health", isOn: $medicationsOn)
+                            .task { if medicationsOn { medicationMessage = await Medications.status() } }
                             .onChange(of: medicationsOn) { _, on in
                                 medicationMessage = ""
                                 if on { Task { await chooseMedications() } }
@@ -164,7 +162,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Medication")
                 } footer: {
-                    Text("Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health.")
+                    Text("Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Moodlog.")
                 }
 
                 Section {
