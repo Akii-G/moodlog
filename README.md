@@ -12,6 +12,24 @@ you open it.
 
 *Screenshots of the real app with made-up sample data.*
 
+## Contents
+
+- [What you can do](#what-you-can-do)
+  - [Log your mood](#log-your-mood)
+  - [See how things go](#see-how-things-go)
+  - [Mark what matters](#mark-what-matters)
+  - [Keep a dream journal](#keep-a-dream-journal)
+  - [Bring a report to your doctor](#bring-a-report-to-your-doctor)
+  - [A gentle reminder, and a kind word](#a-gentle-reminder-and-a-kind-word)
+  - [Use it on your iPhone too](#use-it-on-your-iphone-too)
+  - [Or on your Android phone](#or-on-your-android-phone)
+  - [Make it yours](#make-it-yours)
+- [Install](#install)
+- [Your data](#your-data)
+- [For developers](#for-developers)
+- [Roadmap](#roadmap)
+- [Licence](#licence)
+
 ## What you can do
 
 ### Log your mood
