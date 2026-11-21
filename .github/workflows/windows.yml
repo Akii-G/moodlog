@@ -64,7 +64,7 @@ jobs:
           if (!(Test-Path "$env:RUNNER_TEMP\report.pdf")) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "no report" }
           foreach ($lang in "it", "en") {
             $env:MOODLOG_LANG = $lang
-            $app = Start-Process dist\Moodlog\Moodlog.exe -PassThru
+            $app = Start-Process dist\Moodlog\Moodlog.exe -PassThru -RedirectStandardError "$env:RUNNER_TEMP\err-$lang.txt" -RedirectStandardOutput "$env:RUNNER_TEMP\out-$lang.txt"
             Start-Sleep -Seconds 12
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
             $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
@@ -72,7 +72,7 @@ jobs:
             [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
             New-Item -ItemType Directory -Force screenshots | Out-Null
             $bmp.Save("screenshots\windows-$lang.png")
-            if ($app.HasExited) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "Moodlog closed by itself" }
+            if ($app.HasExited) { "exit code: $($app.ExitCode)"; Get-Content "$env:RUNNER_TEMP\err-$lang.txt", "$env:RUNNER_TEMP\out-$lang.txt", "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "Moodlog closed by itself" }
             Stop-Process -Id $app.Id -Force
             Start-Sleep -Seconds 2
           }
