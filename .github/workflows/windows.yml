@@ -1,0 +1,157 @@
+name: Windows app
+
+on:
+  push:
+    paths: ["src/moodlog", "po/**", "packaging/windows/**", "test/**", ".github/workflows/windows.yml"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # attach the installer to a release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-adwaita-icon-theme
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-gobject
+            mingw-w64-ucrt-x86_64-python-cairo
+            mingw-w64-ucrt-x86_64-python-cryptography
+            mingw-w64-ucrt-x86_64-python-openpyxl
+            mingw-w64-ucrt-x86_64-pyinstaller
+            mingw-w64-ucrt-x86_64-pyinstaller-hooks-contrib
+            mingw-w64-ucrt-x86_64-poppler
+
+      - name: Tests (the same app logic, on Windows)
+        env:
+          GSK_RENDERER: cairo
+        run: |
+          set -e
+          for t in test/test_surveys.py test/test_feelings.py test/test_private.py test/test_medications.py test/test_windows.py; do
+            echo "== $t"; python "$t"
+          done
+
+      - name: Try the app from source (before bundling)
+        env:
+          MOODLOG_NO_WHATS_NEW: "1"
+          PYTHONFAULTHANDLER: "1"
+        run: |
+          export MOODLOG_DATA_DIR=$(mktemp -d) MOODLOG_CONFIG_DIR=$(mktemp -d)
+          python src/moodlog > src-out.txt 2>&1 &
+          pid=$!
+          sleep 12
+          if kill -0 $pid 2>/dev/null; then echo "running from source: OK"; kill $pid; else echo "closed by itself"; fi
+          cat src-out.txt
+
+      - name: Bundle with PyInstaller
+        run: |
+          set -e
+          mkdir -p build
+          cp src/moodlog build/moodlog.py
+          pyinstaller --noconfirm --clean --distpath dist --workpath build/pyinstaller packaging/windows/moodlog.spec
+          ls dist/Moodlog | head -50
+
+      - name: Check the bundled app (a report as PDF, then the window)
+        shell: pwsh
+        run: |
+          $env:MOODLOG_DATA_DIR = "$env:RUNNER_TEMP\moodlog-data"
+          $env:MOODLOG_CONFIG_DIR = "$env:RUNNER_TEMP\moodlog-config"
+          $env:MOODLOG_NO_WHATS_NEW = "1"
+          New-Item -ItemType Directory -Force $env:MOODLOG_DATA_DIR, $env:MOODLOG_CONFIG_DIR | Out-Null
+          $d = Start-Process dist\Moodlog\Moodlog-console.exe -ArgumentList "--diag", "$env:RUNNER_TEMP\diag.txt" -PassThru -Wait
+          "diag exit: $($d.ExitCode)"; Get-Content "$env:RUNNER_TEMP\diag.txt" -Tail 80
+          $p = Start-Process dist\Moodlog\Moodlog.exe -ArgumentList "--report", "$env:RUNNER_TEMP\report.pdf" -PassThru -Wait
+          if (!(Test-Path "$env:RUNNER_TEMP\report.pdf")) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "no report" }
+          foreach ($lang in "it", "en", "cairo") {
+            $env:MOODLOG_LANG = $(if ($lang -eq "cairo") { "it" } else { $lang })
+            $env:GSK_RENDERER = $(if ($lang -eq "cairo") { "cairo" } else { "" })
+            $env:G_MESSAGES_DEBUG = $(if ($lang -eq "it") { "all" } else { "" })
+            $app = Start-Process dist\Moodlog\Moodlog.exe -PassThru -RedirectStandardError "$env:RUNNER_TEMP\err-$lang.txt" -RedirectStandardOutput "$env:RUNNER_TEMP\out-$lang.txt"
+            Start-Sleep -Seconds 12
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            New-Item -ItemType Directory -Force screenshots | Out-Null
+            $bmp.Save("screenshots\windows-$lang.png")
+            if ($app.HasExited) { "exit code: $($app.ExitCode)"; Get-Content "$env:RUNNER_TEMP\err-$lang.txt", "$env:RUNNER_TEMP\out-$lang.txt", "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; Write-Warning "Moodlog closed by itself ($lang)"; $failed = $true; continue }
+            Stop-Process -Id $app.Id -Force
+            Start-Sleep -Seconds 2
+          }
+          Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue
+          Get-ChildItem dist\Moodlog -Recurse -Filter *.exe | Select-Object FullName
+          if ($failed) {
+            $env:GSK_RENDERER = ""; $env:G_MESSAGES_DEBUG = ""; $env:MOODLOG_TRACE = "$env:RUNNER_TEMP\trace.txt"
+            $c = Start-Process dist\Moodlog\Moodlog-console.exe -PassThru -RedirectStandardError "$env:RUNNER_TEMP\cerr.txt" -RedirectStandardOutput "$env:RUNNER_TEMP\cout.txt"
+            Start-Sleep -Seconds 12
+            "console exited: $($c.HasExited) $($c.ExitCode)"
+            Get-Content "$env:RUNNER_TEMP\cerr.txt", "$env:RUNNER_TEMP\cout.txt"
+            "---- last Python stacks"
+            Get-Content "$env:RUNNER_TEMP\trace.txt" -Tail 60
+          }
+          if ($failed) { throw "Moodlog closed by itself" }
+
+      - name: Make the installer
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src\moodlog -Pattern '^VERSION = "(.*)"').Matches[0].Groups[1].Value
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc "/DVersion=$version" packaging\windows\moodlog.iss
+          if ($LASTEXITCODE) { throw "ISCC failed" }
+          Get-ChildItem dist\*.exe
+
+      - name: Try the installer (install, phone receiver, uninstall)
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem dist\Moodlog-Setup-*.exe).FullName
+          Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          $exe = "$env:ProgramFiles\Moodlog\Moodlog.exe"
+          if (!(Test-Path $exe)) { throw "not installed" }
+          if (!(Get-NetFirewallRule -DisplayName "Moodlog phone sync" -ErrorAction SilentlyContinue)) { throw "no firewall rule" }
+          if (!(Test-Path "Registry::HKEY_CLASSES_ROOT\moodlog")) { throw "moodlog: not registered" }
+          Get-Process Moodlog -ErrorAction SilentlyContinue | Stop-Process -Force   # the app opened by the installer
+          $env:MOODLOG_DATA_DIR = "$env:RUNNER_TEMP\installed-data"
+          New-Item -ItemType Directory -Force $env:MOODLOG_DATA_DIR | Out-Null
+          $r = Start-Process $exe -ArgumentList "--sync-server" -PassThru
+          Start-Sleep -Seconds 6
+          if (!(Test-NetConnection 127.0.0.1 -Port 8765 -InformationLevel Quiet)) { throw "the receiver isn't listening" }
+          "receiver answers on 8765"
+          Stop-Process -Id $r.Id -Force
+          Start-Process "$env:ProgramFiles\Moodlog\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path $exe) { throw "still installed after uninstall" }
+          if (Get-NetFirewallRule -DisplayName "Moodlog phone sync" -ErrorAction SilentlyContinue) { throw "firewall rule left behind" }
+          "install and uninstall OK"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Moodlog-Windows-installer
+          path: dist/Moodlog-Setup-*.exe
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Moodlog-Windows-screenshots
+          path: screenshots/
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" (Get-ChildItem dist\Moodlog-Setup-*.exe).FullName --clobber -R "${{ github.repository }}"

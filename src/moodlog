@@ -33,7 +33,8 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.11.0"
+VERSION = "2.12.0"
+IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -50,12 +51,25 @@ def system_language():
         if value:
             code = value.split(".")[0].split("_")[0].split("@")[0].lower()
             return "en" if code in ("c", "posix") else code
+    if IS_WINDOWS:   # Windows has no LANG: GLib reads the Windows display language
+        for name in GLib.get_language_names():
+            code = name.split(".")[0].split("_")[0].split("@")[0].lower()
+            if code not in ("c", "posix", ""):
+                return code
     return "en"
+
+
+def default_config_dir():
+    """~/.config/moodlog; on Windows %LOCALAPPDATA%\\Moodlog\\settings, apart from the data
+    (GLib gives the same folder for both there)."""
+    if IS_WINDOWS:
+        return os.path.join(GLib.get_user_data_dir(), "Moodlog", "settings")
+    return os.path.join(GLib.get_user_config_dir(), "moodlog")
 
 
 def configured_language():
     base = (os.environ.get("MOODLOG_CONFIG_DIR") or os.environ.get("MOODLOG_DATA_DIR")
-            or os.path.join(GLib.get_user_config_dir(), "moodlog"))
+            or default_config_dir())
     try:
         with open(os.path.join(base, "config.json"), encoding="utf-8") as f:
             value = json.load(f).get("language", "auto")
@@ -74,7 +88,8 @@ def pick_language():
 def po_paths(code):
     here = os.path.dirname(os.path.realpath(os.path.abspath(sys.argv[0] if __name__ == "__main__"
                                                             else __file__)))
-    dirs = [os.environ.get("MOODLOG_PO_DIR"), os.path.join(here, "..", "po"),
+    dirs = [os.environ.get("MOODLOG_PO_DIR"), getattr(sys, "_MEIPASS", None) and os.path.join(sys._MEIPASS, "po"),
+            os.path.join(here, "..", "po"),
             os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "po"),
             "/usr/share/moodlog/po"]
     return [os.path.join(d, code + ".po") for d in dirs if d]
@@ -147,7 +162,9 @@ def fmt_date(day, pattern):
              "%B": MONTHS[day.month - 1], "%b": MONTHS_SHORT[day.month - 1]}
     if LANG_CODE == "it":   # Italian writes day and month names in lower case mid-sentence
         names = {k: v.lower() for k, v in names.items()}
-    out = day.strftime(re.sub("%[aAbB]", lambda m: names[m.group(0)].replace("%", "%%"), pattern))
+    # "%-d" (day without a leading zero) is glibc only: Windows' C library crashes on it
+    names["%-d"] = str(day.day)
+    out = day.strftime(re.sub("%(?:[aAbB]|-d)", lambda m: names[m.group(0)].replace("%", "%%"), pattern))
     return out[:1].upper() + out[1:] if LANG_CODE == "it" else out
 
 
@@ -176,13 +193,15 @@ FACE_INK = {1: "#ffffff", 2: "#1b1b1b", 3: "#1b1b1b", 4: "#1b1b1b", 5: "#ffffff"
 # ----------------------------------------------------------------- storage
 
 def default_data_dir():
+    if IS_WINDOWS:   # %LOCALAPPDATA%\Moodlog
+        return os.path.join(GLib.get_user_data_dir(), "Moodlog")
     return os.path.join(GLib.get_user_data_dir(), "moodlog")
 
 
 def config_dir():
     """Settings for this computer only (not synced): ~/.config/moodlog."""
     base = (os.environ.get("MOODLOG_CONFIG_DIR") or os.environ.get("MOODLOG_DATA_DIR")
-            or os.path.join(GLib.get_user_config_dir(), "moodlog"))
+            or default_config_dir())
     os.makedirs(base, exist_ok=True)
     return base
 
@@ -3310,9 +3329,17 @@ def run_sync_server():
             sys.stderr.write("moodlog-sync: %s\n" % (fmt % args))
 
     server = http.server.ThreadingHTTPServer(("0.0.0.0", int(cfg["port"])), Handler)
-    print("Moodlog sync listening on port %d" % cfg["port"], flush=True)
+    if sys.stdout is not None:    # a windowed .exe on Windows has no console
+        print("Moodlog sync listening on port %d" % cfg["port"], flush=True)
     script = os.path.realpath(os.path.abspath(sys.argv[0]))
-    updated = watch_for_update(script, server)
+    if IS_WINDOWS:
+        # the installer closes the receiver and runs `--resume-sync` after an update
+        import threading
+        updated = threading.Event()
+        with open(receiver_pid_path(), "w") as f:
+            f.write(str(os.getpid()))
+    else:
+        updated = watch_for_update(script, server)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -3322,7 +3349,7 @@ def run_sync_server():
         # Moodlog was updated (for example by apt): carry on with the new version, in the
         # same process, so a receiver started by systemd or by hand stays up to date.
         print("Moodlog was updated: restarting the sync receiver", flush=True)
-        os.execv(sys.executable, [sys.executable, script] + sys.argv[1:])
+        restart_self(sys.argv[1:])
     return 0
 
 
@@ -3554,7 +3581,7 @@ STYLE = {"name": "default"}
 # GTK cannot blur what is behind a window, so the "glass" is drawn inside it.
 _TAHOE_COMMON = """
 window, popover, tooltip {
-  font-family: "SF Pro Text", "Inter", "Cantarell", "Fira Sans", sans-serif;
+  font-family: "SF Pro Text", "Inter", "Cantarell", "Fira Sans", "Segoe UI Variable Text", "Segoe UI", sans-serif;
 }
 headerbar {
   background: transparent; background-image: none; box-shadow: none; border: none;
@@ -4682,6 +4709,8 @@ def apply_reminder(on, time):
     cfg = load_config()
     cfg["reminder"] = {"on": bool(on), "time": time}
     save_config(cfg)
+    if IS_WINDOWS:
+        return win_apply_reminder(on, time)
     unit_dir = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "systemd", "user")
     path = os.path.join(unit_dir, REMINDER_TIMER)
     if not on:
@@ -4708,6 +4737,11 @@ def remind():
     on, _time = reminder_settings()
     if not on or Store().day_avg(dt.date.today()):
         return 0
+    if IS_WINDOWS:
+        ok, err = win_toast(tr("How are you today?"), tr("One click on a face is enough."))
+        if not ok:
+            print("moodlog: could not show the reminder (%s)" % err, file=sys.stderr)
+        return 0 if ok else 1
     try:
         bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         reply = bus.call_sync(
@@ -4728,7 +4762,7 @@ def remind():
         if args[0] != note_id:
             return
         if signal == "ActionInvoked":
-            subprocess.Popen([os.path.realpath(os.path.abspath(sys.argv[0]))], start_new_session=True,
+            subprocess.Popen(self_command(), start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         loop.quit()
 
@@ -4739,6 +4773,167 @@ def remind():
     loop.run()
     return 0
 
+
+
+# ----------------------------------------------------------------- Windows
+# On Windows there is no systemd: the daily reminder is a Task Scheduler task, the phone
+# receiver starts at login from the "Run" key and is stopped by its process id, and the
+# reminder is a Windows notification (toast). Everything else is the same app.
+WIN_APP_ID = "Moodlog.Moodlog"          # the Start menu shortcut carries this id (installer)
+WIN_TASK = "Moodlog reminder"
+WIN_RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
+WIN_RUN_NAME = "Moodlog phone sync"
+NO_WINDOW = 0x08000000 if IS_WINDOWS else 0   # CREATE_NO_WINDOW: no console flashing up
+
+
+def self_command(*args):
+    """The command that runs this Moodlog again: the .exe when installed on Windows, otherwise
+    the Python interpreter with this script."""
+    if getattr(sys, "frozen", False):
+        return [sys.executable] + list(args)
+    return [sys.executable, os.path.realpath(os.path.abspath(sys.argv[0]))] + list(args)
+
+
+def restart_self(args):
+    """Starts Moodlog again with `args` and lets this process end. os.execv on Windows doesn't
+    quote paths with spaces ("C:\\Program Files"), so there it's a new process instead."""
+    if IS_WINDOWS:
+        subprocess.Popen(self_command(*args), creationflags=NO_WINDOW)
+        return
+    cmd = self_command(*args)
+    os.execv(cmd[0], cmd)
+
+
+def win_run(cmd):
+    try:
+        done = subprocess.run(cmd, capture_output=True, text=True, timeout=20, creationflags=NO_WINDOW)
+        return done.returncode == 0, (done.stderr or done.stdout).strip()
+    except (OSError, subprocess.SubprocessError) as err:
+        return False, str(err)
+
+
+def win_apply_reminder(on, time):
+    if not on:
+        win_run(["schtasks", "/Delete", "/TN", WIN_TASK, "/F"])
+        return True, ""
+    return win_run(["schtasks", "/Create", "/TN", WIN_TASK, "/SC", "DAILY", "/ST", time, "/F",
+                    "/TR", subprocess.list2cmdline(self_command("--remind"))])
+
+
+def win_toast(title, body):
+    """A Windows notification; clicking it opens Moodlog (the installer registers moodlog:)."""
+    def esc(text):
+        return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace('"', "&quot;"))
+    xml = ('<toast activationType="protocol" launch="moodlog:open"><visual><binding template="ToastGeneric">'
+           "<text>%s</text><text>%s</text></binding></visual></toast>" % (esc(title), esc(body)))
+    script = (
+        "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null\n"
+        "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] > $null\n"
+        "$x = New-Object Windows.Data.Xml.Dom.XmlDocument\n"
+        "$x.LoadXml('%s')\n"
+        "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('%s').Show("
+        "[Windows.UI.Notifications.ToastNotification]::new($x))\n" % (xml.replace("'", "''"), WIN_APP_ID))
+    import base64
+    encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
+    return win_run(["powershell.exe", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+                    "-EncodedCommand", encoded])
+
+
+def receiver_pid_path():
+    return os.path.join(config_dir(), "sync-receiver.pid")
+
+
+def receiver_listening(port=None):
+    """True when something answers on the receiver's port on this computer."""
+    port = port or sync_config()["port"]
+    try:
+        with socket.create_connection(("127.0.0.1", int(port)), timeout=0.4):
+            return True
+    except OSError:
+        return False
+
+
+def win_set_autostart(on):
+    import winreg
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, WIN_RUN_KEY) as key:
+        if on:
+            winreg.SetValueEx(key, WIN_RUN_NAME, 0, winreg.REG_SZ,
+                              subprocess.list2cmdline(self_command("--sync-server")))
+        else:
+            try:
+                winreg.DeleteValue(key, WIN_RUN_NAME)
+            except OSError:
+                pass
+
+
+def win_autostart_on():
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, WIN_RUN_KEY) as key:
+            winreg.QueryValueEx(key, WIN_RUN_NAME)
+            return True
+    except OSError:
+        return False
+
+
+def win_stop_receiver():
+    try:
+        with open(receiver_pid_path()) as f:
+            pid = int(f.read().strip())
+        os.kill(pid, 15)   # TerminateProcess on Windows
+    except (OSError, ValueError):
+        pass
+    try:
+        os.remove(receiver_pid_path())
+    except OSError:
+        pass
+
+
+def win_start_receiver():
+    if not receiver_listening():
+        subprocess.Popen(self_command("--sync-server"), creationflags=NO_WINDOW | 0x00000008,  # DETACHED_PROCESS
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+
+
+def receiver_set(on):
+    """Turns the phone receiver on (now and at every login) or off. Returns (ok, error)."""
+    if not IS_WINDOWS:
+        systemctl("daemon-reload")
+        return systemctl("enable" if on else "disable", "--now", SERVICE)
+    try:
+        win_set_autostart(on)
+    except OSError as err:
+        return False, str(err)
+    if on:
+        win_start_receiver()
+    else:
+        win_stop_receiver()
+    return True, ""
+
+
+def receiver_running():
+    if not IS_WINDOWS:
+        return systemctl("is-active", "--quiet", SERVICE)[0]
+    return receiver_listening()
+
+
+def receiver_restart():
+    """After the data folder changed: the receiver reads it when it starts."""
+    if not IS_WINDOWS:
+        systemctl("try-restart", SERVICE)
+    elif receiver_running():
+        win_stop_receiver()
+        GLib.timeout_add(800, lambda: win_start_receiver() and False)
+
+
+def resume_receiver():
+    """`moodlog --resume-sync`, run by the Windows installer after an update: starts the
+    receiver again if it was on."""
+    if IS_WINDOWS and win_autostart_on():
+        win_set_autostart(True)     # the path to Moodlog.exe may have changed
+        win_start_receiver()
+    return 0
 
 
 def systemctl(*args):
@@ -5602,6 +5797,9 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.12.0", "2026-11-21", [
+        "Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Moodlog.",
+    ]),
     ("2.11.0", "2026-11-21", [
         "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry, more precise than five faces. They show on the day, sync with the phones, and the report lists the ones you picked most often.",
         "Writing prompts: an empty note shows a gentle question, a different one each day, with a button for another. Never required. Both can be turned off in Customize.",
@@ -6279,7 +6477,7 @@ class DataWindow(Gtk.Window):
         except OSError as err:
             win.notify(tr("Could not use that folder: %s") % (err.strerror or err))
             return
-        systemctl("try-restart", SERVICE)  # the phone receiver reads the folder when it starts
+        receiver_restart()  # the phone receiver reads the folder when it starts
         win.reload_data()
         self.update()
         win.notify(tr("Moodlog now uses %s") % folder)
@@ -6347,6 +6545,13 @@ class SyncWindow(Gtk.Window):
         note.add_css_class("dim-label")
         note.add_css_class("caption")
         col.append(note)
+        if IS_WINDOWS:
+            fire = Gtk.Label(xalign=0, wrap=True, label=tr(
+                "On Windows the phone can connect only when your Wi-Fi is a private network. "
+                "If it can't, open Settings → Network & internet → Wi-Fi → your network, and set "
+                "Network profile type to Private."))
+            fire.add_css_class("caption")
+            col.append(card(fire, tr("Windows")))
 
         steps = Gtk.Label(label=SHORTCUT_STEPS, xalign=0, wrap=True, selectable=True)
         android = Gtk.Label(label=ANDROID_STEPS, xalign=0, wrap=True, selectable=True)
@@ -6385,8 +6590,7 @@ class SyncWindow(Gtk.Window):
     def on_switch(self, _switch, state):
         if self._setting:
             return False
-        systemctl("daemon-reload")
-        ok, err = systemctl("enable" if state else "disable", "--now", SERVICE)
+        ok, err = receiver_set(state)
         if not ok:
             self.error = (tr("Could not start the receiver (%s). You can also start it by hand "
                              "in a terminal: moodlog --sync-server") if state else
@@ -6397,7 +6601,7 @@ class SyncWindow(Gtk.Window):
         return False
 
     def update_status(self):
-        active, _ = systemctl("is-active", "--quiet", SERVICE)
+        active = receiver_running()
         self._setting = True
         self.switch.set_active(active)
         self._setting = False
@@ -8691,7 +8895,87 @@ class App(Adw.Application):
         win.present()
 
 
+def diag(path):
+    """`moodlog --diag FILE`: starts GTK step by step and writes each step to FILE, to see
+    where a crash happens on a new system."""
+    out = open(path, "w")
+
+    def step(text):
+        out.write(text + "\n")
+        out.flush()
+        os.fsync(out.fileno())
+    for key in ("GTK_DATA_PREFIX", "GTK_EXE_PREFIX", "GDK_PIXBUF_MODULE_FILE", "GI_TYPELIB_PATH",
+                "XDG_DATA_DIRS", "GSETTINGS_SCHEMA_DIR", "GSK_RENDERER", "GIO_MODULE_DIR"):
+        step("%s=%s" % (key, os.environ.get(key)))
+    step("gtk init")
+    Gtk.init()
+    step("display %s" % Gdk.Display.get_default())
+    step("adw init")
+    Adw.init()
+    step("style manager %s" % Adw.StyleManager.get_default().get_dark())
+    step("icon theme")
+    theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+    step("has edit-copy-symbolic: %s" % theme.has_icon("edit-copy-symbolic"))
+    step("window")
+    win = Gtk.Window(title="diag")
+    win.set_child(Gtk.Label(label="Moodlog"))
+    step("present")
+    win.present()
+    loop = GLib.MainLoop()
+    GLib.timeout_add(1500, loop.quit)
+    step("loop")
+    loop.run()
+    step("adw application")
+    app = Adw.Application(application_id=APP_ID + ".Diag")
+    app.connect("activate", lambda a: (step("activated"), a.quit()))
+    app.run([])
+    step("done with the basics; now Moodlog itself, logging each call")
+    me = os.path.basename(__file__) if "__file__" in globals() else "moodlog"
+
+    def prof(frame, event, _arg):
+        if event == "call" and frame.f_code.co_filename.endswith(me):
+            out.write("%s:%d %s\n" % (frame.f_code.co_name, frame.f_lineno, ""))
+            out.flush()
+        elif event == "c_call":
+            out.write("  c %s\n" % getattr(_arg, "__qualname__", _arg))
+            out.flush()
+    sys.setprofile(prof)
+    real = App(None)
+    GLib.timeout_add(4000, lambda: real.quit())
+    real.run([sys.argv[0]])
+    sys.setprofile(None)
+    step("Moodlog ran and quit")
+    return 0
+
+
 def main(argv):
+    if sys.stdout is None or sys.stderr is None:
+        # the Windows .exe has no console: messages go to a small log, for bug reports
+        try:
+            path = os.path.join(config_dir(), "moodlog.log")
+            if os.path.exists(path) and os.path.getsize(path) > 512 * 1024:
+                os.replace(path, path + ".old")
+            log = open(path, "a", encoding="utf-8", buffering=1)
+        except OSError:
+            log = open(os.devnull, "w")
+        sys.stdout = sys.stdout or log
+        sys.stderr = sys.stderr or log
+
+    if IS_WINDOWS:
+        try:
+            import faulthandler
+            faulthandler.enable(sys.stderr)     # a crash leaves its Python stack in the log
+        except (ValueError, OSError, RuntimeError, AttributeError):
+            pass
+    if os.environ.get("MOODLOG_TRACE"):
+        # for bug hunting: the Python stack every half second, and on a crash
+        import faulthandler
+        global _trace_file
+        _trace_file = open(os.environ["MOODLOG_TRACE"], "w")
+        faulthandler.enable(_trace_file, all_threads=True)
+        faulthandler.dump_traceback_later(0.5, repeat=True, file=_trace_file)
+    if "--diag" in argv:
+        return diag(argv[argv.index("--diag") + 1])
     if "--version" in argv:
         print("Moodlog", VERSION)
         return 0
@@ -8699,6 +8983,8 @@ def main(argv):
         return remind()
     if "--sync-server" in argv:
         return run_sync_server()
+    if "--resume-sync" in argv:
+        return resume_receiver()
     if "--changelog" in argv:
         print(changelog_markdown())
         return 0
@@ -8733,7 +9019,7 @@ def main(argv):
     app = App(page)
     status = app.run([argv[0]])
     if app.restart:
-        os.execv(sys.executable, [sys.executable, os.path.abspath(argv[0])] + argv[1:])
+        restart_self([a for a in argv[1:] if not a.startswith("moodlog:")])
     return status
 
 

@@ -4,6 +4,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.12.0 (2026-11-21)
+
+- Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\Moodlog.
+
 ### 2.11.0 (2026-11-21)
 
 - Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry, more precise than five faces. They show on the day, sync with the phones, and the report lists the ones you picked most often.
