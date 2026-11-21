@@ -115,6 +115,29 @@ jobs:
           if ($LASTEXITCODE) { throw "ISCC failed" }
           Get-ChildItem dist\*.exe
 
+      - name: Try the installer (install, phone receiver, uninstall)
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem dist\Moodlog-Setup-*.exe).FullName
+          Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait
+          $exe = "$env:ProgramFiles\Moodlog\Moodlog.exe"
+          if (!(Test-Path $exe)) { throw "not installed" }
+          if (!(Get-NetFirewallRule -DisplayName "Moodlog phone sync" -ErrorAction SilentlyContinue)) { throw "no firewall rule" }
+          if (!(Test-Path "Registry::HKEY_CLASSES_ROOT\moodlog")) { throw "moodlog: not registered" }
+          Get-Process Moodlog -ErrorAction SilentlyContinue | Stop-Process -Force   # the app opened by the installer
+          $env:MOODLOG_DATA_DIR = "$env:RUNNER_TEMP\installed-data"
+          New-Item -ItemType Directory -Force $env:MOODLOG_DATA_DIR | Out-Null
+          $r = Start-Process $exe -ArgumentList "--sync-server" -PassThru
+          Start-Sleep -Seconds 6
+          if (!(Test-NetConnection 127.0.0.1 -Port 8765 -InformationLevel Quiet)) { throw "the receiver isn't listening" }
+          "receiver answers on 8765"
+          Stop-Process -Id $r.Id -Force
+          Start-Process "$env:ProgramFiles\Moodlog\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path $exe) { throw "still installed after uninstall" }
+          if (Get-NetFirewallRule -DisplayName "Moodlog phone sync" -ErrorAction SilentlyContinue) { throw "firewall rule left behind" }
+          "install and uninstall OK"
+
       - uses: actions/upload-artifact@v4
         with:
           name: Moodlog-Windows-installer
