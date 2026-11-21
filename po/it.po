@@ -2371,3 +2371,9 @@ msgstr "Domande per scrivere: una nota vuota mostra una domanda leggera, diversa
 
 msgid "Medication: when Health has nothing new to ask, Choose which medications… now says so, and where to change your choice."
 msgstr "Farmaci: quando Salute non ha niente di nuovo da chiedere, Scegli quali farmaci… ora lo dice, e spiega dove cambiare la scelta."
+
+msgid "On Windows the phone can connect only when your Wi-Fi is a private network. If it can't, open Settings → Network & internet → Wi-Fi → your network, and set Network profile type to Private."
+msgstr "Su Windows il telefono può collegarsi solo se la tua rete Wi-Fi è una rete privata. Se non ci riesce, apri Impostazioni → Rete e Internet → Wi-Fi → la tua rete, e imposta Tipo di profilo di rete su Privata."
+
+msgid "Windows"
+msgstr "Windows"

@@ -1,0 +1,106 @@
+name: Windows app
+
+on:
+  push:
+    paths: ["src/moodlog", "po/**", "packaging/windows/**", "test/**", ".github/workflows/windows.yml"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # attach the installer to a release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-adwaita-icon-theme
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-gobject
+            mingw-w64-ucrt-x86_64-python-cairo
+            mingw-w64-ucrt-x86_64-python-cryptography
+            mingw-w64-ucrt-x86_64-python-openpyxl
+            mingw-w64-ucrt-x86_64-pyinstaller
+            mingw-w64-ucrt-x86_64-pyinstaller-hooks-contrib
+
+      - name: Tests (the same app logic, on Windows)
+        env:
+          GSK_RENDERER: cairo
+        run: |
+          set -e
+          for t in test/test_surveys.py test/test_feelings.py test/test_private.py test/test_medications.py test/test_windows.py; do
+            echo "== $t"; python "$t"
+          done
+
+      - name: Bundle with PyInstaller
+        run: |
+          set -e
+          mkdir -p build
+          cp src/moodlog build/moodlog.py
+          pyinstaller --noconfirm --clean --distpath dist --workpath build/pyinstaller packaging/windows/moodlog.spec
+          ls dist/Moodlog | head -50
+
+      - name: Check the bundled app (a report as PDF, then the window)
+        shell: pwsh
+        run: |
+          $env:MOODLOG_DATA_DIR = "$env:RUNNER_TEMP\moodlog-data"
+          $env:MOODLOG_CONFIG_DIR = "$env:RUNNER_TEMP\moodlog-config"
+          $env:MOODLOG_NO_WHATS_NEW = "1"
+          New-Item -ItemType Directory -Force $env:MOODLOG_DATA_DIR, $env:MOODLOG_CONFIG_DIR | Out-Null
+          $p = Start-Process dist\Moodlog\Moodlog.exe -ArgumentList "--report", "$env:RUNNER_TEMP\report.pdf" -PassThru -Wait
+          if (!(Test-Path "$env:RUNNER_TEMP\report.pdf")) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "no report" }
+          foreach ($lang in "it", "en") {
+            $env:MOODLOG_LANG = $lang
+            $app = Start-Process dist\Moodlog\Moodlog.exe -PassThru
+            Start-Sleep -Seconds 12
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            [System.Drawing.Graphics]::FromImage($bmp).CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            New-Item -ItemType Directory -Force screenshots | Out-Null
+            $bmp.Save("screenshots\windows-$lang.png")
+            if ($app.HasExited) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "Moodlog closed by itself" }
+            Stop-Process -Id $app.Id -Force
+            Start-Sleep -Seconds 2
+          }
+          Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue
+
+      - name: Make the installer
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src\moodlog -Pattern '^VERSION = "(.*)"').Matches[0].Groups[1].Value
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) { choco install innosetup -y --no-progress; }
+          & $iscc "/DVersion=$version" packaging\windows\moodlog.iss
+          if ($LASTEXITCODE) { throw "ISCC failed" }
+          Get-ChildItem dist\*.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Moodlog-Windows-installer
+          path: dist/Moodlog-Setup-*.exe
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Moodlog-Windows-screenshots
+          path: screenshots/
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" (Get-ChildItem dist\Moodlog-Setup-*.exe).FullName --clobber -R "${{ github.repository }}"
