@@ -331,3 +331,36 @@
 "Private dream" = "Sogno privato";
 "A private note never goes in the doctor report." = "Una nota privata non finisce mai nel resoconto per il medico.";
 "A private dream is only counted in the doctor report; what it was about is never shown." = "Un sogno privato viene solo contato nel resoconto per il medico; di cosa parlava non viene mai mostrato.";
+
+/* Questionnaires (1.8) */
+"Questionnaires" = "Questionari";
+"PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks." = "PHQ-9 e GAD-7 per il tuo medico, con un promemoria leggero ogni due settimane.";
+"Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation." = "Compilati in Moodlog. Ogni risposta vale da 0 (mai) a 3 (quasi ogni giorno); il punteggio è la loro somma, su 27 per il PHQ-9 e su 21 per il GAD-7. Le risposte sono elencate nell'ordine delle domande. Moodlog non dà alcuna interpretazione.";
+"Questionnaire" = "Questionario";
+"Score" = "Punteggio";
+"Answers" = "Risposte";
+"Difficulty" = "Difficoltà";
+"Two weeks since your last questionnaires" = "Sono passate due settimane dagli ultimi questionari";
+"Answering PHQ-9 and GAD-7 again takes about two minutes, and helps your doctor see how things are going." = "Compilare di nuovo PHQ-9 e GAD-7 richiede circa due minuti, e aiuta il tuo medico a vedere come vanno le cose.";
+"Include questionnaires (PHQ-9, GAD-7)" = "Includi i questionari (PHQ-9, GAD-7)";
+"Questionnaires for your doctor" = "Questionari per il medico";
+"PHQ-9 and GAD-7, with a gentle reminder every two weeks." = "PHQ-9 e GAD-7, con un promemoria leggero ogni due settimane.";
+"%@ question left" = "Manca %@ domanda";
+"%@ questions left" = "Mancano %@ domande";
+"Answer %@" = "Compila il %@";
+"%@ · %@ of %@" = "%@ · %@ su %@";
+"Score: %@ of %@" = "Punteggio: %@ su %@";
+"Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Moodlog shows only your score, and the report can include them for your doctor." = "Due brevi questionari che usano i medici: il PHQ-9 sull'umore basso e il GAD-7 sull'ansia. Ognuno chiede delle ultime due settimane. Moodlog mostra solo il punteggio, e il report può includerli per il tuo medico.";
+"Remind me every two weeks" = "Ricordamelo ogni due settimane";
+"A notification two weeks after your last questionnaire. Nothing is sent before your first one." = "Una notifica due settimane dopo l'ultimo questionario. Prima del tuo primo questionario non arriva niente.";
+"Scores over time" = "Punteggi nel tempo";
+"Delete" = "Elimina";
+"History" = "Cronologia";
+"Swipe left to delete one." = "Scorri a sinistra per eliminarne uno.";
+"Delete this questionnaire?" = "Eliminare questo questionario?";
+"It's deleted on your other devices too at the next sync." = "Viene eliminato anche dagli altri dispositivi alla prossima sincronizzazione.";
+"Private: keep it out of the doctor report" = "Privato: non metterlo nel report per il medico";
+"You said you've had thoughts of being better off dead or of hurting yourself. That's a lot to carry, and you don't have to carry it alone. Please tell your doctor, or someone you trust, soon. If it feels heavy right now, you can talk to someone today:" = "Hai detto di aver pensato che sarebbe meglio morire o di farti del male. È tanto da portare, e non devi portarlo da solo. Parlane presto con il tuo medico o con qualcuno di cui ti fidi. Se adesso ti pesa, puoi parlare con qualcuno già oggi:";
+"Moodlog doesn't tell anyone: this stays on your devices." = "Moodlog non lo dice a nessuno: resta sui tuoi dispositivi.";
+"Thank you for answering honestly" = "Grazie per aver risposto con sincerità";
+"Close" = "Chiudi";

@@ -20,11 +20,12 @@ you open it.
   - [Mark what matters](#mark-what-matters)
   - [Keep a dream journal](#keep-a-dream-journal)
   - [Bring a report to your doctor](#bring-a-report-to-your-doctor)
+  - [Questionnaires for your doctor](#questionnaires-for-your-doctor)
   - [A gentle reminder, and a kind word](#a-gentle-reminder-and-a-kind-word)
   - [Make it yours](#make-it-yours)
   - [Use it on your iPhone too](#use-it-on-your-iphone-too)
   - [Or on your Android phone](#or-on-your-android-phone)
-  - [Make it yours](#make-it-yours)
+  - [Change the look](#change-the-look)
 - [Install](#install)
 - [Your data](#your-data)
 - [For developers](#for-developers)
@@ -84,6 +85,20 @@ print or save straight from the phone.
 
 The **Export** menu also saves everything as a spreadsheet (.xlsx, with colours and
 charts) or a plain CSV file, which open in LibreOffice Calc, Excel or Google Sheets.
+
+### Questionnaires for your doctor
+
+Two short questionnaires doctors use, with their official words in English and
+Italian: **PHQ-9** about low mood and **GAD-7** about anxiety (☰ → **Questionnaires for
+your doctor** on the PC, **Settings → Questionnaires** on the phones). Moodlog shows
+only your score and a chart of scores over time, never a label or a diagnosis. The
+report for your doctor can include them, with each answer, and they sync between your
+devices. Two weeks after the last one, Moodlog asks gently if you'd like to answer
+again: a card on the PC, a notification on the phone.
+
+PHQ-9 and GAD-7 were developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt
+Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission is
+required to reproduce, translate, display or distribute them.
 
 ### A gentle reminder, and a kind word
 
@@ -165,7 +180,7 @@ The iPhone and the PC must be on the same Wi-Fi and the PC must be on. Missed da
 are filled in on the next run.
 </details>
 
-### Make it yours
+### Change the look
 
 The ☰ menu switches between two styles, **Default** (GNOME) and **Tahoe**
 (macOS-like, with frosted cards and pill buttons), both in light and dark. It also
@@ -187,7 +202,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.9.0_all.deb
+    sudo apt install ./moodlog_2.10.0_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).

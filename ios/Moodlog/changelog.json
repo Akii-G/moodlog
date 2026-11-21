@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.8.0",
+  "date": "2026-11-21",
+  "items": {
+   "en": [
+    "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
+   ],
+   "it": [
+    "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Moodlog mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
+   ]
+  }
+ },
+ {
   "version": "1.7.0",
   "date": "2026-11-21",
   "items": {

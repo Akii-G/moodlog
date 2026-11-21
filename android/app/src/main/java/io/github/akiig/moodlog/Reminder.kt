@@ -101,7 +101,11 @@ class ReminderReceiver : BroadcastReceiver() {
         loadTranslations(context)
         when (intent.action) {
             Reminder.ACTION -> Reminder.onAlarm(context)
-            else -> Reminder.schedule(context)   // boot, update, time or time-zone change
+            SurveyReminder.ACTION -> SurveyReminder.onAlarm(context)
+            else -> {   // boot, update, time or time-zone change
+                Reminder.schedule(context)
+                SurveyReminder.schedule(context)
+            }
         }
     }
 }

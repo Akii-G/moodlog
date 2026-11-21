@@ -2,7 +2,7 @@
 
 *Leggi in italiano: [PRIVACY.it.md](PRIVACY.it.md)*
 
-Last updated: 21 November 2026. This covers Moodlog for the PC 2.9.0, Moodlog for iPhone 1.7.0 and Moodlog for Android 1.3.0, and newer.
+Last updated: 21 November 2026. This covers Moodlog for the PC 2.10.0, Moodlog for iPhone 1.8.0 and Moodlog for Android 1.4.0, and newer.
 
 ## The short version
 
@@ -19,7 +19,7 @@ Moodlog is a free, open-source personal project by Giosuè ([Akii-G on GitHub](h
 
 Everything you enter: moods and their notes, tags, events (such as a medication change), dreams, and, if you turn it on, health data from your phone.
 
-- **On the PC**, it lives in plain files in your data folder: `~/.local/share/moodlog/` unless you chose another folder. The files are `moods.csv`, `events.csv`, `dreams.csv`, `health.csv` and, if you use medication from Apple Health, `medications.json`. Your settings are in `~/.config/moodlog/config.json`. The phone sync token is in `sync.json`, and a one-line note about the last sync is in `sync-last.txt`.
+- **On the PC**, it lives in plain files in your data folder: `~/.local/share/moodlog/` unless you chose another folder. The files are `moods.csv`, `events.csv`, `dreams.csv`, `health.csv` and, if you use medication from Apple Health, `medications.json`. Questionnaires you answer (PHQ-9, GAD-7) are in `surveys.json`. Your settings are in `~/.config/moodlog/config.json`. The phone sync token is in `sync.json`, and a one-line note about the last sync is in `sync-last.txt`.
 - **On the iPhone and on Android**, it lives in the app's private storage, which other apps can't read.
 
 The files on the PC aren't encrypted by Moodlog. They are protected by your user account, and by disk encryption if you turned it on when you installed your system. If you keep your data folder in a folder that another program syncs (for example Syncthing, Nextcloud or Dropbox), that program, and any server it uses, will hold a copy under its own privacy policy.

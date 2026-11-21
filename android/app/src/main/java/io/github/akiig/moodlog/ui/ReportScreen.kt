@@ -45,6 +45,7 @@ fun ReportDialog(onClose: () -> Unit) {
     var sleep by remember { mutableStateOf(true) }
     var dreams by remember { mutableStateOf(false) }
     var dreamText by remember { mutableStateOf(false) }
+    var surveys by remember { mutableStateOf(true) }
     var canSleep by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
@@ -55,7 +56,8 @@ fun ReportDialog(onClose: () -> Unit) {
         val nights = if (sleep && canSleep) (try { app.health.nightlySleep(start, end) } catch (e: Exception) { null }) ?: emptyMap() else emptyMap()
         val file = File(context.cacheDir, "reports/" + tr("Moodlog report") + " $start – $end.pdf")
         return withContext(Dispatchers.Default) {
-            Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams).write(file)
+            Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams,
+                surveys && app.showQuestionnaires).write(file)
         }
     }
 
@@ -91,6 +93,10 @@ fun ReportDialog(onClose: () -> Unit) {
             if (canSleep) {
                 Line()
                 SwitchRow(tr("Include sleep from Health Connect"), sleep) { sleep = it }
+            }
+            if (app.showQuestionnaires && app.store.surveys.isNotEmpty()) {
+                Line()
+                SwitchRow(tr("Include questionnaires (PHQ-9, GAD-7)"), surveys) { surveys = it }
             }
             if (app.showDreams) {
                 Line()

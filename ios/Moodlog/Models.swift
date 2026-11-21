@@ -95,7 +95,7 @@ enum DreamTag: String, CaseIterable, Identifiable {
 
 struct Tombstone: Codable, Hashable {
     var id: String
-    var type: String      // "entry", "event" or "dream"
+    var type: String      // "entry", "event", "dream" or "survey"
     var deleted: String   // UTC time of the deletion
     var date: String?
 }
@@ -105,6 +105,7 @@ struct SyncState: Codable {
     var events: [MoodEvent]
     var deleted: [Tombstone]
     var dreams: [Dream]?  // missing when the PC runs Moodlog older than 2.3
+    var surveys: [Survey]? = nil  // missing when the PC runs Moodlog older than 2.10
     var changed: Int?
 }
 

@@ -87,6 +87,13 @@ class Prefs(context: Context) {
     var privateDefault: Boolean
         get() = p.getBoolean("privateDefault", false)
         set(v) = p.edit().putBoolean("privateDefault", v).apply()
+    /** PHQ-9 and GAD-7 in Settings, the report and the two-week reminder. */
+    var questionnaires: Boolean
+        get() = p.getBoolean("showQuestionnaires", true)
+        set(v) = p.edit().putBoolean("showQuestionnaires", v).apply()
+    var surveyRemind: Boolean
+        get() = p.getBoolean("surveyRemind", true)
+        set(v) = p.edit().putBoolean("surveyRemind", v).apply()
     var customizeSeen: Boolean
         get() = p.getBoolean("customizeSeen", false)
         set(v) = p.edit().putBoolean("customizeSeen", v).apply()

@@ -12,6 +12,8 @@ struct ReportView: View {
     @State private var medication = true
     @AppStorage("showDreams") private var showDreams = true
     @AppStorage("showMedication") private var showMedication = true
+    @AppStorage("showQuestionnaires") private var showQuestionnaires = true
+    @State private var surveys = true
     @State private var dreams = false
     @State private var dreamText = false
     @State private var busy = false
@@ -36,6 +38,9 @@ struct ReportView: View {
                     Toggle("Include my notes", isOn: $notes)
                     if HealthSender.isAvailable { Toggle("Include sleep from Apple Health", isOn: $sleep) }
                     if Medications.isOn && showMedication { Toggle("Include medication from Apple Health", isOn: $medication) }
+                    if showQuestionnaires && !store.surveys.isEmpty {
+                        Toggle("Include questionnaires (PHQ-9, GAD-7)", isOn: $surveys)
+                    }
                     if showDreams {
                         Toggle("Include dreams (how many, and nightmare nights)", isOn: $dreams)
                             .onChange(of: dreams) { _, on in if !on { dreamText = false } }
@@ -85,7 +90,8 @@ struct ReportView: View {
             .appendingPathComponent(tr("Moodlog report") + " \(start) – \(end).pdf")
         do {
             try Report(store: store, start: start, end: end, includeNotes: notes, sleep: nights,
-                       includeDreams: dreams && showDreams, dreamText: dreams && dreamText && showDreams, doses: doses, meds: meds).write(to: url)
+                       includeDreams: dreams && showDreams, dreamText: dreams && dreamText && showDreams, doses: doses, meds: meds,
+                       includeSurveys: surveys && showQuestionnaires).write(to: url)
             file = url
         } catch {
             message = error.localizedDescription

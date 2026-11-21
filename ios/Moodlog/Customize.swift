@@ -10,6 +10,8 @@ enum Prefs {
     /// The Private tick on notes and dreams, and whether new ones start ticked.
     static var privateTick: Bool { UserDefaults.standard.object(forKey: "privateTick") as? Bool ?? true }
     static var privateDefault: Bool { UserDefaults.standard.bool(forKey: "privateDefault") }
+    /// PHQ-9 and GAD-7 in Settings, the report and the two-week reminder.
+    static var questionnaires: Bool { UserDefaults.standard.object(forKey: "showQuestionnaires") as? Bool ?? true }
 }
 
 /// The options themselves: rows in a Form, or stacked in the tour's card.
@@ -19,6 +21,7 @@ struct CustomizeOptions: View {
     @AppStorage("severalMoods") private var several = "grid"
     @AppStorage("privateTick") private var privateTick = true
     @AppStorage("privateDefault") private var privateDefault = false
+    @AppStorage("showQuestionnaires") private var showQuestionnaires = true
 
     var body: some View {
         Toggle(isOn: $showDreams) {
@@ -35,6 +38,13 @@ struct CustomizeOptions: View {
                     Text("The doses from Apple Health on each day and in the report.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+            }
+        }
+        Toggle(isOn: $showQuestionnaires) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Questionnaires")
+                Text("PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         Toggle(isOn: $privateTick) {

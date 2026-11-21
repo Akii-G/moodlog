@@ -11,6 +11,7 @@ final class AppStore {
     var entries: [Entry] = []
     var events: [MoodEvent] = []
     var dreams: [Dream] = []
+    var surveys: [Survey] = []
     var deleted: [Tombstone] = []
 
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
@@ -21,6 +22,7 @@ final class AppStore {
         var events: [MoodEvent]
         var deleted: [Tombstone]
         var dreams: [Dream]?  // optional: files saved by 1.1 and older have none
+        var surveys: [Survey]?  // optional: files saved by 1.7 and older have none
     }
 
     init() {
@@ -36,11 +38,12 @@ final class AppStore {
         entries = saved.entries
         events = saved.events
         dreams = saved.dreams ?? []
+        surveys = saved.surveys ?? []
         deleted = saved.deleted
     }
 
     func save() {
-        let saved = Saved(entries: entries, events: events, deleted: deleted, dreams: dreams)
+        let saved = Saved(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys)
         if let data = try? JSONEncoder().encode(saved) {
             try? data.write(to: fileURL, options: .atomic)
         }
@@ -210,10 +213,27 @@ final class AppStore {
         changed()
     }
 
+    @discardableResult
+    func addSurvey(kind: SurveyKind, answers: [Int], difficulty: Int, isPrivate: Bool = false) -> Survey {
+        let now = Date()
+        let survey = Survey(id: AppStore.newID(), date: Day.string(now), time: Day.timeString(now), kind: kind.rawValue,
+                            answers: answers, difficulty: difficulty, updated: Stamp.now(), isPrivate: isPrivate ? true : nil)
+        surveys.append(survey)
+        surveys.sort { ($0.date, $0.time) < ($1.date, $1.time) }
+        changed()
+        return survey
+    }
+
+    func delete(_ survey: Survey) {
+        surveys.removeAll { $0.id == survey.id }
+        deleted.append(Tombstone(id: survey.id, type: "survey", deleted: Stamp.now(), date: survey.date))
+        changed()
+    }
+
     // MARK: - Sync
 
     func state() -> SyncState {
-        return SyncState(entries: entries, events: events, deleted: deleted, dreams: dreams, changed: nil)
+        return SyncState(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys, changed: nil)
     }
 
     /// Merge what the PC sent. Returns how many things changed here.
@@ -311,7 +331,32 @@ final class AppStore {
             }
         }
 
+        var surveysByID: [String: Survey] = [:]
+        for s in surveys {
+            if let old = surveysByID[s.id], old.updated >= s.updated { continue }
+            surveysByID[s.id] = s
+        }
+        for s in other.surveys ?? [] where s.isValid {  // an older PC sends none: keep ours
+            if let t = tombs[s.id], t.deleted >= s.updated { continue }
+            if let mine = surveysByID[s.id] {
+                if s.updated > mine.updated {
+                    surveysByID[s.id] = s
+                    changes += 1
+                }
+            } else {
+                surveysByID[s.id] = s
+                changes += 1
+            }
+        }
+        for t in tombs.values where t.type == "survey" {
+            if let mine = surveysByID[t.id], mine.updated <= t.deleted {
+                surveysByID.removeValue(forKey: t.id)
+                changes += 1
+            }
+        }
+
         entries = Array(byID.values)
+        surveys = Array(surveysByID.values).sorted { ($0.date, $0.time) < ($1.date, $1.time) }
         events = Array(eventsByID.values).sorted { $0.date < $1.date }
         dreams = Array(dreamsByID.values).sorted { $0.date < $1.date }
         deleted = Array(tombs.values)

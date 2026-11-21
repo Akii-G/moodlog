@@ -28,6 +28,7 @@ class Report(
     private val sleep: Map<String, Double>,      // empty when not included
     private val includeDreams: Boolean,
     private val dreamText: Boolean,
+    private val includeSurveys: Boolean = false,
 ) {
     companion object {
         const val W = 595f
@@ -181,6 +182,7 @@ class Report(
         if (en.isNotEmpty() || an.isNotEmpty()) scaleChart()
         if (sleep.isNotEmpty()) sleepChart()
         eventsTable()
+        if (includeSurveys) surveyTable()
         if (includeDreams) dreamsSection()
         dayTable()
 
@@ -328,6 +330,38 @@ class Report(
         }
         if (evs.any { !store.moodAround(it.date).complete }) y += text("* " + tr("so far"), M, y, 7f, muted, italic = true)
         y += 6f
+    }
+
+    /** PHQ-9 and GAD-7: date, score, each answer in question order, difficulty. Private ones are left out. */
+    private fun surveyTable() {
+        val list = store.surveys.filter { it.date in start..end && !it.private }
+        if (list.isEmpty()) return
+        heading(tr("Questionnaires"))
+        y += text(tr("Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation."),
+            M, y, 8f, muted, width = W - 2 * M) + 6f
+        val widths = mutableListOf(70f, 64f, 56f, 120f, 0f).also { it[4] = W - 2 * M - it.sum() }
+        val heads = listOf(tr("Date"), tr("Questionnaire"), tr("Score"), tr("Answers"), tr("Difficulty"))
+        fun head() {
+            var x = M
+            heads.forEachIndexed { i, h -> text(h, x, y, 7.5f, muted, bold = true, width = widths[i] - 4f); x += widths[i] }
+            y += 14f
+            c.drawLine(M, y - 3f, W - M, y - 3f, stroke(grid, 0.6f))
+        }
+        head()
+        val words = SurveyText.current.difficultyOptions
+        for (s in list) {
+            val diff = if (s.difficulty >= 0) words[s.difficulty] else "–"
+            val cells = listOf(Day.pretty(s.date, "d MMM yyyy"), s.name, "${s.score} / ${s.maxScore}",
+                s.answers.joinToString(" "), diff)
+            val rowH = measure(diff, 8.5f, widths[4] - 4f).coerceAtLeast(12f) + 6f
+            if (y + rowH > H - 48f) { newPage(); head() }
+            var x = M
+            cells.forEachIndexed { i, t -> text(t, x, y, 8.5f, ink, bold = i == 2, width = widths[i] - 4f); x += widths[i] }
+            y += rowH
+        }
+        val credit = SurveyText.current.credit
+        ensure(measure(credit, 7f, W - 2 * M) + 4f)
+        y += text(credit, M, y + 2f, 7f, muted, width = W - 2 * M, italic = true) + 10f
     }
 
     private fun dreamsSection() {

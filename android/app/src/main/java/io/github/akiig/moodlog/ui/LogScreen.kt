@@ -132,7 +132,6 @@ fun LogScreen(onDay: (String) -> Unit) {
 /** After several very hard days: a calm note with a helpline. Hidden for a week when dismissed. */
 @Composable
 fun KindWord(onHide: () -> Unit) {
-    val context = LocalContext.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
         .background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -143,6 +142,17 @@ fun KindWord(onHide: () -> Unit) {
         }
         Text(tr("That sounds heavy. You don't have to carry it alone: talking to someone can help, even just once."),
             style = MaterialTheme.typography.bodyMedium)
+        HelplineRows()
+        Text(tr("Thanks, hide this for now"), color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onHide).padding(vertical = 6.dp))
+    }
+}
+
+/** The helplines in the app's language: tap one to call it or open its page. */
+@Composable
+fun HelplineRows() {
+    val context = LocalContext.current
         for (h in Care.helplines()) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest)
@@ -161,10 +171,6 @@ fun KindWord(onHide: () -> Unit) {
                     tint = MaterialTheme.colorScheme.primary)
             }
         }
-        Text(tr("Thanks, hide this for now"), color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onHide).padding(vertical = 6.dp))
-    }
 }
 
 @Composable

@@ -16,6 +16,7 @@ struct SettingsView: View {
     @AppStorage("reminderOn") private var reminderOn = false
     @AppStorage("reminderTime") private var reminderTime = "20:30"
     @AppStorage("kindWord") private var kindWord = true
+    @AppStorage("showQuestionnaires") private var showQuestionnaires = true
     @AppStorage("lastBackup") private var lastBackup = ""
     @State private var backupPlace = Backup.placeName
     @State private var backupMessage = ""
@@ -176,6 +177,25 @@ struct SettingsView: View {
                     Text("Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Moodlog.")
                 }
 
+                #if DEVTOOLS
+                DevNotificationsSection()
+                #endif
+
+                if showQuestionnaires {
+                    Section {
+                        NavigationLink {
+                            SurveysView()
+                        } label: {
+                            LabeledContent("Questionnaires for your doctor",
+                                           value: store.surveys.last.map { Day.pretty($0.date, style: "d MMM") } ?? "")
+                        }
+                    } header: {
+                        Text("Questionnaires")
+                    } footer: {
+                        Text("PHQ-9 and GAD-7, with a gentle reminder every two weeks.")
+                    }
+                }
+
                 Section {
                     Toggle("Remind me once a day", isOn: $reminderOn)
                         .onChange(of: reminderOn) { _, on in
@@ -240,6 +260,7 @@ struct SettingsView: View {
                     LabeledContent("Entries on this iPhone", value: "\(store.entries.count)")
                     LabeledContent("Events", value: "\(store.events.count)")
                     LabeledContent("Dreams", value: "\(store.dreams.count)")
+                    LabeledContent("Questionnaires", value: "\(store.surveys.count)")
                 }
             }
             .navigationTitle("Settings")

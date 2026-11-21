@@ -21,6 +21,8 @@ class AppStore(private val file: File?) {
         private set
     var dreams by mutableStateOf(listOf<Dream>())
         private set
+    var surveys by mutableStateOf(listOf<Survey>())
+        private set
     var deleted by mutableStateOf(listOf<Tombstone>())
         private set
 
@@ -38,6 +40,7 @@ class AppStore(private val file: File?) {
             entries = s.entries
             events = s.events
             dreams = s.dreams ?: emptyList()
+            surveys = (s.surveys ?: emptyList()).filter { it.isValid }
             deleted = s.deleted
         } catch (e: Exception) {
             // an unreadable file is kept as it is, not overwritten with nothing
@@ -50,6 +53,7 @@ class AppStore(private val file: File?) {
         .put("events", JSONArray(events.map { it.json() }))
         .put("deleted", JSONArray(deleted.map { it.json() }))
         .put("dreams", JSONArray(dreams.map { it.json() }))
+        .put("surveys", JSONArray(surveys.map { it.json() }))
 
     fun save() {
         val f = file ?: return
@@ -187,6 +191,19 @@ class AppStore(private val file: File?) {
         changed()
     }
 
+    fun addSurvey(kind: SurveyKind, answers: List<Int>, difficulty: Int, private: Boolean = false): Survey {
+        val survey = Survey(newId(), Day.today, Day.now(), kind.raw, answers, difficulty, Stamp.now(), private)
+        surveys = (surveys + survey).sortedWith(compareBy({ it.date }, { it.time }))
+        changed()
+        return survey
+    }
+
+    fun delete(survey: Survey) {
+        surveys = surveys.filter { it.id != survey.id }
+        deleted = deleted + Tombstone(survey.id, "survey", Stamp.now(), survey.date)
+        changed()
+    }
+
     // ---------------------------------------------------------------- sync
 
     /** Merge what the PC sent. Returns how many things changed here. */
@@ -236,6 +253,8 @@ class AppStore(private val file: File?) {
             .sortedBy { it.date }
         dreams = merge(dreams, other.dreams, "dream", { it.id }, { it.updated }, { a, b -> a.sameContent(b) })
             .sortedBy { it.date }
+        surveys = merge(surveys, other.surveys?.filter { it.isValid }, "survey", { it.id }, { it.updated }, { _, _ -> false })
+            .sortedWith(compareBy({ it.date }, { it.time }))
         deleted = tombs.values.toList()
         save()
         return changes

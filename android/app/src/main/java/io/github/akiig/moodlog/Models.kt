@@ -140,6 +140,7 @@ data class SyncState(
     val events: List<MoodEvent>,
     val deleted: List<Tombstone>,
     val dreams: List<Dream>?,
+    val surveys: List<Survey>? = null,   // null when the PC runs Moodlog older than 2.10
 ) {
     companion object {
         fun from(o: JSONObject): SyncState {
@@ -149,7 +150,8 @@ data class SyncState(
             }
             return SyncState(list("entries", Entry::from), list("events", MoodEvent::from),
                 list("deleted", Tombstone::from),
-                if (o.has("dreams")) list("dreams", Dream::from) else null)
+                if (o.has("dreams")) list("dreams", Dream::from) else null,
+                if (o.has("surveys")) list("surveys", Survey::from) else null)
         }
     }
 }

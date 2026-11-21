@@ -9,7 +9,7 @@ import glob, os, re, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ios", "Moodlog")
 LIT = r'"((?:[^"\\]|\\.)*)"'
 SWIFTUI = (r'\b(?:Text|Label|Button|Section|Toggle|DatePicker|Picker|TextField|SecureField|'
-           r'LabeledContent|NavigationLink|navigationTitle|accessibilityLabel|tile|card|empty)\(\s*' + LIT)
+           r'LabeledContent|NavigationLink|navigationTitle|accessibilityLabel|confirmationDialog|tile|card|empty)\(\s*' + LIT)
 PATTERNS = [
     re.compile(r'\btrn\(\s*' + LIT + r'\s*,\s*' + LIT),          # both plural forms
     re.compile(r'\btr\(\s*' + LIT),

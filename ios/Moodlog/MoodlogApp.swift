@@ -1,16 +1,21 @@
 import SwiftUI
 import UserNotifications
 
-/// Set when the reminder notification is tapped: the Log opens today's page with a new entry.
+/// Set when a notification is tapped: the daily reminder opens today's page with a new entry,
+/// the questionnaire reminder opens the questionnaires.
 @MainActor
 @Observable
 final class Launch: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Launch()
     var openToday = false
+    var openSurveys = false
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
-        Task { @MainActor in self.openToday = true }
+        let surveys = (response.notification.request.content.userInfo["open"] as? String) == "surveys"
+        Task { @MainActor in
+            if surveys { self.openSurveys = true } else { self.openToday = true }
+        }
         completionHandler()
     }
 
@@ -48,15 +53,18 @@ struct MoodlogApp: App {
                         guard let store = store else { return }
                         coordinator.syncSoon(store, delay: 2)
                         Reminder.plan(store)          // logging today means no reminder today
+                        SurveyReminder.plan(store)    // a new questionnaire moves the next reminder
                         backupSoon(store)
                     }
                     coordinator.syncSoon(store, delay: 0)
                     Reminder.plan(store)
+                    SurveyReminder.plan(store)
                 }
                 .onChange(of: phase) { _, newPhase in
                     if newPhase == .active {
                         sync.syncSoon(store, delay: 0)
                         Reminder.plan(store)
+                        SurveyReminder.plan(store)
                     } else if newPhase == .background {
                         Backup.write(store)
                     }
@@ -87,8 +95,10 @@ struct ContentView: View {
     @State private var tab = 0
     @State private var whatsNew: WhatsNewItem?
     @State private var customizing = false
+    @State private var showingSurveys = false
     @AppStorage("customizeSeen") private var customizeSeen = false
     @AppStorage("showDreams") private var showDreams = true
+    @AppStorage("showQuestionnaires") private var showQuestionnaires = true
 
     var body: some View {
         TabView(selection: $tab) {
@@ -124,6 +134,9 @@ struct ContentView: View {
         .onChange(of: launch.openToday) { _, open in
             if open { tour.step = nil; tab = 0 }
         }
+        .onChange(of: launch.openSurveys) { _, open in
+            if open { tour.step = nil; tab = 4; showingSurveys = true; launch.openSurveys = false }
+        }
         .onAppear {
             // a brand-new install (nothing logged yet): the welcome tour once;
             // after an update: "What's new" once
@@ -132,19 +145,29 @@ struct ContentView: View {
             lastSeenVersion = WhatsNew.current
             if !tourDone && fresh {
                 tour.start()
-            } else if let since, !launch.openToday {
+            } else if let since, !launch.openToday && !launch.openSurveys {
                 whatsNew = WhatsNewItem(since: since)
-            } else if !customizeSeen && !launch.openToday {
+            } else if !customizeSeen && !launch.openToday && !launch.openSurveys {
                 customizeSeen = true
                 customizing = true
             }
+            if launch.openSurveys {   // opened by tapping the questionnaire reminder
+                tab = 4; showingSurveys = true; launch.openSurveys = false
+            }
         }
         .onChange(of: showDreams) { _, on in if !on && tab == 2 { tab = 0 } }
+        .onChange(of: showQuestionnaires) { _, _ in SurveyReminder.plan(store) }
         .sheet(item: $whatsNew, onDismiss: {
             // after an update: "Customize your experience" once, right after What's new
             if !customizeSeen { customizeSeen = true; customizing = true }
         }) { item in WhatsNewView(since: item.since) }
         .sheet(isPresented: $customizing) { CustomizeSheet() }
+        .sheet(isPresented: $showingSurveys) {
+            NavigationStack {
+                SurveysView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showingSurveys = false } } }
+            }
+        }
     }
 }
 

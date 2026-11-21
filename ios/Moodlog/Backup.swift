@@ -16,6 +16,7 @@ enum Backup {
         var events: [MoodEvent]
         var deleted: [Tombstone]
         var dreams: [Dream]?
+        var surveys: [Survey]?
         var moodlog_backup: Int?
         var exported: String?
     }
@@ -23,7 +24,7 @@ enum Backup {
     @MainActor
     static func content(_ store: AppStore) throws -> Data {
         let file = File(entries: store.entries, events: store.events, deleted: store.deleted,
-                        dreams: store.dreams, moodlog_backup: 1, exported: Stamp.now())
+                        dreams: store.dreams, surveys: store.surveys, moodlog_backup: 1, exported: Stamp.now())
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         return try encoder.encode(file)
@@ -31,7 +32,8 @@ enum Backup {
 
     static func parse(_ data: Data) throws -> SyncState {
         let file = try JSONDecoder().decode(File.self, from: data)
-        return SyncState(entries: file.entries, events: file.events, deleted: file.deleted, dreams: file.dreams)
+        return SyncState(entries: file.entries, events: file.events, deleted: file.deleted, dreams: file.dreams,
+                         surveys: file.surveys)
     }
 
     /// A first copy in the app's temporary folder, for the Save picker to put where you choose.

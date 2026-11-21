@@ -82,3 +82,28 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name || inputs.release }}
         run: gh release upload "$TAG" "$IPA" --clobber --repo "${{ github.repository }}"
+
+      # A developer version with test buttons (Settings → "Developer: test notifications").
+      # Same app id, so it installs over Moodlog and keeps your data. Never attached to releases.
+      - name: Build the developer version
+        if: github.event_name != 'release'
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild -project Moodlog.xcodeproj -scheme Moodlog -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build-dev \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            SWIFT_ACTIVE_COMPILATION_CONDITIONS="DEVTOOLS" \
+            build | tee build-dev.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          test -d build-dev/Build/Products/Release-iphoneos/Moodlog.app || (grep -B2 -A6 "error:" build-dev.log | head -200; exit 1)
+          rm -rf Payload && mkdir -p Payload
+          cp -R build-dev/Build/Products/Release-iphoneos/Moodlog.app Payload/
+          ldid -SMoodlog/Moodlog.entitlements Payload/Moodlog.app/Moodlog
+          VERSION=$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml)
+          zip -qry "Moodlog-iPhone-$VERSION-dev.ipa" Payload
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'release'
+        with:
+          name: Moodlog-iPhone-dev-ipa
+          path: ios/Moodlog-iPhone-*-dev.ipa

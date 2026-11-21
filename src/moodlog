@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.9.0"
+VERSION = "2.10.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -1366,7 +1366,7 @@ def _avg(values):
 
 
 def export_report(path, store, events, health, start, end, include_notes=False,
-                  include_health=True, dreams=None, dream_mode="off", meds=None):
+                  include_health=True, dreams=None, dream_mode="off", meds=None, surveys=None):
     """A printable summary for a doctor or therapist. Returns the number of pages.
 
     dream_mode: "off" (default: dreams are private), "summary" (counts, nightmare nights
@@ -1714,6 +1714,51 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             pdf.y += max(h, 12) + 6
         pdf.y += 10
 
+    # ---- questionnaires (PHQ-9, GAD-7)
+    taken = [x for x in surveys.between(start, end) if not x.get("private")] if surveys else []
+    if taken:
+        pdf.ensure(90)
+        pdf.text(tr("Questionnaires"), M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 20
+        note = tr("Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); "
+                  "the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are "
+                  "listed in question order. Moodlog gives no interpretation.")
+        _w, h = pdf.text(note, M, 0, 8, measure=True, width=W - 2 * M)
+        pdf.text(note, M, pdf.y, 8, ink["muted"], width=W - 2 * M)
+        pdf.y += h + 8
+        colx = [M, M + 110, M + 180, M + 240, M + 370]
+        heads = [tr("Date"), tr("Questionnaire"), tr("Score"), tr("Answers"), tr("Difficulty")]
+
+        def survey_head():
+            for x, h_ in zip(colx, heads):
+                pdf.text(h_, x, pdf.y, 7.5, ink["muted"], bold=True)
+            pdf.y += 14
+            src(cr, ink["axis"])
+            cr.set_line_width(0.6)
+            cr.move_to(M, pdf.y - 3)
+            cr.line_to(W - M, pdf.y - 3)
+            cr.stroke()
+        survey_head()
+        diff_words = survey_text()["difficulty_options"]
+        for x in taken:
+            diff = diff_words[x["difficulty"]] if x["difficulty"] >= 0 else "–"
+            _w, h = pdf.text(diff, colx[4], 0, 8.5, measure=True, width=W - M - colx[4])
+            if pdf.ensure(h + 8):
+                survey_head()
+            y = pdf.y
+            pdf.text(fmt_date(x["date"], "%-d %b %Y"), colx[0], y, 8.5, ink["ink"])
+            pdf.text(survey_name(x["kind"]), colx[1], y, 8.5, ink["ink"])
+            pdf.text("%d / %d" % (survey_score(x), survey_max(x["kind"])), colx[2], y, 8.5, ink["ink"],
+                     bold=True)
+            pdf.text(" ".join(str(a) for a in x["answers"]), colx[3], y, 8.5, ink["ink"])
+            pdf.text(diff, colx[4], y, 8.5, ink["ink"], width=W - M - colx[4])
+            pdf.y += max(h, 12) + 6
+        credit = survey_text()["credit"]
+        _w, h = pdf.text(credit, M, 0, 7, measure=True, width=W - 2 * M)
+        pdf.ensure(h + 6)
+        pdf.text(credit, M, pdf.y + 2, 7, ink["muted"], width=W - 2 * M, italic=True)
+        pdf.y += h + 16
+
     # ---- dreams
     dream_text = dream_summary_text(store, dreams, start, end) if dream_mode != "off" else None
     if dream_text:
@@ -1826,9 +1871,11 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 
 # ----------------------------------------------------------------- backup, restore, merging
 
-DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json", "sync.json",
+DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json", "surveys.json",
+              "sync.json",
               "sync-last.txt"]
-CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json"]
+CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json",
+                 "surveys.json"]
 MANIFEST = "moodlog-backup.json"
 
 
@@ -1896,9 +1943,11 @@ def restore_backup(path):
     return safety
 
 
-def merge_folder_into(src, dst_store, dst_events, dst_health, dst_dreams=None):
+def merge_folder_into(src, dst_store, dst_events, dst_health, dst_dreams=None, dst_surveys=None):
     """Add everything from the data files in folder `src` that the destination lacks."""
     added = dst_store.absorb(Store(os.path.join(src, "moods.csv")))
+    if dst_surveys is not None:
+        added += dst_surveys.absorb(SurveyStore(os.path.join(src, "surveys.json")))
     added += dst_events.absorb(EventStore(os.path.join(src, "events.csv")))
     if dst_dreams is not None:
         added += dst_dreams.absorb(DreamStore(os.path.join(src, "dreams.csv")))
@@ -2372,6 +2421,283 @@ class MedicationStore:
         return [(name, *row) for name, row in sorted(out.items(), key=lambda kv: kv[0].lower())]
 
 
+# ----------------------------------------------------------------- questionnaires (PHQ-9, GAD-7)
+# The official texts, word for word (phqscreeners.com, checked 21 November 2026). They are not
+# translated with tr(): each language has its own validated wording.
+# "Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an
+# educational grant from Pfizer Inc. No permission required to reproduce, translate, display or
+# distribute." Moodlog shows raw scores only: no severity words and nothing like a diagnosis.
+SURVEY_KINDS = ("phq9", "gad7")
+SURVEY_EVERY_DAYS = 14
+SURVEY_TEXT = {
+    "en": {
+        "phq9": {
+            "name": "PHQ-9",
+            "about": "Patient Health Questionnaire",
+            "question": "Over the last 2 weeks, how often have you been bothered by any of the following "
+                        "problems?",
+            "options": ["Not at all", "Several days", "More than half the days", "Nearly every day"],
+            "items": [
+                "Little interest or pleasure in doing things",
+                "Feeling down, depressed, or hopeless",
+                "Trouble falling or staying asleep, or sleeping too much",
+                "Feeling tired or having little energy",
+                "Poor appetite or overeating",
+                "Feeling bad about yourself — or that you are a failure or have let yourself or "
+                "your family down",
+                "Trouble concentrating on things, such as reading the newspaper or watching television",
+                "Moving or speaking so slowly that other people could have noticed? Or the opposite — "
+                "being so fidgety or restless that you have been moving around a lot more than usual",
+                "Thoughts that you would be better off dead or of hurting yourself in some way",
+            ],
+        },
+        "gad7": {
+            "name": "GAD-7",
+            "about": "Generalized Anxiety Disorder 7-item scale",
+            "question": "Over the last 2 weeks, how often have you been bothered by the following problems?",
+            "options": ["Not at all", "Several days", "More than half the days", "Nearly every day"],
+            "items": [
+                "Feeling nervous, anxious or on edge",
+                "Not being able to stop or control worrying",
+                "Worrying too much about different things",
+                "Trouble relaxing",
+                "Being so restless that it is hard to sit still",
+                "Becoming easily annoyed or irritable",
+                "Feeling afraid as if something awful might happen",
+            ],
+        },
+        "difficulty": "If you checked off any problems, how difficult have these problems made it for "
+                      "you to do your work, take care of things at home, or get along with other people?",
+        "difficulty_options": ["Not difficult at all", "Somewhat difficult", "Very difficult",
+                               "Extremely difficult"],
+        "credit": "Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and "
+                  "colleagues, with an educational grant from Pfizer Inc. No permission required to "
+                  "reproduce, translate, display or distribute.",
+    },
+    "it": {
+        "phq9": {
+            "name": "PHQ-9",
+            "about": "Questionario sulla salute del/della paziente",
+            "question": "Nelle ultime 2 settimane, con quale frequenza le ha dato fastidio ciascuno dei "
+                        "seguenti problemi?",
+            "options": ["Mai", "Alcuni giorni", "Per più della metà dei giorni", "Quasi ogni giorno"],
+            "items": [
+                "Scarso interesse o piacere nel fare le cose",
+                "Sentirsi giù, triste o disperato/a",
+                "Problemi ad addormentarsi o a dormire tutta la notte senza svegliarsi, o a dormire troppo",
+                "Sentirsi stanco/a o avere poca energia",
+                "Scarso appetito o mangiare troppo",
+                "Avere una scarsa opinione di sé, o sentirsi un/una fallito/a o aver deluso se stesso/a "
+                "o i propri familiari",
+                "Difficoltà a concentrarsi su qualcosa, per esempio leggere il giornale o guardare la "
+                "televisione",
+                "Muoversi o parlare così lentamente da poter essere notato/a da altre persone. O, al "
+                "contrario, essere così irrequieto/a da muoversi molto più del solito",
+                "Pensare che sarebbe meglio morire o farsi del male in un modo o nell'altro",
+            ],
+        },
+        "gad7": {
+            "name": "GAD-7",
+            "about": "Questionario sul disturbo d'ansia generalizzato",
+            "question": "Nelle ultime 2 settimane, con quale frequenza le ha dato fastidio ciascuno dei "
+                        "seguenti problemi?",
+            "options": ["Mai", "Alcuni giorni", "Per oltre la metà dei giorni", "Quasi ogni giorno"],
+            "items": [
+                "Sentirsi nervoso/a, ansioso/a o teso/a",
+                "Non riuscire a smettere di preoccuparsi o a tenere sotto controllo le preoccupazioni",
+                "Preoccuparsi troppo per varie cose",
+                "Avere difficoltà a rilassarsi",
+                "Essere talmente irrequieto/a da far fatica a stare seduto/a fermo/a",
+                "Infastidirsi o irritarsi facilmente",
+                "Avere paura che possa succedere qualcosa di terribile",
+            ],
+        },
+        "difficulty": "Se ha fatto una crocetta su uno qualsiasi di questi problemi, quanto questi "
+                      "problemi le hanno reso difficile fare il suo lavoro, occuparsi delle sue cose a "
+                      "casa o avere buoni rapporti con gli altri?",
+        "difficulty_options": ["Per niente difficile", "Abbastanza difficile", "Molto difficile",
+                               "Estremamente difficile"],
+        "credit": "Elaborato dai dottori Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke e "
+                  "colleghi, con un finanziamento da parte della Pfizer Inc. Non è richiesto un "
+                  "permesso per la riproduzione, traduzione, visualizzazione o distribuzione.",
+    },
+}
+
+
+def survey_text():
+    return SURVEY_TEXT.get(LANG_CODE, SURVEY_TEXT["en"])
+
+
+def survey_size(kind):
+    return len(SURVEY_TEXT["en"][kind]["items"])
+
+
+def survey_max(kind):
+    return 3 * survey_size(kind)
+
+
+def survey_score(survey):
+    return sum(survey["answers"])
+
+
+def clean_survey(item):
+    """One questionnaire from JSON (a file or the phone), checked field by field, or None.
+    {id, date, time, kind, answers: [0-3 per question], difficulty: -1 (not asked) or 0-3, updated,
+    private: true if it must stay out of the doctor report}"""
+    if not isinstance(item, dict):
+        return None
+    try:
+        day = dt.date.fromisoformat(str(item.get("date")))
+    except ValueError:
+        return None
+    kind = item.get("kind")
+    sid, stamp = str(item.get("id") or "")[:64], clean_stamp(str(item.get("updated") or ""))
+    answers = item.get("answers")
+    if kind not in SURVEY_KINDS or not sid or not stamp or not isinstance(answers, list):
+        return None
+    if len(answers) != survey_size(kind) or not all(
+            isinstance(a, int) and not isinstance(a, bool) and 0 <= a <= 3 for a in answers):
+        return None
+    diff = item.get("difficulty")
+    diff = diff if isinstance(diff, int) and not isinstance(diff, bool) and 0 <= diff <= 3 else -1
+    time = str(item.get("time") or "")
+    if not TIME_RE.match(time):
+        time = ""
+    return {"id": sid, "date": day, "time": time, "kind": kind, "answers": list(answers),
+            "difficulty": diff, "updated": stamp, "private": item.get("private") is True}
+
+
+def survey_json(s):
+    out = {"id": s["id"], "date": s["date"].isoformat(), "time": s["time"], "kind": s["kind"],
+           "answers": list(s["answers"]), "difficulty": s["difficulty"], "updated": s["updated"]}
+    if s.get("private"):
+        out["private"] = True
+    return out
+
+
+class SurveyStore:
+    """Answered questionnaires: surveys.json. Merged like moods: the newest change wins and
+    deletions are kept, so a questionnaire deleted on one device goes away on the others."""
+
+    def __init__(self, path=None):
+        self.path = os.path.join(data_dir(), "surveys.json") if path is None else path
+        self.items = []
+        self.deleted = {}
+        self.mtime = None
+        if self.path:
+            self.load()
+
+    def load(self):
+        self.items, self.deleted = [], {}
+        self.mtime = file_mtime(self.path)
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            return
+        self.absorb_json(doc if isinstance(doc, dict) else {})
+
+    def absorb_json(self, doc):
+        """Read {"surveys": [...], "deleted": [{type: "survey"}...]} into this store."""
+        other = SurveyStore("")
+        for item in (doc.get("surveys") or [])[:20000]:
+            s = clean_survey(item)
+            if s:
+                other.items.append(s)
+        for item in (doc.get("deleted") or [])[:200000]:
+            if isinstance(item, dict) and item.get("type") == "survey":
+                sid, gone = str(item.get("id") or "")[:64], clean_stamp(str(item.get("deleted") or ""))
+                if sid and gone:
+                    other.deleted[sid] = max(gone, other.deleted.get(sid, ""))
+        return self.absorb(other)
+
+    def changed_on_disk(self):
+        return bool(self.path) and file_mtime(self.path) != self.mtime
+
+    def to_json(self):
+        return {"surveys": [survey_json(s) for s in self.items],
+                "deleted": [{"id": sid, "type": "survey", "deleted": gone}
+                            for sid, gone in sorted(self.deleted.items())]}
+
+    def save(self):
+        if not self.path:
+            return
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(self.to_json(), f, ensure_ascii=False, indent=1)
+        os.replace(tmp, self.path)
+        self.mtime = file_mtime(self.path)
+
+    def sort(self):
+        self.items.sort(key=lambda s: (s["date"], s["time"], s["kind"]))
+
+    def add(self, kind, answers, difficulty=-1, day=None, time=None, private=False):
+        now = dt.datetime.now()
+        s = {"id": new_id(), "date": day or now.date(), "time": time if time is not None else now.strftime("%H:%M"),
+             "kind": kind, "answers": list(answers), "difficulty": difficulty, "updated": now_stamp(),
+             "private": bool(private)}
+        self.items.append(s)
+        self.sort()
+        return s
+
+    def remove(self, survey, stamp=None):
+        self.items = [s for s in self.items if s["id"] != survey["id"]]
+        self.deleted[survey["id"]] = stamp or now_stamp()
+
+    def absorb(self, other):
+        changed = 0
+        mine = {s["id"]: s for s in self.items}
+        for sid, gone in other.deleted.items():
+            s = mine.get(sid)
+            if s is not None and s["updated"] <= gone:
+                self.remove(s, stamp=gone)
+                mine.pop(sid)
+                changed += 1
+            elif s is None and self.deleted.get(sid, "") < gone:
+                self.deleted[sid] = gone
+        for theirs in other.items:
+            sid = theirs["id"]
+            if sid in self.deleted and self.deleted[sid] >= theirs["updated"]:
+                continue
+            s = mine.get(sid)
+            if s is None:
+                copy = dict(theirs, answers=list(theirs["answers"]))
+                self.items.append(copy)
+                mine[sid] = copy
+                self.deleted.pop(sid, None)
+                changed += 1
+            elif theirs["updated"] > s["updated"]:
+                s.clear()
+                s.update(theirs, answers=list(theirs["answers"]))
+                changed += 1
+        self.sort()
+        return changed
+
+    def between(self, start=None, end=None, kind=None):
+        return [s for s in self.items if (not start or s["date"] >= start)
+                and (not end or s["date"] <= end) and (not kind or s["kind"] == kind)]
+
+    def latest(self, kind=None):
+        found = self.between(kind=kind)
+        return found[-1] if found else None
+
+    def due(self, today=None):
+        """True when the last questionnaire is 14 or more days old (or there is none yet)."""
+        today = today or dt.date.today()
+        last = self.latest()
+        return last is None or (today - last["date"]).days >= SURVEY_EVERY_DAYS
+
+
+def survey_name(kind):
+    return SURVEY_TEXT["en"][kind]["name"]
+
+
+def survey_worries(survey):
+    """PHQ-9 question 9 answered above "Not at all": the app answers with kind words and
+    helplines. Nobody is ever told or alerted."""
+    return survey["kind"] == "phq9" and survey["answers"][8] > 0
+
+
 def dose_text(dose):
     """'08:10 Sertraline 50 mg' (the amount only when Health has one)."""
     _day, time, _status, amount, unit, name = dose
@@ -2521,8 +2847,8 @@ def stores_from_json(doc):
             continue
         if item.get("type") == "event":
             events.deleted[eid] = max(gone, events.deleted.get(eid, ""))
-        elif item.get("type") == "dream":
-            continue  # read by dreams_from_json
+        elif item.get("type") in ("dream", "survey"):
+            continue  # read by dreams_from_json and SurveyStore
         else:
             store.deleted[eid] = (gone, day_of(item.get("date")))
     return store, events
@@ -2555,7 +2881,7 @@ def dreams_from_json(doc):
     return dreams
 
 
-def stores_to_json(store, events, dreams=None):
+def stores_to_json(store, events, dreams=None, surveys=None):
     entries = [dict({"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
                      "anxiety": e[4], "note": e[2], "updated": e[6]},
                     **({"private": True} if is_private(e, 7) else {}))
@@ -2574,6 +2900,10 @@ def stores_to_json(store, events, dreams=None):
                               **({"private": True} if is_private(d, 6) else {}))
                          for d in dreams.items]
         deleted += [{"id": eid, "type": "dream", "deleted": gone} for eid, gone in dreams.deleted.items()]
+    if surveys is not None:
+        part = surveys.to_json()
+        doc["surveys"] = part["surveys"]
+        deleted += part["deleted"]
     return doc
 
 
@@ -2585,16 +2915,19 @@ def sync_with_phone(body):
         raise ValueError(tr("The request is not valid JSON."))
     remote_store, remote_events = stores_from_json(doc)
     remote_dreams = dreams_from_json(doc)
-    store, events, dreams = Store(), EventStore(), DreamStore()
+    store, events, dreams, surveys = Store(), EventStore(), DreamStore(), SurveyStore()
     changed = store.absorb(remote_store) + events.absorb(remote_events)
     dream_changes = dreams.absorb(remote_dreams)
+    survey_changes = surveys.absorb_json(doc) if isinstance(doc, dict) else 0
     if changed:
         store.save()
         events.save()
     if dream_changes:
         dreams.save()
-    changed += dream_changes
-    state = stores_to_json(store, events, dreams)
+    if survey_changes:
+        surveys.save()
+    changed += dream_changes + survey_changes
+    state = stores_to_json(store, events, dreams, surveys)
     state["changed"] = changed
     return state
 
@@ -4593,6 +4926,349 @@ def dream_summary_text(store, dreams, start=None, end=None):
     return out
 
 
+def helpline_labels(box):
+    """The helplines of helplines(), one selectable label each, added to `box`."""
+    for name, contact, note in helplines():
+        if contact.startswith("http"):
+            line = '<b>%s</b>  ·  <a href="%s">%s</a>' % (GLib.markup_escape_text(name), contact,
+                                                         GLib.markup_escape_text(contact.split("//")[1]))
+        else:
+            line = "<b>%s</b>  ·  %s" % (GLib.markup_escape_text(name), GLib.markup_escape_text(contact))
+        lbl = Gtk.Label(xalign=0, wrap=True, selectable=True)
+        lbl.set_markup(line + "\n<small>%s</small>" % GLib.markup_escape_text(note))
+        box.append(lbl)
+
+
+class SurveyChart(Canvas):
+    """PHQ-9 and GAD-7 scores over time, one line each, on the same 0-27 points axis."""
+
+    def __init__(self, win, kinds=SURVEY_KINDS, height=190):
+        super().__init__(-1, height)
+        self.win, self.kinds = win, kinds
+        self.set_hexpand(True)
+
+    def colour(self, kind, th):
+        return th["health"] if kind == "phq9" else th["anxiety"]
+
+    def draw(self, cr, w, h, th):
+        found = [s for s in self.win.surveys.items if s["kind"] in self.kinds]
+        if not found:
+            no_data(cr, self, w, h, th)
+            return
+        first, last = found[0]["date"], found[-1]["date"]
+        span = max(1, (last - first).days)
+        top = max(survey_max(k) for k in self.kinds)
+        left, right, up, down = 30, 14, 10, 36
+        pw, ph = w - left - right, h - up - down
+
+        def px(day):
+            return left + (pw * (day - first).days / span if len(found) > 1 and span else pw / 2)
+
+        def py(score):
+            return up + ph * (1 - score / top)
+
+        cr.set_line_width(1)
+        for v in range(0, top + 1, 9 if top > 21 else 7):
+            src(cr, th["grid"])
+            cr.move_to(left, py(v) + 0.5)
+            cr.line_to(w - right, py(v) + 0.5)
+            cr.stroke()
+            text(cr, self, str(v), left - 6, py(v), 8.5, th["muted"], ax=1, ay=0.5)
+        text(cr, self, fmt_date(first, "%-d %b %Y"), left, h - down + 6, 8.5, th["muted"])
+        if last != first:
+            text(cr, self, fmt_date(last, "%-d %b %Y"), w - right, h - down + 6, 8.5, th["muted"], ax=1)
+        lx = left
+        for kind in self.kinds:
+            points = [s for s in found if s["kind"] == kind]
+            if not points:
+                continue
+            colour = self.colour(kind, th)
+            src(cr, colour)
+            cr.set_line_width(2)
+            for i, s in enumerate(points):
+                (cr.line_to if i else cr.move_to)(px(s["date"]), py(survey_score(s)))
+            cr.stroke()
+            for s in points:
+                x, y = px(s["date"]), py(survey_score(s))
+                cr.arc(x, y, 5, 0, 2 * math.pi)
+                src(cr, th["surface"])
+                cr.fill()
+                cr.arc(x, y, 4, 0, 2 * math.pi)
+                src(cr, colour)
+                cr.fill()
+                self.hits.append((x - 9, y - 9, 18, 18, tr("%s on %s: %d of %d") % (
+                    survey_name(kind), fmt_date(s["date"], "%-d %b %Y"), survey_score(s),
+                    survey_max(kind))))
+            if len(self.kinds) > 1:    # the legend
+                cr.arc(lx + 5, h - 9, 4, 0, 2 * math.pi)
+                src(cr, colour)
+                cr.fill()
+                tw, _th = text(cr, self, survey_name(kind), lx + 13, h - 9, 9, th["ink2"], ay=0.5)
+                lx += tw + 32
+
+
+class SurveyAnswerWindow(Gtk.Window):
+    """Answer one questionnaire, with the official words."""
+
+    def __init__(self, win, kind):
+        info, all_text = survey_text()[kind], survey_text()
+        super().__init__(title=info["name"], transient_for=win, modal=True)
+        self.set_default_size(620, 720)
+        self.win, self.kind = win, kind
+        size = survey_size(kind)
+        self.answers = [None] * size
+        self.difficulty = -1
+
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        title = Gtk.Label(label="%s · %s" % (info["name"], info["about"]), xalign=0, wrap=True)
+        title.add_css_class("title-3")
+        col.append(title)
+        question = Gtk.Label(label=info["question"], xalign=0, wrap=True)
+        question.add_css_class("heading")
+        col.append(question)
+
+        def choice_row(options, on_pick):
+            row = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=6, row_spacing=6,
+                              homogeneous=True, min_children_per_line=2, max_children_per_line=4)
+            first = None
+            for value, label in enumerate(options):
+                btn = Gtk.ToggleButton(label="%d · %s" % (value, label) if on_pick != self.pick_difficulty
+                                       else label)
+                btn.get_child().set_wrap(True)
+                btn.get_child().set_justify(Gtk.Justification.CENTER)
+                if first is None:
+                    first = btn
+                else:
+                    btn.set_group(first)
+                btn.connect("toggled", lambda b, v=value: b.get_active() and on_pick(v))
+                row.append(btn)
+            return row
+
+        for i, item in enumerate(info["items"]):
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+            label = Gtk.Label(label="%d. %s" % (i + 1, item), xalign=0, wrap=True)
+            box.append(label)
+            box.append(choice_row(info["options"], lambda v, i=i: self.pick(i, v)))
+            col.append(box)
+            col.append(Gtk.Separator())
+        self.diff_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.diff_box.append(Gtk.Label(label=all_text["difficulty"], xalign=0, wrap=True))
+        self.diff_box.append(choice_row(all_text["difficulty_options"], self.pick_difficulty))
+        self.diff_box.set_visible(False)
+        col.append(self.diff_box)
+        self.private_check = Gtk.CheckButton(label=tr("Private: keep it out of the doctor report"),
+                                             active=bool(win.prefs["private_default"]))
+        self.private_check.set_visible(bool(win.prefs["private_tick"]))
+        col.append(self.private_check)
+        credit = Gtk.Label(label=all_text["credit"], xalign=0, wrap=True)
+        credit.add_css_class("dim-label")
+        credit.add_css_class("caption")
+        col.append(credit)
+        scroll = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        scroll.set_child(col)
+
+        self.status = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        self.status.add_css_class("dim-label")
+        cancel = Gtk.Button(label=tr("Cancel"))
+        cancel.connect("clicked", lambda *_: self.close())
+        self.save = Gtk.Button(label=tr("Save"), sensitive=False)
+        self.save.add_css_class("suggested-action")
+        self.save.connect("clicked", self.on_save)
+        bar = Gtk.Box(spacing=8)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(bar, "set_margin_" + side)(12)
+        for wdg in (self.status, cancel, self.save):
+            bar.append(wdg)
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        outer.append(scroll)
+        outer.append(Gtk.Separator())
+        outer.append(bar)
+        self.set_child(outer)
+        self.update()
+
+    def pick(self, index, value):
+        self.answers[index] = value
+        self.update()
+
+    def pick_difficulty(self, value):
+        self.difficulty = value
+
+    def update(self):
+        left = sum(a is None for a in self.answers)
+        self.diff_box.set_visible(any(a for a in self.answers if a))
+        self.save.set_sensitive(left == 0)
+        self.status.set_text(trn("%d question left", "%d questions left", left) % left if left
+                             else tr("Score: %d of %d") % (sum(self.answers), survey_max(self.kind)))
+
+    def on_save(self, *_):
+        if any(a is None for a in self.answers):
+            return
+        win = self.win
+        diff = self.difficulty if any(self.answers) else -1
+        survey = win.surveys.add(self.kind, self.answers, diff,
+                                 private=self.private_check.get_active() and win.prefs["private_tick"])
+        if not win.save_surveys():
+            self.status.set_text(tr("Could not save to surveys.json."))
+            return
+        self.close()
+        if survey_worries(survey):
+            SurveyCareWindow(win).present()
+
+
+class SurveyCareWindow(Gtk.Window):
+    """Shown after a PHQ-9 with question 9 above "Not at all". Kind words and helplines only:
+    Moodlog never tells or alerts anyone."""
+
+    def __init__(self, win):
+        super().__init__(title=tr("Thank you for answering honestly"), transient_for=win, modal=True)
+        self.set_default_size(440, -1)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(box, "set_margin_" + side)(20)
+        box.add_css_class("kind-word")
+        title = Gtk.Label(label="♥  " + tr("Thank you for answering honestly"), xalign=0, wrap=True)
+        title.add_css_class("heading")
+        box.append(title)
+        box.append(Gtk.Label(label=tr(
+            "You said you've had thoughts of being better off dead or of hurting yourself. That's "
+            "a lot to carry, and you don't have to carry it alone. Please tell your doctor, or "
+            "someone you trust, soon. If it feels heavy right now, you can talk to someone today:"),
+            xalign=0, wrap=True, max_width_chars=48))
+        helpline_labels(box)
+        box.append(Gtk.Label(label=tr("Moodlog doesn't tell anyone: this stays on your devices."),
+                             xalign=0, wrap=True, max_width_chars=48))
+        ok = Gtk.Button(label=tr("Close"), halign=Gtk.Align.END)
+        ok.add_css_class("suggested-action")
+        ok.connect("clicked", lambda *_: self.close())
+        box.append(ok)
+        self.set_child(box)
+        ok.grab_focus()    # not the first selectable helpline, which would show selected
+
+
+class SurveysWindow(Gtk.Window):
+    """Questionnaires: answer one, see the scores over time, set the reminder."""
+
+    def __init__(self, win):
+        super().__init__(title=tr("Questionnaires"), transient_for=win)
+        self.set_default_size(560, 640)
+        self.win = win
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        title = Gtk.Label(label=tr("Questionnaires"), xalign=0)
+        title.add_css_class("title-3")
+        col.append(title)
+        intro = Gtk.Label(label=tr(
+            "Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. "
+            "Each one asks about the last two weeks. Moodlog shows only your score, and the "
+            "report can include them for your doctor."), xalign=0, wrap=True, max_width_chars=1)
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        buttons = Gtk.Box(spacing=8, homogeneous=True)
+        for kind in SURVEY_KINDS:
+            info = survey_text()[kind]
+            btn = Gtk.Button()
+            inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
+            for side in ("top", "bottom"):
+                getattr(inner, "set_margin_" + side)(6)
+            name = Gtk.Label(label=tr("Answer %s") % info["name"])
+            name.add_css_class("heading")
+            inner.append(name)
+            about = Gtk.Label(label=info["about"], wrap=True, justify=Gtk.Justification.CENTER)
+            about.add_css_class("caption")
+            inner.append(about)
+            btn.set_child(inner)
+            btn.connect("clicked", lambda _b, k=kind: self.answer(k))
+            buttons.append(btn)
+        col.append(buttons)
+
+        remind = Gtk.Box(spacing=12)
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        name = Gtk.Label(label=tr("Remind me every two weeks"), xalign=0)
+        name.add_css_class("heading")
+        texts.append(name)
+        hint = Gtk.Label(label=tr("Two weeks after your last questionnaire, a small card on the "
+                                  "Log page asks if you'd like to answer again."),
+                         xalign=0, wrap=True, max_width_chars=1)
+        hint.add_css_class("dim-label")
+        hint.add_css_class("caption")
+        texts.append(hint)
+        remind.append(texts)
+        sw = Gtk.Switch(active=bool(win.prefs["survey_remind"]), valign=Gtk.Align.CENTER)
+        sw.connect("notify::active", lambda w, _p: win.set_pref("survey_remind", w.get_active()))
+        remind.append(sw)
+        col.append(remind)
+
+        self.chart = SurveyChart(win)
+        col.append(card(self.chart, tr("Scores over time")))
+        self.history = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.history.add_css_class("boxed-list")
+        col.append(self.history)
+        credit = Gtk.Label(label=survey_text()["credit"], xalign=0, wrap=True, max_width_chars=1)
+        credit.add_css_class("dim-label")
+        credit.add_css_class("caption")
+        col.append(credit)
+        scroll = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        scroll.set_child(col)
+        self.set_child(scroll)
+        win.survey_windows.append(self)
+        self.connect("close-request", lambda *_: win.survey_windows.remove(self) and False)
+        self.update()
+
+    def answer(self, kind):
+        SurveyAnswerWindow(self.win, kind).present()
+
+    def update(self):
+        while (row := self.history.get_first_child()) is not None:
+            self.history.remove(row)
+        items = list(reversed(self.win.surveys.items))
+        if not items:
+            empty = Gtk.Label(label=tr("No questionnaires yet."), xalign=0)
+            empty.add_css_class("dim-label")
+            for side in ("top", "bottom", "start", "end"):
+                getattr(empty, "set_margin_" + side)(12)
+            self.history.append(empty)
+        for s in items:
+            row = Gtk.Box(spacing=12)
+            for side in ("top", "bottom", "start", "end"):
+                getattr(row, "set_margin_" + side)(10)
+            texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+            head = Gtk.Label(label="%s · %s" % (survey_name(s["kind"]),
+                                                tr("%d of %d") % (survey_score(s), survey_max(s["kind"]))),
+                             xalign=0)
+            head.add_css_class("heading")
+            texts.append(head)
+            when = fmt_date(s["date"], "%A %-d %B %Y") + (" · " + s["time"] if s["time"] else "")
+            if s["difficulty"] >= 0:
+                when += " · " + survey_text()["difficulty_options"][s["difficulty"]]
+            sub = Gtk.Label(label=when, xalign=0, wrap=True)
+            sub.add_css_class("dim-label")
+            sub.add_css_class("caption")
+            texts.append(sub)
+            row.append(texts)
+            if s.get("private"):
+                row.append(Gtk.Image(icon_name="changes-prevent-symbolic", tooltip_text=tr("Private")))
+            delete = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
+                                tooltip_text=tr("Delete"))
+            delete.add_css_class("flat")
+            delete.connect("clicked", lambda _b, s=s: self.delete(s))
+            row.append(delete)
+            self.history.append(row)
+        self.chart.queue_draw()
+
+    def delete(self, survey):
+        ConfirmWindow(self, tr("Delete this questionnaire?"),
+                      tr("%s from %s. It's deleted on your other devices too at the next sync.") % (
+                          survey_name(survey["kind"]), fmt_date(survey["date"], "%-d %B %Y")),
+                      [(tr("Delete"), lambda: self.really_delete(survey), "destructive-action")]).present()
+
+    def really_delete(self, survey):
+        self.win.surveys.remove(survey)
+        self.win.save_surveys()
+
+
 class EventWindow(Gtk.Window):
     """Add or edit one event."""
 
@@ -4740,6 +5416,9 @@ class ReportWindow(Gtk.Window):
         self.meds_check = Gtk.CheckButton(label=tr("Include medication from Apple Health"), active=True)
         self.meds_check.set_visible(bool(win.meds.doses) and win.prefs["medication"])
         self.meds_check.set_active(win.prefs["medication"])
+        self.surveys_check = Gtk.CheckButton(label=tr("Include questionnaires (PHQ-9, GAD-7)"))
+        self.surveys_check.set_visible(bool(win.surveys.items) and win.prefs["questionnaires"])
+        self.surveys_check.set_active(bool(win.surveys.items) and win.prefs["questionnaires"])
         self.dreams_check = Gtk.CheckButton(label=tr("Include dreams (how many, and nightmare nights)"))
         self.dream_text_check = Gtk.CheckButton(label=tr("Also what the dreams were about"))
         self.dream_text_check.set_margin_start(28)
@@ -4750,7 +5429,7 @@ class ReportWindow(Gtk.Window):
         self.dreams_check.set_visible(has_dreams)
         self.dream_text_check.set_visible(has_dreams)
         for wdg in (self.notes_check, notes_hint, self.health_check, self.meds_check,
-                    self.dreams_check, self.dream_text_check):
+                    self.surveys_check, self.dreams_check, self.dream_text_check):
             col.append(wdg)
         self.error = Gtk.Label(xalign=0, wrap=True)
         self.error.add_css_class("error")
@@ -4819,6 +5498,7 @@ class ReportWindow(Gtk.Window):
                                   include_notes=self.notes_check.get_active(),
                                   include_health=self.health_check.get_active(),
                                   meds=win.meds if self.meds_check.get_active() else None,
+                                  surveys=win.surveys if self.surveys_check.get_active() else None,
                                   dreams=win.dreams, dream_mode=(
                                       "off" if not self.dreams_check.get_active() else
                                       "text" if self.dream_text_check.get_active() else "summary"))
@@ -4839,6 +5519,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.10.0", "2026-11-21", [
+        "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.",
+        "Charts: \"Most common\" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart.",
+    ]),
     ("2.9.0", "2026-11-21", [
         "Private notes and dreams: tick Private on a note and it never goes in the doctor report; a private dream is only counted there, never shown. In Customize you can hide the tick, or make new ones start private.",
         "Customize your experience (☰ menu, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest.",
@@ -4970,6 +5654,9 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("1.4.0", "2026-11-21", [
+        "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
+    ]),
     ("1.3.0", "2026-11-21", [
         "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and iPhone.",
         "Customize your experience (Settings, the tour, and once after updating): turn off Dreams, and choose whether days with several moods show all of them in a grid or only the latest.",
@@ -5001,6 +5688,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("1.8.0", "2026-11-21", [
+        "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
+    ]),
     ("1.7.0", "2026-11-21", [
         "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android.",
         "Customize your experience (Settings, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest.",
@@ -5473,7 +6163,8 @@ class DataWindow(Gtk.Window):
                 there = (Store(os.path.join(folder, "moods.csv")),
                          EventStore(os.path.join(folder, "events.csv")),
                          HealthStore(os.path.join(folder, "health.csv")),
-                         DreamStore(os.path.join(folder, "dreams.csv")))
+                         DreamStore(os.path.join(folder, "dreams.csv")),
+                         SurveyStore(os.path.join(folder, "surveys.json")))
                 merge_folder_into(old, *there)
                 for store in there:
                     store.save()
@@ -5651,7 +6342,8 @@ def card(child, title=None):
 # ----------------------------------------------------------------- customize
 
 PREF_DEFAULTS = {"dreams": True, "medication": True, "several": "grid",   # several: grid|latest
-                 "private_tick": True, "private_default": False}
+                 "private_tick": True, "private_default": False,
+                 "questionnaires": True, "survey_remind": True}
 
 
 def load_prefs():
@@ -5696,9 +6388,9 @@ class SeveralPreview(Gtk.DrawingArea):
         cr.restore()
 
 
-def customize_options(win):
-    """The switches of "Customize your experience": in the tour and in its own window."""
-    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+def customize_options(win, compact=False):
+    """The switches of "Customize your experience": in the tour (compact) and in its own window."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5 if compact else 10)
 
     def switch_row(key, title, hint):
         row = Gtk.Box(spacing=12)
@@ -5721,6 +6413,8 @@ def customize_options(win):
                              "even when it's off.")))
     box.append(switch_row("medication", tr("Medication"),
                           tr("Doses from Apple Health, sent by Moodlog for iPhone.")))
+    box.append(switch_row("questionnaires", tr("Questionnaires"),
+                          tr("PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks.")))
     box.append(switch_row("private_tick", tr("Private notes and dreams"),
                           tr("A Private tick on each note and dream: private notes never go in the "
                              "doctor report, and private dreams are only counted.")))
@@ -5972,7 +6666,7 @@ class TourOverlay(Gtk.Overlay):
             self.extra.remove(child)
             child = self.extra.get_first_child()
         if key == "customize":
-            self.extra.append(customize_options(self.win))
+            self.extra.append(customize_options(self.win, compact=True))
         self.extra.set_visible(key == "customize")
         self.title.set_text(title)
         self.body.set_text(body)
@@ -6148,6 +6842,8 @@ class Window(Adw.ApplicationWindow):
         self.prefs = load_prefs()
         self.events = EventStore()
         self.dreams = DreamStore()
+        self.surveys = SurveyStore()
+        self.survey_windows = []
         self.link = GridgetsLink(self.store)
         if self.link.reconcile_all():
             self.store.save()
@@ -6228,6 +6924,11 @@ class Window(Adw.ApplicationWindow):
         custom_action.connect("activate", lambda *_: CustomizeWindow(self).present())
         self.add_action(custom_action)
         news_menu.prepend(tr("Customize your experience…"), "win.customize")
+        survey_action = Gio.SimpleAction.new("questionnaires", None)
+        survey_action.connect("activate", lambda *_: SurveysWindow(self).present())
+        self.add_action(survey_action)
+        self.survey_menu = Gio.Menu()    # filled by apply_prefs when Questionnaires is on
+        main_menu.append_section(None, self.survey_menu)
         main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
         menu_btn.set_tooltip_text(tr("Style, language and what's new"))
@@ -6359,6 +7060,10 @@ class Window(Adw.ApplicationWindow):
         if not self.prefs["dreams"] and self.stack.get_visible_child_name() == "dreams":
             self.stack.set_visible_child_name("log")
         self.private_check.set_visible(bool(self.prefs["private_tick"]))
+        self.survey_menu.remove_all()
+        if self.prefs["questionnaires"]:
+            self.survey_menu.append(tr("Questionnaires for your doctor…"), "win.questionnaires")
+        self.refresh_surveys()
         self.rebuild_day_events()
         self.rebuild_entries()
         self.redraw_all()
@@ -6436,6 +7141,8 @@ class Window(Adw.ApplicationWindow):
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.kind_card = self.build_kind_word()
         left.append(self.kind_card)
+        self.survey_card = self.build_survey_card()
+        left.append(self.survey_card)
         left.append(nav)
         left.append(self.calendar)
         left.append(self.month_summary)
@@ -6664,6 +7371,64 @@ class Window(Adw.ApplicationWindow):
     # -- notes page
 
     # -- events
+
+    def save_surveys(self):
+        try:
+            self.surveys.save()
+        except OSError:
+            return False
+        self.refresh_surveys()
+        return True
+
+    def refresh_surveys(self):
+        for window in list(self.survey_windows):
+            window.update()
+        if hasattr(self, "survey_card"):
+            self.survey_card.set_visible(self.survey_due())
+
+    def survey_due(self, today=None):
+        """The two-week card: questionnaires on, reminder on, one answered 14+ days ago, and not
+        put off with "Not now" in the last three days."""
+        today = today or dt.date.today()
+        if not (self.prefs["questionnaires"] and self.prefs["survey_remind"]) or not self.surveys.items:
+            return False
+        if not self.surveys.due(today):
+            return False
+        later = load_config().get("survey_later")
+        try:
+            if later and (today - dt.date.fromisoformat(later)).days < 3:
+                return False
+        except ValueError:
+            pass
+        return True
+
+    def build_survey_card(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        box.add_css_class("kind-word")
+        title = Gtk.Label(label=tr("Two weeks since your last questionnaires"), xalign=0, wrap=True)
+        title.add_css_class("heading")
+        box.append(title)
+        box.append(Gtk.Label(label=tr("Answering PHQ-9 and GAD-7 again takes about two minutes, and "
+                                      "helps your doctor see how things are going."),
+                             xalign=0, wrap=True))
+        row = Gtk.Box(spacing=8)
+        go = Gtk.Button(label=tr("Answer now"))
+        go.add_css_class("suggested-action")
+        go.connect("clicked", lambda *_: SurveysWindow(self).present())
+        later = Gtk.Button(label=tr("Not now"))
+        later.add_css_class("flat")
+        later.connect("clicked", self.on_survey_later)
+        row.append(go)
+        row.append(later)
+        box.append(row)
+        box.set_visible(False)
+        return box
+
+    def on_survey_later(self, *_):
+        cfg = load_config()
+        cfg["survey_later"] = dt.date.today().isoformat()
+        save_config(cfg)
+        self.survey_card.set_visible(False)
 
     def save_events(self):
         try:
@@ -7282,6 +8047,9 @@ class Window(Adw.ApplicationWindow):
         if self.meds.changed_on_disk():
             self.meds.load()
             self.rebuild_day_events()
+        if self.surveys.changed_on_disk():
+            self.surveys.load()
+            self.refresh_surveys()
         return True
 
     def insight(self):
@@ -7538,6 +8306,8 @@ class Window(Adw.ApplicationWindow):
         self.dreams = DreamStore()
         self.health = HealthStore()
         self.meds = MedicationStore()
+        self.surveys = SurveyStore()
+        self.refresh_surveys()
         self.link.store = self.store
         items = self.store.entries(self.selected)
         self.current = items[index] if index is not None and index < len(items) else None
@@ -7637,10 +8407,13 @@ class Window(Adw.ApplicationWindow):
         value.set_text(str(len(moods)))
         sub.set_text(trn("of %d day so far", "of %d days so far", days_total) % days_total)
         value, sub = self.tiles["common"]
-        if moods:
-            best = max(range(1, 6), key=lambda m: (moods.count(m), m))
+        # every entry counts, like the "How often you logged each mood" chart (and the phones)
+        logged = [m for _d, _t, m in self.period_entries() if m]
+        if logged:
+            best = max(range(1, 6), key=lambda m: (logged.count(m), m))
             value.set_text(MOOD_NAMES[best])
-            sub.set_text(trn("%d day", "%d days", moods.count(best)) % moods.count(best))
+            n = logged.count(best)
+            sub.set_text(trn("%d of %d entry", "%d of %d entries", len(logged)) % (n, len(logged)))
         else:
             value.set_text("–")
             sub.set_text("")

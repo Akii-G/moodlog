@@ -62,6 +62,7 @@ fun MoodlogApp() {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var openDay by rememberSaveable { mutableStateOf<String?>(null) }
     var showPrivacy by rememberSaveable { mutableStateOf(false) }
+    var showSurveys by rememberSaveable { mutableStateOf(false) }
 
     val tabs = listOf(
         Tab(tr("Log"), Icons.Filled.CalendarMonth, 0),
@@ -85,11 +86,11 @@ fun MoodlogApp() {
         val since = io.github.akiig.moodlog.WhatsNew.since(app.prefs.lastSeenVersion, current, app.prefs.tourDone || !fresh)
         app.prefs.lastSeenVersion = current
         if (!app.prefs.tourDone && fresh) tour.start()
-        else if (since != null && !app.openToday) {
+        else if (since != null && !app.openToday && !app.openSurveys) {
             // coming from a version that didn't record this: mark only this version as new
             whatsNewSince = if (since == "0") io.github.akiig.moodlog.WhatsNew.load(context).getOrNull(1)?.version ?: "0" else since
             showWhatsNew = true
-        } else if (!app.prefs.customizeSeen && !app.openToday) {
+        } else if (!app.prefs.customizeSeen && !app.openToday && !app.openSurveys) {
             app.prefs.customizeSeen = true
             showCustomize = true
         }
@@ -107,9 +108,19 @@ fun MoodlogApp() {
         }
     }
 
-    BackHandler(enabled = openDay != null || showPrivacy || tab != 0) {
+    // the questionnaire reminder was tapped: Settings → Questionnaires
+    LaunchedEffect(app.openSurveys) {
+        if (app.openSurveys) {
+            app.openSurveys = false
+            tour.step = null
+            tab = 4; showPrivacy = false; showSurveys = true
+        }
+    }
+
+    BackHandler(enabled = openDay != null || showPrivacy || showSurveys || tab != 0) {
         when {
             showPrivacy -> showPrivacy = false
+            showSurveys -> showSurveys = false
             openDay != null -> { openDay = null; addNow = false }
             else -> tab = 0
         }
@@ -126,11 +137,12 @@ fun MoodlogApp() {
                 2 -> DreamsScreen()
                 3 -> EventsScreen()
                 else -> if (showPrivacy) PrivacyScreen(back = tr("Settings")) { showPrivacy = false }
-                        else SettingsScreen(onPrivacy = { showPrivacy = true },
+                        else if (showSurveys) SurveysScreen(back = tr("Settings")) { showSurveys = false }
+                        else SettingsScreen(onPrivacy = { showPrivacy = true }, onSurveys = { showSurveys = true },
                                             onWhatsNew = { whatsNewSince = null; showWhatsNew = true })
             }
             TabBar(tabs, tab, Modifier.align(Alignment.BottomCenter).onGloballyPositioned { tour.tabBar = it.boundsInRoot() }) {
-                if (tab == it) { openDay = null; showPrivacy = false }
+                if (tab == it) { openDay = null; showPrivacy = false; showSurveys = false }
                 tab = it
             }
             if (showWhatsNew) WhatsNewDialog(whatsNewSince) {
@@ -140,7 +152,7 @@ fun MoodlogApp() {
             }
             if (showCustomize) CustomizeDialog { showCustomize = false }
             if (tour.step != null) {
-                TourOverlay(tour, onTab = { tab = it; openDay = null; showPrivacy = false }) {
+                TourOverlay(tour, onTab = { tab = it; openDay = null; showPrivacy = false; showSurveys = false }) {
                     tour.step = null
                     app.prefs.tourDone = true
                     app.prefs.customizeSeen = true

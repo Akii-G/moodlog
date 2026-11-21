@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -30,7 +32,7 @@ abstract class Screens(private val lang: String) {
             state.prefs.tourDone = true
             state.prefs.customizeSeen = true
             state.chooseDreams(true); state.chooseSeveral("grid")
-            state.choosePrivateTick(true); state.choosePrivateDefault(false)
+            state.choosePrivateTick(true); state.choosePrivateDefault(false); state.chooseQuestionnaires(true)
             state.prefs.server = "http://pop-os.local:8765"
             state.prefs.token = "sample-token-0123456789"
             state.prefs.autoSync = false
@@ -114,6 +116,49 @@ abstract class Screens(private val lang: String) {
         rule.runOnUiThread { state.chooseDreams(true); state.chooseSeveral("grid") }
     }
 
+    /** Questionnaires: the list with scores over time, answering PHQ-9, and the kind words after question 9. */
+    @Test fun surveys() {
+        val state = AppState.get(ApplicationProvider.getApplicationContext())
+        rule.runOnUiThread { state.chooseQuestionnaires(true) }
+        if (state.store.surveys.isEmpty()) {
+            val t = Day.today
+            val list = listOf(9, 7, 6, 4, 3).flatMapIndexed { i, k ->
+                val d = Day.adding(-14 * (4 - i) - 2, t)
+                listOf(Survey("q$i", d, "20:00", "phq9", List(9) { j -> ((k + j) % 3).coerceAtMost(k / 3) }, 1, "2026-01-01T00:00:00.000Z"),
+                       Survey("a$i", d, "20:05", "gad7", List(7) { j -> ((k + j + 1) % 3).coerceAtMost(k / 3) }, 0, "2026-01-01T00:00:00.000Z"))
+            }
+            state.store.absorb(SyncState(emptyList(), emptyList(), emptyList(), null, list))
+        }
+        tab("Settings")
+        rule.onAllNodes(hasText(tr("Questionnaires for your doctor")), useUnmergedTree = false)[0].performScrollTo()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)   // a tap could land on the tab bar
+        rule.waitForIdle()
+        shot("surveys")
+        rule.onAllNodes(hasText(tr("Answer %@", "PHQ-9")))[0].performClick()
+        rule.waitForIdle()
+        shot("surveys-answer")
+        rule.onAllNodes(hasText(tr("Cancel")))[0].performClick()
+        rule.waitForIdle()
+    }
+
+    /** A note ticked private, in the editor and then on the day (for the "more private" video). */
+    @Test fun privateNote() {
+        tab("Log")
+        rule.onAllNodes(androidx.compose.ui.test.hasContentDescription(tr("Today")))[0].performClick()
+        rule.onAllNodes(hasText(tr("How do you feel now?")))[0].performClick()
+        rule.waitForIdle()
+        val faces = rule.onAllNodes(hasText(Mood.name(4)))
+        faces[faces.fetchSemanticsNodes().size - 1].performClick()
+        val note = if (lang == "it") "Una cosa che voglio tenere solo per me." else "Something I want to keep just for me."
+        rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction())[0]
+            .performScrollTo().performTextInput(note)
+        rule.onAllNodes(hasText(tr("Private note")))[0].performScrollTo().performClick()
+        shot("private-editor")
+        rule.onAllNodes(hasText(tr("Save")))[0].performClick()
+        rule.mainClock.advanceTimeBy(1000)
+        shot("private-day")
+    }
+
     /** The doctor report's pages, drawn onto images instead of a PDF. */
     private fun report() {
         val store = AppState.get(ApplicationProvider.getApplicationContext()).store
@@ -151,7 +196,8 @@ class ScreensItalian : Screens("it") {
             rule.onAllNodes(hasText(tr("Settings")))[0].performClick()
             rule.waitForIdle()
             val row = rule.onAllNodes(hasText(tr("What's new")))
-            row[row.fetchSemanticsNodes().size - 1].performScrollTo().performClick()
+            row[row.fetchSemanticsNodes().size - 1].performScrollTo()
+                .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
             rule.mainClock.advanceTimeBy(1000)
             rule.waitForIdle()
         }

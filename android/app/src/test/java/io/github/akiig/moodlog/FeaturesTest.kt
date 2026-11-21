@@ -91,4 +91,33 @@ class FeaturesTest {
         val d = Dream("d1", "2026-11-20", "neutral", listOf("vivid"), "text", "2026-11-20T08:00:00.000Z", private = true)
         assertEquals(true, Dream.from(org.json.JSONObject(d.json().toString())).private)
     }
+
+    @Test fun surveys() {
+        assertEquals(9, SurveyText.italian.forms.getValue(SurveyKind.PHQ9).items.size)
+        assertEquals(7, SurveyText.english.forms.getValue(SurveyKind.GAD7).items.size)
+        val s = AppStore(null)
+        val phq = Survey("p1", "2026-11-01", "20:00", "phq9", listOf(1, 1, 0, 0, 0, 0, 0, 0, 1), 1, "2026-11-01T19:00:00.000Z")
+        val gad = Survey("g1", "2026-11-01", "20:05", "gad7", listOf(0, 1, 2, 3, 0, 0, 0), -1, "2026-11-01T19:05:00.000Z")
+        val bad = Survey("b1", "2026-11-01", "", "phq9", listOf(0, 0), -1, "2026-11-01T19:00:00.000Z")
+        val doc = org.json.JSONObject().put("entries", org.json.JSONArray()).put("events", org.json.JSONArray())
+            .put("deleted", org.json.JSONArray()).put("surveys", org.json.JSONArray(listOf(phq, gad, bad).map { it.json() }))
+        assertEquals(2, s.absorb(SyncState.from(doc)))
+        assertEquals(listOf("p1", "g1"), s.surveys.map { it.id })
+        assertTrue(s.surveys[0].worries)
+        assertEquals(3, s.surveys[0].score)
+        // an older PC sends no surveys: ours stay
+        assertEquals(0, s.absorb(SyncState(emptyList(), emptyList(), emptyList(), null)))
+        assertEquals(2, s.surveys.size)
+        // a deletion from the PC removes it
+        assertEquals(1, s.absorb(SyncState(emptyList(), emptyList(),
+            listOf(Tombstone("g1", "survey", "2099-01-01T00:00:00.000Z", null)), null)))
+        assertEquals(listOf("p1"), s.surveys.map { it.id })
+        assertTrue(s.toJson().getJSONArray("surveys").length() == 1)
+        // the reminder: 14 days after the last one at 19:00, then weekly
+        assertEquals(LocalDateTime.of(2026, 11, 15, 19, 0),
+            SurveyReminder.next("2026-11-01", LocalDateTime.of(2026, 11, 10, 9, 0)))
+        assertEquals(LocalDateTime.of(2026, 11, 22, 19, 0),
+            SurveyReminder.next("2026-11-01", LocalDateTime.of(2026, 11, 16, 9, 0)))
+        assertEquals(null, SurveyReminder.next(null))
+    }
 }

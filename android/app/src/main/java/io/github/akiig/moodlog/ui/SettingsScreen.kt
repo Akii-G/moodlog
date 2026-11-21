@@ -48,7 +48,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun SettingsScreen(onPrivacy: () -> Unit, onWhatsNew: () -> Unit = {}) {
+fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew: () -> Unit = {}) {
     val app = LocalApp.current
     val prefs = app.prefs
     val context = LocalContext.current
@@ -181,6 +181,13 @@ fun SettingsScreen(onPrivacy: () -> Unit, onWhatsNew: () -> Unit = {}) {
                 }
             }
 
+            if (app.showQuestionnaires) {
+                Section(tr("Questionnaires"), tr("PHQ-9 and GAD-7, with a gentle reminder every two weeks.")) {
+                    LinkRow(tr("Questionnaires for your doctor"),
+                        app.store.surveys.lastOrNull()?.let { Day.pretty(it.date, "d MMM") }, onClick = onSurveys)
+                }
+            }
+
             Section(tr("Reminder"), tr("Only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge.")) {
                 SwitchRow(tr("Remind me once a day"), remind) { on ->
                     if (on && !Reminder.canNotify(context) && Build.VERSION.SDK_INT >= 33)
@@ -251,6 +258,8 @@ fun SettingsScreen(onPrivacy: () -> Unit, onWhatsNew: () -> Unit = {}) {
                 ValueRow(tr("Events"), "${app.store.events.size}")
                 Line()
                 ValueRow(tr("Dreams"), "${app.store.dreams.size}")
+                Line()
+                ValueRow(tr("Questionnaires"), "${app.store.surveys.size}")
             }
             Spacer(Modifier.height(TabBarSpace))
         }

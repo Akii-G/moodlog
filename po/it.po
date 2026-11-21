@@ -2124,3 +2124,103 @@ msgstr "Note e sogni privati: una nota privata non finisce mai nel resoconto per
 
 msgid "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and iPhone."
 msgstr "Note e sogni privati: una nota privata non finisce mai nel resoconto per il medico, e un sogno privato lì viene solo contato. Si sincronizzano con il PC e l'iPhone."
+
+msgid "%d of %d entry"
+msgid_plural "%d of %d entries"
+msgstr[0] "%d su %d voce"
+msgstr[1] "%d su %d voci"
+
+msgid "Charts: \"Most common\" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart."
+msgstr "Grafici: \"Più frequente\" ora conta ogni voce, come il grafico di quante volte hai registrato ogni umore e come sui telefoni. Prima contava la media di ogni giorno, quindi un pareggio tra giorni poteva mostrare un umore diverso dal grafico."
+
+msgid "Questionnaires"
+msgstr "Questionari"
+
+msgid "Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation."
+msgstr "Compilati in Moodlog. Ogni risposta vale da 0 (mai) a 3 (quasi ogni giorno); il punteggio è la loro somma, su 27 per il PHQ-9 e su 21 per il GAD-7. Le risposte sono elencate nell'ordine delle domande. Moodlog non dà alcuna interpretazione."
+
+msgid "Questionnaire"
+msgstr "Questionario"
+
+msgid "Answers"
+msgstr "Risposte"
+
+msgid "Difficulty"
+msgstr "Difficoltà"
+
+msgid "%s on %s: %d of %d"
+msgstr "%s del %s: %d su %d"
+
+msgid "Private: keep it out of the doctor report"
+msgstr "Privato: non metterlo nel report per il medico"
+
+msgid "%d question left"
+msgid_plural "%d questions left"
+msgstr[0] "Manca %d domanda"
+msgstr[1] "Mancano %d domande"
+
+msgid "Score: %d of %d"
+msgstr "Punteggio: %d su %d"
+
+msgid "Could not save to surveys.json."
+msgstr "Non è stato possibile salvare in surveys.json."
+
+msgid "Thank you for answering honestly"
+msgstr "Grazie per aver risposto con sincerità"
+
+msgid "You said you've had thoughts of being better off dead or of hurting yourself. That's a lot to carry, and you don't have to carry it alone. Please tell your doctor, or someone you trust, soon. If it feels heavy right now, you can talk to someone today:"
+msgstr "Hai detto di aver pensato che sarebbe meglio morire o di farti del male. È tanto da portare, e non devi portarlo da solo. Parlane presto con il tuo medico o con qualcuno di cui ti fidi. Se adesso ti pesa, puoi parlare con qualcuno già oggi:"
+
+msgid "Moodlog doesn't tell anyone: this stays on your devices."
+msgstr "Moodlog non lo dice a nessuno: resta sui tuoi dispositivi."
+
+msgid "Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Moodlog shows only your score, and the report can include them for your doctor."
+msgstr "Due brevi questionari che usano i medici: il PHQ-9 sull'umore basso e il GAD-7 sull'ansia. Ognuno chiede delle ultime due settimane. Moodlog mostra solo il punteggio, e il report può includerli per il tuo medico."
+
+msgid "Answer %s"
+msgstr "Compila il %s"
+
+msgid "Remind me every two weeks"
+msgstr "Ricordamelo ogni due settimane"
+
+msgid "Two weeks after your last questionnaire, a small card on the Log page asks if you'd like to answer again."
+msgstr "Due settimane dopo l'ultimo questionario, un piccolo riquadro nella pagina Diario ti chiede se vuoi compilarlo di nuovo."
+
+msgid "Scores over time"
+msgstr "Punteggi nel tempo"
+
+msgid "No questionnaires yet."
+msgstr "Ancora nessun questionario."
+
+msgid "Delete this questionnaire?"
+msgstr "Eliminare questo questionario?"
+
+msgid "%s from %s. It's deleted on your other devices too at the next sync."
+msgstr "%s del %s. Viene eliminato anche dagli altri dispositivi alla prossima sincronizzazione."
+
+msgid "Include questionnaires (PHQ-9, GAD-7)"
+msgstr "Includi i questionari (PHQ-9, GAD-7)"
+
+msgid "PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks."
+msgstr "PHQ-9 e GAD-7 per il tuo medico, con un promemoria leggero ogni due settimane."
+
+msgid "Questionnaires for your doctor…"
+msgstr "Questionari per il medico…"
+
+msgid "Two weeks since your last questionnaires"
+msgstr "Sono passate due settimane dagli ultimi questionari"
+
+msgid "Answering PHQ-9 and GAD-7 again takes about two minutes, and helps your doctor see how things are going."
+msgstr "Compilare di nuovo PHQ-9 e GAD-7 richiede circa due minuti, e aiuta il tuo medico a vedere come vanno le cose."
+
+msgid "Answer now"
+msgstr "Compila ora"
+
+msgid "Not now"
+msgstr "Non ora"
+
+msgid "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again."
+msgstr "Questionari per il medico (menu ☰): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale in italiano e in inglese. Moodlog mostra solo il punteggio, un grafico dei punteggi nel tempo, e il report può includerli. Due settimane dopo l'ultimo, un piccolo riquadro nella pagina Diario ti chiede se vuoi compilarli di nuovo."
+
+msgid "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
+msgstr "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Moodlog mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."

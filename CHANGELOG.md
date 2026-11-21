@@ -4,6 +4,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.10.0 (2026-11-21)
+
+- Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.
+- Charts: "Most common" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart.
+
 ### 2.9.0 (2026-11-21)
 
 - Private notes and dreams: tick Private on a note and it never goes in the doctor report; a private dream is only counted there, never shown. In Customize you can hide the tick, or make new ones start private.
@@ -132,6 +137,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.8.0 (2026-11-21)
+
+- Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.
+
 ### 1.7.0 (2026-11-21)
 
 - Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android.
@@ -207,6 +216,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.
 
 ## Moodlog for Android
+
+### 1.4.0 (2026-11-21)
+
+- Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.
 
 ### 1.3.0 (2026-11-21)
 

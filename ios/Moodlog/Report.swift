@@ -17,16 +17,19 @@ final class Report {
     private let includeNotes: Bool, sleep: [String: Double], includeDreams: Bool, dreamText: Bool
     private let days: [String]
     private let doses: [DoseRecord], meds: [MedicationInfo]
+    private let surveys: [Survey]
     private var ctx: UIGraphicsPDFRendererContext!
     private var pageNo = 0
     private var y: CGFloat = 42
     private var weekly: Bool { days.count > 92 }
 
     init(store: AppStore, start: String, end: String, includeNotes: Bool, sleep: [String: Double],
-         includeDreams: Bool, dreamText: Bool, doses: [DoseRecord] = [], meds: [MedicationInfo] = []) {
+         includeDreams: Bool, dreamText: Bool, doses: [DoseRecord] = [], meds: [MedicationInfo] = [],
+         includeSurveys: Bool = false) {
         self.store = store; self.start = start; self.end = end; self.includeNotes = includeNotes
         self.sleep = sleep; self.includeDreams = includeDreams; self.dreamText = dreamText
         self.doses = doses.filter { $0.day >= start && $0.day <= end }; self.meds = meds
+        self.surveys = includeSurveys ? store.surveys.filter { $0.date >= start && $0.date <= end && !$0.hidden } : []
         var out: [String] = []
         var d = start
         while d <= end { out.append(d); d = Day.adding(1, to: d) }
@@ -144,6 +147,7 @@ final class Report {
         if !sleep.isEmpty { sleepChart() }
         eventsTable()
         medicationTable()
+        surveyTable()
         if includeDreams { dreamsSection() }
         dayTable()
     }
@@ -335,6 +339,39 @@ final class Report {
             y += rowH
         }
         y += 6
+    }
+
+    /// PHQ-9 and GAD-7: date, score, each answer in question order, difficulty. Private ones are left out.
+    private func surveyTable() {
+        let M = Report.M, W = Report.W
+        if surveys.isEmpty { return }
+        heading(tr("Questionnaires"))
+        y += text(tr("Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation."),
+                  M, y, 8, muted, width: W - 2 * M) + 6
+        var widths: [CGFloat] = [70, 64, 56, 120, 0]
+        widths[4] = W - 2 * M - widths.reduce(0, +)
+        let heads = [tr("Date"), tr("Questionnaire"), tr("Score"), tr("Answers"), tr("Difficulty")]
+        func head() {
+            var x = M
+            for (i, h) in heads.enumerated() { text(h, x, y, 7.5, muted, bold: true, width: widths[i] - 4); x += widths[i] }
+            y += 14
+            line(CGPoint(x: M, y: y - 3), CGPoint(x: W - M, y: y - 3), grid, 0.6)
+        }
+        head()
+        let words = SurveyText.current.difficultyOptions
+        for s in surveys {
+            let diff = s.difficulty >= 0 ? words[s.difficulty] : "–"
+            let cells = [Day.pretty(s.date, style: "d MMM yyyy"), s.name, "\(s.score) / \(s.maxScore)",
+                         s.answers.map(String.init).joined(separator: " "), diff]
+            let rowH = max(measure(diff, 8.5, widths[4] - 4), 12) + 6
+            if y + rowH > Report.H - 48 { newPage(); head() }
+            var x = M
+            for (i, c) in cells.enumerated() { text(c, x, y, 8.5, ink, bold: i == 2, width: widths[i] - 4); x += widths[i] }
+            y += rowH
+        }
+        let credit = SurveyText.current.credit
+        ensure(measure(credit, 7, W - 2 * M) + 4)
+        y += text(credit, M, y + 2, 7, muted, width: W - 2 * M, italic: true) + 10
     }
 
     private func dreamsSection() {

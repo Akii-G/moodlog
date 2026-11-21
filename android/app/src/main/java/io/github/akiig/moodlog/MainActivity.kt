@@ -29,6 +29,8 @@ class AppState private constructor(app: Application) {
 
     /** Set when the reminder notification was tapped: open today's entry. */
     var openToday by androidx.compose.runtime.mutableStateOf(false)
+    /** Set when the questionnaire reminder was tapped: open the questionnaires. */
+    var openSurveys by androidx.compose.runtime.mutableStateOf(false)
     var backupStatus by androidx.compose.runtime.mutableStateOf("")
 
     // Customize your experience (state, so the screens follow at once)
@@ -44,6 +46,11 @@ class AppState private constructor(app: Application) {
     fun choosePrivateTick(on: Boolean) { privateTick = on; prefs.privateTick = on }
     fun choosePrivateDefault(on: Boolean) { privateDefault = on; prefs.privateDefault = on }
     fun chooseSeveral(mode: String) { several = mode; prefs.several = mode }
+    var showQuestionnaires by androidx.compose.runtime.mutableStateOf(prefs.questionnaires)
+        private set
+    fun chooseQuestionnaires(on: Boolean) {
+        showQuestionnaires = on; prefs.questionnaires = on; SurveyReminder.schedule(context)
+    }
     private var pendingBackup: kotlinx.coroutines.Job? = null
 
     /** Writes the backup file, if one was picked, a few seconds after the last change. */
@@ -73,6 +80,7 @@ class AppState private constructor(app: Application) {
             sync.syncSoon(store, 2_000)
             backupSoon()
             Reminder.schedule(context)     // logging today means no reminder today
+            SurveyReminder.schedule(context)   // a new questionnaire moves the next reminder
         }
         client.remember = { host, ip -> prefs.p.edit().putString("ip:$host", ip).apply() }
         client.recall = { host -> prefs.p.getString("ip:$host", null) }
@@ -101,8 +109,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         state = AppState.get(application)
         if (intent?.getBooleanExtra(Reminder.OPEN_TODAY, false) == true) state.openToday = true
+        if (intent?.getBooleanExtra(SurveyReminder.OPEN_SURVEYS, false) == true) state.openSurveys = true
         Reminder.createChannel(this)
         Reminder.schedule(this)
+        SurveyReminder.schedule(this)
         setContent {
             MoodlogTheme {
                 androidx.compose.runtime.CompositionLocalProvider(LocalApp provides state) {
@@ -115,6 +125,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(Reminder.OPEN_TODAY, false)) state.openToday = true
+        if (intent.getBooleanExtra(SurveyReminder.OPEN_SURVEYS, false)) state.openSurveys = true
     }
 
     override fun onPause() {

@@ -35,6 +35,9 @@ fun CustomizeOptions() {
         IosSwitch(app.showDreams) { app.chooseDreams(it) }
     }
     Line()
+    OptionRow(tr("Questionnaires"), tr("PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks."),
+        app.showQuestionnaires) { app.chooseQuestionnaires(it) }
+    Line()
     OptionRow(tr("Private notes and dreams"),
         tr("A Private tick on each note and dream: private notes never go in the doctor report, and private dreams are only counted."),
         app.privateTick) { app.choosePrivateTick(it) }
