@@ -18,8 +18,6 @@ struct SettingsView: View {
     @AppStorage("kindWord") private var kindWord = true
     @AppStorage("lastBackup") private var lastBackup = ""
     @State private var backupPlace = Backup.placeName
-    @State private var picking = false
-    @State private var savingTo: URL?          // set: saving the backup file; nil: picking one to restore
     @State private var backupMessage = ""
 
     private func chooseMedications() async {
@@ -33,8 +31,8 @@ struct SettingsView: View {
 
     private func chooseFile() {
         do {
-            savingTo = try Backup.draft(store)
-            picking = true
+            let draft = try Backup.draft(store)
+            FilePicker.present(saving: draft, onPick: { useFile($0) })
         } catch {
             backupMessage = error.localizedDescription
         }
@@ -211,7 +209,7 @@ struct SettingsView: View {
                     } else {
                         Button("Choose a backup file…") { chooseFile() }
                     }
-                    Button("Restore from a backup…") { savingTo = nil; picking = true }
+                    Button("Restore from a backup…") { FilePicker.present(saving: nil, onPick: { restore(from: $0) }) }
                     if !backupMessage.isEmpty { Text(backupMessage).font(.footnote).foregroundStyle(.secondary) }
                 } header: {
                     Text("Backup")
@@ -238,13 +236,6 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .sheet(isPresented: $picking) {
-                DocumentPicker(types: [.json, .data], saving: savingTo, onPick: { url in
-                    picking = false
-                    if savingTo != nil { useFile(url) } else { restore(from: url) }
-                }, onCancel: { picking = false })
-                .ignoresSafeArea()
-            }
         }
     }
 }

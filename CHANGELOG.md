@@ -127,6 +127,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.6.7 (2026-11-21)
+
+- Backup: the screen for saving or restoring the backup file now always has its Save button.
+
 ### 1.6.6 (2026-11-21)
 
 - Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance.

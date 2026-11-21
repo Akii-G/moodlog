@@ -2049,3 +2049,6 @@ msgstr "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro 
 
 msgid "Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
 msgstr "Backup: le Impostazioni avvisano quando Moodlog non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."
+
+msgid "Backup: the screen for saving or restoring the backup file now always has its Save button."
+msgstr "Backup: la schermata per salvare o ripristinare il file di backup ora ha sempre il pulsante Salva."
