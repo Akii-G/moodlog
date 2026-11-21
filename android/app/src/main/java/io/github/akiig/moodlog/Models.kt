@@ -24,10 +24,12 @@ data class Entry(
     val note: String,
     val updated: String,   // UTC change time, e.g. 2026-11-19T05:20:31.123Z
     val private: Boolean = false,   // never in the doctor report
+    val feelings: List<String> = emptyList(),   // feeling words, e.g. "joy", "tiredness"
 ) {
     fun json(): JSONObject = JSONObject().put("id", id).put("date", date).put("time", time)
         .put("mood", mood).put("energy", energy).put("anxiety", anxiety).put("note", note)
         .put("updated", updated).also { if (private) it.put("private", true) }
+        .also { if (feelings.isNotEmpty()) it.put("feelings", JSONArray(feelings)) }
 
     fun sameContent(o: Entry) = date == o.date && time == o.time && mood == o.mood &&
         energy == o.energy && anxiety == o.anxiety && note == o.note
@@ -35,7 +37,8 @@ data class Entry(
     companion object {
         fun from(o: JSONObject) = Entry(o.getString("id"), o.getString("date"), o.optString("time"),
             o.optInt("mood"), o.optInt("energy"), o.optInt("anxiety"), o.optString("note"),
-            o.optString("updated"), o.optBoolean("private", false))
+            o.optString("updated"), o.optBoolean("private", false),
+            o.optJSONArray("feelings")?.let { a -> Feeling.clean((0 until a.length()).map { a.optString(it) }) } ?: emptyList())
     }
 }
 

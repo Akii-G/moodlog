@@ -159,6 +159,9 @@ struct EntryRow: View {
                     if entry.energy > 0 { Text("E\(entry.energy)").font(.caption).foregroundStyle(Palette.energy) }
                     if entry.anxiety > 0 { Text("A\(entry.anxiety)").font(.caption).foregroundStyle(Palette.anxiety) }
                 }
+                if Prefs.feelings, let words = entry.feelings, !words.isEmpty {
+                    Text(Feeling.text(words)).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
                 if !entry.note.isEmpty {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         if entry.hidden && Prefs.privateTick {
@@ -188,7 +191,11 @@ struct EntryEditor: View {
     @State private var anxiety: Int
     @State private var note: String
     @State private var isPrivate: Bool
+    @State private var feelings: Set<String>
+    @State private var promptOffset = 0
     @AppStorage("privateTick") private var privateTick = true
+    @AppStorage("showFeelings") private var showFeelings = true
+    @AppStorage("showPrompts") private var showPrompts = true
 
     init(day: String, original: Entry?) {
         self.day = day
@@ -203,11 +210,18 @@ struct EntryEditor: View {
         _anxiety = State(initialValue: original?.anxiety ?? 0)
         _note = State(initialValue: original?.note ?? "")
         _isPrivate = State(initialValue: original.map { $0.hidden } ?? (Prefs.privateTick && Prefs.privateDefault))
+        _feelings = State(initialValue: Set(original?.feelings ?? []))
     }
 
     private var isEmpty: Bool {
-        return mood == 0 && energy == 0 && anxiety == 0
+        return mood == 0 && energy == 0 && anxiety == 0 && feelings.isEmpty
             && note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var noteIsEmpty: Bool { note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    private var placeholder: String {
+        showPrompts ? Prompts.forDay(day, offset: promptOffset) : tr("A few words about it")
     }
 
     var body: some View {
@@ -224,6 +238,34 @@ struct EntryEditor: View {
                 } footer: {
                     Text("Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious.")
                 }
+                if showFeelings {
+                    Section {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+                            ForEach(Feeling.all, id: \.key) { f in
+                                let on = feelings.contains(f.key)
+                                Button {
+                                    if on { feelings.remove(f.key) } else { feelings.insert(f.key) }
+                                } label: {
+                                    Text(f.label)
+                                        .font(.subheadline.weight(on ? .semibold : .regular))
+                                        .lineLimit(1).minimumScaleFactor(0.8)
+                                        .frame(maxWidth: .infinity, minHeight: 34)
+                                        .background(on ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06),
+                                                    in: Capsule())
+                                        .overlay(Capsule().stroke(on ? Color.accentColor : .clear, lineWidth: 1.5))
+                                        .foregroundStyle(on ? Color.accentColor : .primary)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(on ? .isSelected : [])
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    } header: {
+                        Text("Feelings")
+                    } footer: {
+                        Text("Pick any that fit. Optional.")
+                    }
+                }
                 Section {
                     Toggle("Time", isOn: $hasTime)
                     if hasTime {
@@ -231,8 +273,14 @@ struct EntryEditor: View {
                     }
                 }
                 Section {
-                    TextField("A few words about it", text: $note, axis: .vertical)
+                    TextField(placeholder, text: $note, axis: .vertical)
                         .lineLimit(3...10)
+                    if showPrompts && noteIsEmpty {
+                        Button { promptOffset += 1 } label: {
+                            Label("Another question", systemImage: "arrow.clockwise")
+                        }
+                        .font(.subheadline)
+                    }
                     if privateTick {
                         Toggle(isOn: $isPrivate) { Label("Private note", systemImage: "lock.fill") }
                     }
@@ -273,10 +321,11 @@ struct EntryEditor: View {
             entry.anxiety = anxiety
             entry.note = note
             if privateTick { entry.isPrivate = isPrivate ? true : nil }
+            entry.feelings = feelings.isEmpty ? nil : Feeling.clean(Array(feelings))
             store.update(entry)
         } else {
             store.addEntry(date: day, time: t, mood: mood, energy: energy, anxiety: anxiety, note: note,
-                           isPrivate: privateTick && isPrivate)
+                           isPrivate: privateTick && isPrivate, feelings: Array(feelings))
         }
         dismiss()
     }

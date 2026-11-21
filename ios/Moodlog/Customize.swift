@@ -11,6 +11,9 @@ enum Prefs {
     static var privateTick: Bool { UserDefaults.standard.object(forKey: "privateTick") as? Bool ?? true }
     static var privateDefault: Bool { UserDefaults.standard.bool(forKey: "privateDefault") }
     /// PHQ-9 and GAD-7 in Settings, the report and the two-week reminder.
+    /// Feeling words next to a mood, and the writing prompt in an empty note.
+    static var feelings: Bool { UserDefaults.standard.object(forKey: "showFeelings") as? Bool ?? true }
+    static var prompts: Bool { UserDefaults.standard.object(forKey: "showPrompts") as? Bool ?? true }
     static var questionnaires: Bool { UserDefaults.standard.object(forKey: "showQuestionnaires") as? Bool ?? true }
 }
 
@@ -22,6 +25,8 @@ struct CustomizeOptions: View {
     @AppStorage("privateTick") private var privateTick = true
     @AppStorage("privateDefault") private var privateDefault = false
     @AppStorage("showQuestionnaires") private var showQuestionnaires = true
+    @AppStorage("showFeelings") private var showFeelings = true
+    @AppStorage("showPrompts") private var showPrompts = true
 
     var body: some View {
         Toggle(isOn: $showDreams) {
@@ -38,6 +43,20 @@ struct CustomizeOptions: View {
                     Text("The doses from Apple Health on each day and in the report.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
+            }
+        }
+        Toggle(isOn: $showFeelings) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Feeling words")
+                Text("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        Toggle(isOn: $showPrompts) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Writing prompts")
+                Text("A gentle question in an empty note, for days you don't know what to write.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         Toggle(isOn: $showQuestionnaires) {

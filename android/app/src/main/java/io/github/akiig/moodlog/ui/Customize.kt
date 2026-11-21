@@ -35,6 +35,12 @@ fun CustomizeOptions() {
         IosSwitch(app.showDreams) { app.chooseDreams(it) }
     }
     Line()
+    OptionRow(tr("Feeling words"), tr("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off."),
+        app.showFeelings) { app.chooseFeelings(it) }
+    Line()
+    OptionRow(tr("Writing prompts"), tr("A gentle question in an empty note, for days you don't know what to write."),
+        app.showPrompts) { app.choosePrompts(it) }
+    Line()
     OptionRow(tr("Questionnaires"), tr("PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks."),
         app.showQuestionnaires) { app.chooseQuestionnaires(it) }
     Line()

@@ -178,6 +178,13 @@ class Report(
         }
 
         if (entries.any { it.mood > 0 }) countBars(entries)
+        val words = Feeling.counts(store, start, end)
+        if (words.isNotEmpty()) {
+            val line = tr("Feeling words picked most often: %@.",
+                words.take(8).joinToString(", ") { "${Feeling.label(it.first)} (${it.second})" })
+            ensure(measure(line, 9f, W - 2 * M) + 12f)
+            y += text(line, M, y, 9f, ink2, width = W - 2 * M) + 12f
+        }
         if (moodDays.isNotEmpty()) moodChart()
         if (en.isNotEmpty() || an.isNotEmpty()) scaleChart()
         if (sleep.isNotEmpty()) sleepChart()

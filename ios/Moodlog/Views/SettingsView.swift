@@ -27,6 +27,10 @@ struct SettingsView: View {
             return
         }
         medicationMessage = await Medications.status()
+        if !Medications.lastChooseShowedSheet {
+            medicationMessage = tr("Health has nothing new to ask: every medication already has an answer. To change which ones Moodlog can read, go to Settings → Health → Data Access & Devices → Moodlog.")
+                + "\n\n" + medicationMessage
+        }
         UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // send the whole history again
     }
 

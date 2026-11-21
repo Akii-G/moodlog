@@ -56,9 +56,15 @@ enum Medications {
 
     static var isOn: Bool { isSupported && UserDefaults.standard.bool(forKey: "medicationsOn") }
 
+    /// Set by choose(): false when Health returned at once without showing its sheet, which it
+    /// does when every medication already has an answer (HealthKit doesn't say so directly).
+    nonisolated(unsafe) static var lastChooseShowedSheet = true
+
     /// Shows the Health sheet where you pick which medications Moodlog may read.
     /// Returns an error message, or nil when it worked.
     static func choose() async -> String? {
+        let started = Date()
+        defer { lastChooseShowedSheet = Date().timeIntervalSince(started) > 1.0 }
         guard #available(iOS 26.0, *) else { return tr("Needs iOS 26 or newer.") }
         do {
             try await HealthSender.store.requestPerObjectReadAuthorization(for: HKObjectType.userAnnotatedMedicationType(),

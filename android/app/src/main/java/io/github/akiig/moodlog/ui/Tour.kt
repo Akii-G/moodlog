@@ -190,7 +190,8 @@ fun TourOverlay(tour: TourState, onTab: (Int) -> Unit, onFinish: () -> Unit) {
                     }
                     Text(s.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text(s.text, style = MaterialTheme.typography.bodyMedium)
-                    if (s.customize) Column { CustomizeOptions() }
+                    if (s.customize) Column(Modifier.heightIn(max = 330.dp)   // the list grows; the card must still fit
+                        .verticalScroll(androidx.compose.foundation.rememberScrollState())) { CustomizeOptions() }
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         for (d in steps.indices) {
                             Box(Modifier.size(6.dp).clip(CircleShape).background(

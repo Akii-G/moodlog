@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.10.0"
+VERSION = "2.11.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -265,7 +265,8 @@ class Store:
     """All entries, kept in memory and mirrored to a CSV file.
 
     A day can hold several entries. Each entry is a list
-    [time, mood, note, energy, anxiety, id, updated, private]: time is "HH:MM" or "" (unknown),
+    [time, mood, note, energy, anxiety, id, updated, private, feelings]: time is "HH:MM" or ""
+    (unknown), feelings a clean_feelings() text,
     mood, energy and anxiety are 1-5 or 0 (not given), id identifies the entry on every
     device, updated is when it last changed. Deleted entries leave a record
     (self.deleted: id -> (time of deletion, date)) so a deletion syncs too.
@@ -314,7 +315,7 @@ class Store:
                     except ValueError:
                         value = 0
                     scales.append(value if 1 <= value <= 5 else 0)
-                if mood or note.strip() or any(scales):
+                if mood or note.strip() or any(scales) or clean_feelings(row.get("feelings") or ""):
                     eid = (row.get("id") or "").strip()
                     if not eid:  # written before version 2.0
                         key = (day, time, mood, note) + tuple(scales)
@@ -322,7 +323,8 @@ class Store:
                         eid = legacy_id(day, time, mood, scales[0], scales[1], note, seen[key])
                     self.days.setdefault(day, []).append(
                         [time, mood, note] + scales + [eid, clean_stamp(row.get("updated")),
-                                                       truthy(row.get("private"))])
+                                                       truthy(row.get("private")),
+                                                       clean_feelings(row.get("feelings") or "")])
         for items in self.days.values():
             items.sort(key=lambda e: e[0])
 
@@ -333,14 +335,15 @@ class Store:
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["date", "time", "mood", "energy", "anxiety", "note", "id", "updated",
-                        "deleted", "private"])
+                        "deleted", "private", "feelings"])
             for day in sorted(self.days):
                 for e in self.days[day]:
                     time, mood, note, energy, anxiety, eid, updated = e[:7]
                     w.writerow([day.isoformat(), time, mood or "", energy or "", anxiety or "",
-                                note, eid, updated, "", "1" if is_private(e, 7) else ""])
+                                note, eid, updated, "", "1" if is_private(e, 7) else "",
+                                ",".join(entry_feelings(e))])
             for eid, (gone, day) in sorted(self.deleted.items()):
-                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone, ""])
+                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone, "", ""])
         os.replace(tmp, self.path)
         self.mtime = file_mtime(self.path)
 
@@ -399,9 +402,9 @@ class Store:
         return self.days.get(day, [])
 
     def add(self, day, time, mood, note, energy=0, anxiety=0, eid=None, updated=None,
-            private=False):
+            private=False, feelings=""):
         entry = [time if TIME_RE.match(time or "") else "", mood, note, energy, anxiety,
-                 eid or new_id(), updated or now_stamp(), bool(private)]
+                 eid or new_id(), updated or now_stamp(), bool(private), clean_feelings(feelings)]
         items = self.days.setdefault(day, [])
         items.append(entry)
         items.sort(key=lambda e: e[0])
@@ -494,6 +497,75 @@ class Store:
                 continue
             out.extend((day, e[0], e[1]) for e in self.days[day] if e[1])
         return out
+
+
+# ----------------------------------------------------------------- feeling words and prompts
+# Optional words next to a mood, more precise than five faces. Nouns, so they read the same for
+# everyone in Italian too. The keys are stored and synced; the same list in every app.
+FEELINGS = [("joy", tr("Joy")), ("calm", tr("Calm")), ("gratitude", tr("Gratitude")),
+            ("pride", tr("Pride")), ("hope", tr("Hope")), ("relief", tr("Relief")),
+            ("motivation", tr("Motivation")), ("connection", tr("Connection")),
+            ("sadness", tr("Sadness")), ("worry", tr("Worry")), ("tiredness", tr("Tiredness")),
+            ("loneliness", tr("Loneliness")), ("irritation", tr("Irritation")),
+            ("overwhelm", tr("Overwhelm")), ("emptiness", tr("Emptiness")), ("guilt", tr("Guilt")),
+            ("boredom", tr("Boredom")), ("stress", tr("Stress"))]
+FEELING_LABELS = dict(FEELINGS)
+
+
+def clean_feelings(value):
+    """Feeling words as one text in a fixed order ("joy,tiredness"); unknown words are dropped."""
+    if isinstance(value, str):
+        value = value.replace(";", ",").split(",")
+    wanted = {str(v).strip().lower() for v in value or []} if isinstance(value, (list, tuple, set, str)) else set()
+    return ",".join(key for key, _label in FEELINGS if key in wanted)
+
+
+def entry_feelings(entry):
+    """The feeling keys of an entry ([] for entries without any)."""
+    return [k for k in (entry[8] if len(entry) > 8 and entry[8] else "").split(",") if k]
+
+
+def feeling_counts(store, start=None, end=None):
+    """[(key, how many entries)] in the period, most often first; private entries left out."""
+    counts = {}
+    for day in store.days:
+        if (start and day < start) or (end and day > end):
+            continue
+        for e in store.days[day]:
+            if not is_private(e, 7):
+                for k in entry_feelings(e):
+                    counts[k] = counts.get(k, 0) + 1
+    order = [k for k, _l in FEELINGS]
+    return sorted(counts.items(), key=lambda kv: (-kv[1], order.index(kv[0])))
+
+
+def feelings_text(keys):
+    return ", ".join(FEELING_LABELS[k] for k in keys if k in FEELING_LABELS)
+
+
+# Writing prompts: a gentle question when the note is empty. Never required; one a day, or
+# another one when asked. The same list, in the same order, in every app.
+PROMPTS = [
+    tr("What took most of your energy today?"),
+    tr("What's one small thing that went well?"),
+    tr("Is there something you're carrying that you'd like to put down here?"),
+    tr("Who did you talk to today, and how did it feel?"),
+    tr("What would you like to tell yourself tonight?"),
+    tr("How did you sleep, and how did it shape the day?"),
+    tr("What made you smile, even a little?"),
+    tr("What's on your mind right now?"),
+    tr("What did your body need today?"),
+    tr("Was there a moment you felt like yourself?"),
+    tr("What's worrying you, in a few words?"),
+    tr("What are you looking forward to, even something small?"),
+    tr("What would make tomorrow a bit easier?"),
+    tr("What did you do just for you today?"),
+]
+
+
+def prompt_for(day, offset=0):
+    """The day's question; offset moves to the next ones."""
+    return PROMPTS[(day.toordinal() + offset) % len(PROMPTS)]
 
 
 # ----------------------------------------------------------------- events
@@ -1456,6 +1528,15 @@ def export_report(path, store, events, health, start, end, include_notes=False,
                              8.5, ink["ink2"])
             x += w + 26
         pdf.y += 22
+
+    # ---- feeling words (not from private entries)
+    words = feeling_counts(store, start, end)
+    if words:
+        line = tr("Feeling words picked most often: %s.") % ", ".join(
+            "%s (%d)" % (FEELING_LABELS[k], n) for k, n in words[:8])
+        _w, h = pdf.text(line, M, 0, 9, measure=True, width=W - 2 * M)
+        pdf.text(line, M, pdf.y, 9, ink["ink2"], width=W - 2 * M)
+        pdf.y += h + 16
 
     # ---- time charts
     weekly = span > 120
@@ -2827,9 +2908,10 @@ def stores_from_json(doc):
         time = str(item.get("time") or "")
         note = str(item.get("note") or "")[:20000]
         mood, energy, anxiety = level(item.get("mood")), level(item.get("energy")), level(item.get("anxiety"))
-        if mood or energy or anxiety or note.strip():
+        feelings = clean_feelings(item.get("feelings") if isinstance(item.get("feelings"), (list, str)) else "")
+        if mood or energy or anxiety or note.strip() or feelings:
             store.add(day, time, mood, note, energy, anxiety, eid=eid, updated=stamp,
-                      private=item.get("private") is True)
+                      private=item.get("private") is True, feelings=feelings)
     for item in (doc.get("events") or [])[:20000]:
         if not isinstance(item, dict):
             continue
@@ -2884,7 +2966,8 @@ def dreams_from_json(doc):
 def stores_to_json(store, events, dreams=None, surveys=None):
     entries = [dict({"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
                      "anxiety": e[4], "note": e[2], "updated": e[6]},
-                    **({"private": True} if is_private(e, 7) else {}))
+                    **({"private": True} if is_private(e, 7) else {}),
+                    **({"feelings": entry_feelings(e)} if entry_feelings(e) else {}))
                for day in sorted(store.days) for e in store.days[day]]
     evs = [{"id": e[4], "date": e[0].isoformat(), "kind": e[1], "title": e[2], "note": e[3],
             "updated": e[5]} for e in events.items]
@@ -5519,6 +5602,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.11.0", "2026-11-21", [
+        "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry, more precise than five faces. They show on the day, sync with the phones, and the report lists the ones you picked most often.",
+        "Writing prompts: an empty note shows a gentle question, a different one each day, with a button for another. Never required. Both can be turned off in Customize.",
+    ]),
     ("2.10.0", "2026-11-21", [
         "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.",
         "Charts: \"Most common\" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart.",
@@ -5654,6 +5741,10 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("1.5.0", "2026-11-21", [
+        "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.",
+        "Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.",
+    ]),
     ("1.4.0", "2026-11-21", [
         "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
     ]),
@@ -5688,6 +5779,11 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("1.9.0", "2026-11-21", [
+        "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.",
+        "Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.",
+        "Medication: when Health has nothing new to ask, Choose which medications… now says so, and where to change your choice.",
+    ]),
     ("1.8.1", "2026-11-21", [
         "Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone.",
     ]),
@@ -6346,7 +6442,7 @@ def card(child, title=None):
 
 PREF_DEFAULTS = {"dreams": True, "medication": True, "several": "grid",   # several: grid|latest
                  "private_tick": True, "private_default": False,
-                 "questionnaires": True, "survey_remind": True}
+                 "questionnaires": True, "survey_remind": True, "feelings": True, "prompts": True}
 
 
 def load_prefs():
@@ -6416,6 +6512,10 @@ def customize_options(win, compact=False):
                              "even when it's off.")))
     box.append(switch_row("medication", tr("Medication"),
                           tr("Doses from Apple Health, sent by Moodlog for iPhone.")))
+    box.append(switch_row("feelings", tr("Feeling words"),
+                          tr("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off.")))
+    box.append(switch_row("prompts", tr("Writing prompts"),
+                          tr("A gentle question in an empty note, for days you don't know what to write.")))
     box.append(switch_row("questionnaires", tr("Questionnaires"),
                           tr("PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks.")))
     box.append(switch_row("private_tick", tr("Private notes and dreams"),
@@ -6669,7 +6769,10 @@ class TourOverlay(Gtk.Overlay):
             self.extra.remove(child)
             child = self.extra.get_first_child()
         if key == "customize":
-            self.extra.append(customize_options(self.win, compact=True))
+            scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, propagate_natural_height=True)
+            scroll.set_max_content_height(330)   # the list grows; the card must still fit the window
+            scroll.set_child(customize_options(self.win, compact=True))
+            self.extra.append(scroll)
         self.extra.set_visible(key == "customize")
         self.title.set_text(title)
         self.body.set_text(body)
@@ -7063,6 +7166,8 @@ class Window(Adw.ApplicationWindow):
         if not self.prefs["dreams"] and self.stack.get_visible_child_name() == "dreams":
             self.stack.set_visible_child_name("log")
         self.private_check.set_visible(bool(self.prefs["private_tick"]))
+        self.feel_row.set_visible(bool(self.prefs["feelings"]))
+        self.update_prompt()
         self.survey_menu.remove_all()
         if self.prefs["questionnaires"]:
             self.survey_menu.append(tr("Questionnaires for your doctor…"), "win.questionnaires")
@@ -7241,6 +7346,35 @@ class Window(Adw.ApplicationWindow):
         scale_hint.add_css_class("dim-label")
         scale_hint.add_css_class("caption")
         self.scales_box.append(scale_hint)
+        # feeling words: the chosen ones in a line, all of them in a popover
+        self.feel_buttons = {}
+        flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=6, row_spacing=6,
+                           min_children_per_line=3, max_children_per_line=3, homogeneous=True)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(flow, "set_margin_" + side)(8)
+        for key, label in FEELINGS:
+            btn = Gtk.ToggleButton(label=label)
+            btn.connect("toggled", self.on_feeling_toggled, key)
+            self.feel_buttons[key] = btn
+            flow.append(btn)
+        pop_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        pop_title = Gtk.Label(label=tr("Pick any that fit. Optional."), xalign=0)
+        pop_title.add_css_class("dim-label")
+        for side in ("top", "start"):
+            getattr(pop_title, "set_margin_" + side)(8)
+        pop_box.append(pop_title)
+        pop_box.append(flow)
+        popover = Gtk.Popover()
+        popover.set_child(pop_box)
+        self.feel_button = Gtk.MenuButton(label=tr("Add…"), popover=popover)
+        self.feel_button.set_tooltip_text(tr("Words for how you feel, more precise than a face"))
+        feel_title = Gtk.Label(label=tr("Feelings"), xalign=0)
+        feel_title.add_css_class("heading")
+        self.feel_label = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        self.feel_label.add_css_class("dim-label")
+        self.feel_row = Gtk.Box(spacing=8)
+        for wdg in (feel_title, self.feel_label, self.feel_button):
+            self.feel_row.append(wdg)
         note_title = Gtk.Label(label=tr("Note"), xalign=0, hexpand=True)
         note_title.add_css_class("heading")
         self.private_check = Gtk.CheckButton(label=tr("Private"))
@@ -7257,8 +7391,29 @@ class Window(Adw.ApplicationWindow):
         scroll = Gtk.ScrolledWindow(vexpand=True)
         scroll.set_min_content_height(90)
         scroll.set_child(self.note_view)
+        # the writing prompt: shown inside the empty note, gone as soon as you type
+        self.prompt_offset = 0
+        self.prompt_label = Gtk.Label(xalign=0, yalign=0, wrap=True, can_target=False,
+                                      halign=Gtk.Align.FILL, valign=Gtk.Align.START)
+        self.prompt_label.add_css_class("dim-label")
+        for side in ("top", "start"):
+            getattr(self.prompt_label, "set_margin_" + side)(10)
+        self.prompt_label.set_margin_end(44)
+        self.prompt_next = Gtk.Button.new_from_icon_name("view-refresh-symbolic")
+        self.prompt_next.add_css_class("flat")
+        self.prompt_next.add_css_class("circular")
+        self.prompt_next.set_tooltip_text(tr("Another question"))
+        self.prompt_next.set_halign(Gtk.Align.END)
+        self.prompt_next.set_valign(Gtk.Align.START)
+        for side in ("top", "end"):
+            getattr(self.prompt_next, "set_margin_" + side)(4)
+        self.prompt_next.connect("clicked", self.on_next_prompt)
+        note_overlay = Gtk.Overlay()
+        note_overlay.set_child(scroll)
+        note_overlay.add_overlay(self.prompt_label)
+        note_overlay.add_overlay(self.prompt_next)
         frame = Gtk.Frame()
-        frame.set_child(scroll)
+        frame.set_child(note_overlay)
         self.saved_label = Gtk.Label(xalign=0, hexpand=True)
         self.saved_label.add_css_class("dim-label")
         self.saved_label.add_css_class("caption")
@@ -7273,7 +7428,7 @@ class Window(Adw.ApplicationWindow):
             bottom.append(wdg)
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for wdg in (day_row, self.day_events, self.entry_scroll, mode_row, faces,
-                    self.scales_box, note_label, frame, bottom):
+                    self.scales_box, self.feel_row, note_label, frame, bottom):
             right.append(wdg)
         right_card = card(right)
         right_card.set_size_request(350, -1)
@@ -7748,6 +7903,12 @@ class Window(Adw.ApplicationWindow):
         for m, btn in self.face_buttons.items():
             btn.set_active(bool(entry) and m == entry[1])
         self.note_view.get_buffer().set_text(entry[2] if entry else "")
+        chosen = entry_feelings(entry) if entry else []
+        for key, btn in self.feel_buttons.items():
+            btn.set_active(key in chosen)
+        self.show_feelings(chosen)
+        self.prompt_offset = 0
+        self.update_prompt()
         self.private_check.set_active(is_private(entry, 7) if entry else
                                       bool(self.prefs["private_tick"] and self.prefs["private_default"]))
         for index, buttons in self.scale_buttons.items():
@@ -7853,7 +8014,33 @@ class Window(Adw.ApplicationWindow):
         self.rebuild_entries()
         self.refresh()
 
+    def current_feelings(self):
+        return ",".join(key for key, btn in self.feel_buttons.items() if btn.get_active())
+
+    def show_feelings(self, keys):
+        self.feel_label.set_text(feelings_text(keys) or tr("none"))
+
+    def on_feeling_toggled(self, _btn, _key):
+        if self._loading:
+            return
+        self.show_feelings(self.current_feelings().split(","))
+        self.commit()
+        self.rebuild_entries()
+
+    def update_prompt(self):
+        """The question shows only in an empty note, and only if prompts are on."""
+        on = bool(self.prefs["prompts"]) and not self.current_note()
+        self.prompt_label.set_text(prompt_for(self.selected, self.prompt_offset))
+        self.prompt_label.set_visible(on)
+        self.prompt_next.set_visible(on)
+
+    def on_next_prompt(self, _btn):
+        self.prompt_offset += 1
+        self.update_prompt()
+        self.note_view.grab_focus()
+
     def on_note_changed(self, _buf):
+        self.update_prompt()
         if self._loading:
             return
         self.commit()
@@ -7895,7 +8082,8 @@ class Window(Adw.ApplicationWindow):
         """Write the editor into the store: creates the entry on first input."""
         mood, note, day = self.current_mood(), self.current_note(), self.selected
         energy, anxiety = self.current_scale(3), self.current_scale(4)
-        empty = not mood and not note.strip() and not energy and not anxiety
+        feelings = self.current_feelings()
+        empty = not mood and not note.strip() and not energy and not anxiety and not feelings
         if self.current is None:
             if empty:
                 return
@@ -7903,7 +8091,8 @@ class Window(Adw.ApplicationWindow):
             if day == dt.date.today() and not self._time_touched:
                 value = dt.datetime.now().strftime("%H:%M")
             private = self.prefs["private_tick"] and self.private_check.get_active()
-            self.current = self.store.add(day, value, mood, note, energy, anxiety, private=private)
+            self.current = self.store.add(day, value, mood, note, energy, anxiety, private=private,
+                                          feelings=feelings)
             self._loading = True
             self.time_entry.set_text(self.current[0])
             self.time_entry.remove_css_class("error")
@@ -7911,6 +8100,9 @@ class Window(Adw.ApplicationWindow):
             self.update_mode()
         else:
             self.current[1:5] = [mood, note, energy, anxiety]
+            while len(self.current) < 9:
+                self.current.append(False if len(self.current) == 7 else "")
+            self.current[8] = feelings
             self.store.touch(self.current)
             if empty:
                 self.store.remove(day, self.current)
@@ -7951,7 +8143,9 @@ class Window(Adw.ApplicationWindow):
                                                  (("energy", energy), ("anxiety", anxiety)) if value))
                 extra.add_css_class("caption")
                 box.append(extra)
-            snippet = Gtk.Label(label=" ".join(note.split()), xalign=0, hexpand=True)
+            words = feelings_text(entry_feelings(entry)) if self.prefs["feelings"] else ""
+            snippet = Gtk.Label(label=" · ".join(p for p in (words, " ".join(note.split())) if p),
+                                xalign=0, hexpand=True)
             snippet.set_ellipsize(Pango.EllipsizeMode.END)
             snippet.add_css_class("dim-label")
             box.append(snippet)

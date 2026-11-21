@@ -138,8 +138,11 @@ struct TourOverlay: View {
             Text(step.title).font(.title3.weight(.semibold))
             Text(step.text).font(.subheadline).fixedSize(horizontal: false, vertical: true)
             if step.customize {
-                VStack(alignment: .leading, spacing: 12) { CustomizeOptions() }
-                    .font(.subheadline)
+                ScrollView {   // the list grows; the card must still fit the screen
+                    VStack(alignment: .leading, spacing: 12) { CustomizeOptions() }
+                        .font(.subheadline)
+                }
+                .frame(maxHeight: 330)
             }
             HStack(spacing: 5) {
                 ForEach(0..<count, id: \.self) { i in

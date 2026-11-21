@@ -41,6 +41,10 @@ Pick one of five faces, from Awful to Great. That's the whole job. Energy, anxie
 time, and you can fill in any past day from the calendar. Each day takes the
 colour of its mood; a day with several shows one small tile per entry.
 
+If five faces aren't enough, add **feeling words** like Joy, Tiredness or Worry. And
+when you don't know what to write, an empty note shows a gentle **question**, a
+different one each day. Both are optional and can be turned off in Customize.
+
 The **Notes** tab lists every note, newest first, with search.
 
 ### See how things go
@@ -202,7 +206,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.10.0_all.deb
+    sudo apt install ./moodlog_2.11.0_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).

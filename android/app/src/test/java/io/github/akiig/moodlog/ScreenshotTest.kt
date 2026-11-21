@@ -141,6 +141,23 @@ abstract class Screens(private val lang: String) {
         rule.waitForIdle()
     }
 
+    /** The entry editor with feeling words picked and the day's writing prompt in the empty note. */
+    @Test fun feelings() {
+        rule.waitForIdle()
+        rule.onAllNodes(hasText(tr("Done"))).fetchSemanticsNodes().takeIf { it.isNotEmpty() }?.let {
+            rule.onAllNodes(hasText(tr("Done")))[0].performClick(); rule.waitForIdle()
+        }
+        tab("Log")
+        rule.onAllNodes(androidx.compose.ui.test.hasContentDescription(tr("Today")))[0].performClick()
+        rule.onAllNodes(hasText(tr("How do you feel now?")))[0].performClick()
+        rule.waitForIdle()
+        rule.onAllNodes(hasText(tr("Tiredness")))[0].performScrollTo().performClick()
+        rule.onAllNodes(hasText(tr("Hope")))[0].performScrollTo().performClick()
+        rule.waitForIdle()
+        shot("feelings")
+        rule.onAllNodes(hasText(tr("Cancel")))[0].performClick()
+    }
+
     /** A note ticked private, in the editor and then on the day (for the "more private" video). */
     @Test fun privateNote() {
         tab("Log")

@@ -46,6 +46,12 @@ class AppState private constructor(app: Application) {
     fun choosePrivateTick(on: Boolean) { privateTick = on; prefs.privateTick = on }
     fun choosePrivateDefault(on: Boolean) { privateDefault = on; prefs.privateDefault = on }
     fun chooseSeveral(mode: String) { several = mode; prefs.several = mode }
+    var showFeelings by androidx.compose.runtime.mutableStateOf(prefs.feelings)
+        private set
+    var showPrompts by androidx.compose.runtime.mutableStateOf(prefs.prompts)
+        private set
+    fun chooseFeelings(on: Boolean) { showFeelings = on; prefs.feelings = on }
+    fun choosePrompts(on: Boolean) { showPrompts = on; prefs.prompts = on }
     var showQuestionnaires by androidx.compose.runtime.mutableStateOf(prefs.questionnaires)
         private set
     fun chooseQuestionnaires(on: Boolean) {

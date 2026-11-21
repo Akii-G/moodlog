@@ -1,5 +1,21 @@
 [
  {
+  "version": "1.9.0",
+  "date": "2026-11-21",
+  "items": {
+   "en": [
+    "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.",
+    "Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.",
+    "Medication: when Health has nothing new to ask, Choose which medications… now says so, and where to change your choice."
+   ],
+   "it": [
+    "Parole sulle emozioni: accanto a un umore puoi scegliere parole come Gioia, Stanchezza o Preoccupazione. Si vedono nel giorno, si sincronizzano con il PC, e il report elenca quelle che hai scelto più spesso.",
+    "Domande per scrivere: una nota vuota mostra una domanda leggera, diversa ogni giorno; tocca Un'altra domanda per averne una nuova. Puoi spegnere entrambe in Personalizza.",
+    "Farmaci: quando Salute non ha niente di nuovo da chiedere, Scegli quali farmaci… ora lo dice, e spiega dove cambiare la scelta."
+   ]
+  }
+ },
+ {
   "version": "1.8.1",
   "date": "2026-11-21",
   "items": {

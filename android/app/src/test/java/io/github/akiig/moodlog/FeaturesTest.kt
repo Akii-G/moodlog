@@ -92,6 +92,21 @@ class FeaturesTest {
         assertEquals(true, Dream.from(org.json.JSONObject(d.json().toString())).private)
     }
 
+    @Test fun feelingsAndPrompts() {
+        assertEquals(18, Feeling.keys.size)
+        assertEquals(listOf("joy", "tiredness"), Feeling.clean(listOf("Tiredness", "joy", "nope")))
+        val e = Entry("f1", "2026-11-20", "09:00", 2, 0, 0, "", "2026-11-20T08:00:00.000Z", feelings = listOf("worry", "tiredness"))
+        assertEquals(listOf("worry", "tiredness"), Entry.from(org.json.JSONObject(e.json().toString())).feelings)
+        assertFalse(e.copy(feelings = emptyList()).json().has("feelings"))
+        val s = AppStore(null)
+        s.absorb(SyncState(listOf(e, e.copy(id = "f2", feelings = listOf("worry"), time = "11:00"), e.copy(id = "f3", private = true, time = "10:00")),
+            emptyList(), emptyList(), null))
+        assertEquals(listOf("worry" to 2, "tiredness" to 1), Feeling.counts(s, "2026-11-01", "2026-11-30"))
+        // the same question on the same day as the PC (Python: date(2026, 11, 21).toordinal() % 14 == 13)
+        assertEquals(Prompts.all[13], Prompts.forDay("2026-11-21"))
+        assertEquals(Prompts.all[0], Prompts.forDay("2026-11-21", 1))
+    }
+
     @Test fun surveys() {
         assertEquals(9, SurveyText.italian.forms.getValue(SurveyKind.PHQ9).items.size)
         assertEquals(7, SurveyText.english.forms.getValue(SurveyKind.GAD7).items.size)

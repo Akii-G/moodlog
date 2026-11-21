@@ -13,11 +13,13 @@ struct Entry: Codable, Identifiable, Hashable {
     var updated: String   // UTC change time, e.g. 2026-11-19T05:20:31.123Z
     /// Ticked private: never in the doctor report. Sent as "private": true only when set.
     var isPrivate: Bool? = nil
+    /// Feeling words (keys like "joy", "tiredness"); nil or empty when none were picked.
+    var feelings: [String]? = nil
 
     var hidden: Bool { isPrivate == true }
 
     enum CodingKeys: String, CodingKey {
-        case id, date, time, mood, energy, anxiety, note, updated
+        case id, date, time, mood, energy, anxiety, note, updated, feelings
         case isPrivate = "private"
     }
 }

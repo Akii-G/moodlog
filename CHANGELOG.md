@@ -4,6 +4,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.11.0 (2026-11-21)
+
+- Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry, more precise than five faces. They show on the day, sync with the phones, and the report lists the ones you picked most often.
+- Writing prompts: an empty note shows a gentle question, a different one each day, with a button for another. Never required. Both can be turned off in Customize.
+
 ### 2.10.0 (2026-11-21)
 
 - Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.
@@ -137,6 +142,12 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.9.0 (2026-11-21)
+
+- Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.
+- Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.
+- Medication: when Health has nothing new to ask, Choose which medications… now says so, and where to change your choice.
+
 ### 1.8.1 (2026-11-21)
 
 - Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone.
@@ -220,6 +231,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.
 
 ## Moodlog for Android
+
+### 1.5.0 (2026-11-21)
+
+- Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.
+- Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.
 
 ### 1.4.0 (2026-11-21)
 

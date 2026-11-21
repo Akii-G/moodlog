@@ -34,6 +34,8 @@ import io.github.akiig.moodlog.Day
 import io.github.akiig.moodlog.Dream
 import io.github.akiig.moodlog.Entry
 import io.github.akiig.moodlog.EventKind
+import io.github.akiig.moodlog.Feeling
+import io.github.akiig.moodlog.Prompts
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.Mood
 import io.github.akiig.moodlog.MoodEvent
@@ -113,6 +115,10 @@ fun EntryRow(entry: Entry, onClick: () -> Unit) {
                 if (entry.energy > 0) Text("E${entry.energy}", style = MaterialTheme.typography.labelMedium, color = Palette.energy, fontWeight = FontWeight.SemiBold)
                 if (entry.anxiety > 0) Text("A${entry.anxiety}", style = MaterialTheme.typography.labelMedium, color = Palette.anxiety, fontWeight = FontWeight.SemiBold)
             }
+            if (entry.feelings.isNotEmpty() && LocalApp.current.showFeelings) {
+                Text(Feeling.text(entry.feelings), maxLines = 2, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (entry.note.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (entry.private && LocalApp.current.privateTick) Icon(Icons.Filled.Lock, tr("Private note"),
@@ -141,13 +147,17 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
     val app = LocalApp.current
     var private by remember { mutableStateOf(original?.private ?: (app.privateTick && app.privateDefault)) }
     var pickTime by remember { mutableStateOf(false) }
-    val empty = mood == 0 && energy == 0 && anxiety == 0 && note.isBlank()
+    var feelings by remember { mutableStateOf(original?.feelings?.toSet() ?: emptySet()) }
+    var promptOffset by remember { mutableIntStateOf(0) }
+    val empty = mood == 0 && energy == 0 && anxiety == 0 && note.isBlank() && feelings.isEmpty()
 
     EditorDialog(tr(if (original == null) "New entry" else "Edit entry"), !empty, onClose, onSave = {
         val t = if (hasTime) Day.timeString(time) else ""
         val keep = if (app.privateTick) private else (original?.private ?: false)
-        if (original != null) store.update(original.copy(time = t, mood = mood, energy = energy, anxiety = anxiety, note = note, private = keep))
-        else store.addEntry(day, t, mood, energy, anxiety, note, keep)
+        val words = Feeling.clean(feelings.toList())
+        if (original != null) store.update(original.copy(time = t, mood = mood, energy = energy, anxiety = anxiety, note = note,
+            private = keep, feelings = words))
+        else store.addEntry(day, t, mood, energy, anxiety, note, keep, words)
         onClose()
     }) {
         Section(tr("How do you feel?"), padded = false) {
@@ -159,6 +169,9 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
                 ScalePicker("Anxiety", Scale.anxietyWords, Palette.anxiety, anxiety) { anxiety = it }
             }
         }
+        if (app.showFeelings) Section(tr("Feelings"), tr("Pick any that fit. Optional.")) {
+            FeelingChips(feelings) { key -> feelings = if (key in feelings) feelings - key else feelings + key }
+        }
         Section {
             SwitchRow(tr("Time"), hasTime) { hasTime = it }
             if (hasTime) {
@@ -167,8 +180,13 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
             }
         }
         Section(tr("Note"), footer = if (app.privateTick) tr("A private note never goes in the doctor report.") else null) {
-            FieldRow("", note, { note = it }, tr("A few words about it"), minLines = 3,
+            FieldRow("", note, { note = it },
+                if (app.showPrompts) Prompts.forDay(day, promptOffset) else tr("A few words about it"), minLines = 3,
                 keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
+            if (app.showPrompts && note.isBlank()) {
+                Line()
+                ActionRow(tr("Another question")) { promptOffset++ }
+            }
             if (app.privateTick) {
                 Line()
                 SwitchRow(tr("Private note"), private) { private = it }

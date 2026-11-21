@@ -142,6 +142,13 @@ final class Report {
             y += 54
         }
         if entries.contains(where: { $0.mood > 0 }) { countBars(entries) }
+        let words = Feeling.counts(store, from: start, to: end)
+        if !words.isEmpty {
+            let line = tr("Feeling words picked most often: %@.",
+                          words.prefix(8).map { "\(Feeling.label($0.0)) (\($0.1))" }.joined(separator: ", "))
+            ensure(measure(line, 9, W - 2 * M) + 12)
+            y += text(line, M, y, 9, ink2, width: W - 2 * M) + 12
+        }
         if !moodDays.isEmpty { moodChart() }
         if !en.isEmpty || !an.isEmpty { scaleChart() }
         if !sleep.isEmpty { sleepChart() }

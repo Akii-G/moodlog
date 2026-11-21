@@ -87,6 +87,13 @@ class Prefs(context: Context) {
     var privateDefault: Boolean
         get() = p.getBoolean("privateDefault", false)
         set(v) = p.edit().putBoolean("privateDefault", v).apply()
+    /** Feeling words next to a mood, and the writing prompt in an empty note. */
+    var feelings: Boolean
+        get() = p.getBoolean("showFeelings", true)
+        set(v) = p.edit().putBoolean("showFeelings", v).apply()
+    var prompts: Boolean
+        get() = p.getBoolean("showPrompts", true)
+        set(v) = p.edit().putBoolean("showPrompts", v).apply()
     /** PHQ-9 and GAD-7 in Settings, the report and the two-week reminder. */
     var questionnaires: Boolean
         get() = p.getBoolean("showQuestionnaires", true)
