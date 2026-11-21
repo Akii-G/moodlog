@@ -28,10 +28,12 @@ def s2():
     # every step that points at something has a spotlight on screen
     for i, (target, _title, _body) in enumerate(m.TOUR_STEPS):
         t.go(i)
-        if target:
+        if target and target != "customize":   # customize: options in the card, no spotlight
             hole = t.target(target)
             assert hole and hole[2] > 10 and hole[3] > 10, (target, hole)
             assert 0 <= hole[0] and hole[0] + hole[2] <= t.get_width() + 8, (target, hole)
+        if target == "customize":
+            assert t.extra.get_visible(), "the customize step shows its options"
         cw, ch = t.card_size()
         x, y = t.card_place(t.target(target))
         assert x >= 0 and y >= 0 and x + cw <= t.get_width() + 1 and y + ch <= t.get_height() + 1, (target, x, y, cw, ch)

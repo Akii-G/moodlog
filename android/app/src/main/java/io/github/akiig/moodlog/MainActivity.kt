@@ -30,6 +30,20 @@ class AppState private constructor(app: Application) {
     /** Set when the reminder notification was tapped: open today's entry. */
     var openToday by androidx.compose.runtime.mutableStateOf(false)
     var backupStatus by androidx.compose.runtime.mutableStateOf("")
+
+    // Customize your experience (state, so the screens follow at once)
+    var showDreams by androidx.compose.runtime.mutableStateOf(prefs.showDreams)
+        private set
+    var several by androidx.compose.runtime.mutableStateOf(prefs.several)
+        private set
+    fun chooseDreams(on: Boolean) { showDreams = on; prefs.showDreams = on }
+    var privateTick by androidx.compose.runtime.mutableStateOf(prefs.privateTick)
+        private set
+    var privateDefault by androidx.compose.runtime.mutableStateOf(prefs.privateDefault)
+        private set
+    fun choosePrivateTick(on: Boolean) { privateTick = on; prefs.privateTick = on }
+    fun choosePrivateDefault(on: Boolean) { privateDefault = on; prefs.privateDefault = on }
+    fun chooseSeveral(mode: String) { several = mode; prefs.several = mode }
     private var pendingBackup: kotlinx.coroutines.Job? = null
 
     /** Writes the backup file, if one was picked, a few seconds after the last change. */

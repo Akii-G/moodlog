@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.8.1"
+VERSION = "2.9.0"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -232,6 +232,15 @@ def new_id():
     return uuid.uuid4().hex[:16]
 
 
+def is_private(item, index):
+    """A note (entry index 7) or dream (index 6) ticked private: never in the doctor report."""
+    return len(item) > index and bool(item[index])
+
+
+def truthy(value):
+    return str(value or "").strip().lower() in ("1", "true", "yes")
+
+
 def legacy_id(*parts):
     """Stable id for a row written before ids existed, the same on every computer."""
     return hashlib.sha1("\x1f".join(str(p) for p in parts).encode("utf-8")).hexdigest()[:16]
@@ -256,7 +265,7 @@ class Store:
     """All entries, kept in memory and mirrored to a CSV file.
 
     A day can hold several entries. Each entry is a list
-    [time, mood, note, energy, anxiety, id, updated]: time is "HH:MM" or "" (unknown),
+    [time, mood, note, energy, anxiety, id, updated, private]: time is "HH:MM" or "" (unknown),
     mood, energy and anxiety are 1-5 or 0 (not given), id identifies the entry on every
     device, updated is when it last changed. Deleted entries leave a record
     (self.deleted: id -> (time of deletion, date)) so a deletion syncs too.
@@ -312,7 +321,8 @@ class Store:
                         seen[key] = seen.get(key, 0) + 1
                         eid = legacy_id(day, time, mood, scales[0], scales[1], note, seen[key])
                     self.days.setdefault(day, []).append(
-                        [time, mood, note] + scales + [eid, clean_stamp(row.get("updated"))])
+                        [time, mood, note] + scales + [eid, clean_stamp(row.get("updated")),
+                                                       truthy(row.get("private"))])
         for items in self.days.values():
             items.sort(key=lambda e: e[0])
 
@@ -323,13 +333,14 @@ class Store:
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["date", "time", "mood", "energy", "anxiety", "note", "id", "updated",
-                        "deleted"])
+                        "deleted", "private"])
             for day in sorted(self.days):
-                for time, mood, note, energy, anxiety, eid, updated in self.days[day]:
+                for e in self.days[day]:
+                    time, mood, note, energy, anxiety, eid, updated = e[:7]
                     w.writerow([day.isoformat(), time, mood or "", energy or "", anxiety or "",
-                                note, eid, updated, ""])
+                                note, eid, updated, "", "1" if is_private(e, 7) else ""])
             for eid, (gone, day) in sorted(self.deleted.items()):
-                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone])
+                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone, ""])
         os.replace(tmp, self.path)
         self.mtime = file_mtime(self.path)
 
@@ -387,9 +398,10 @@ class Store:
     def entries(self, day):
         return self.days.get(day, [])
 
-    def add(self, day, time, mood, note, energy=0, anxiety=0, eid=None, updated=None):
+    def add(self, day, time, mood, note, energy=0, anxiety=0, eid=None, updated=None,
+            private=False):
         entry = [time if TIME_RE.match(time or "") else "", mood, note, energy, anxiety,
-                 eid or new_id(), updated or now_stamp()]
+                 eid or new_id(), updated or now_stamp(), bool(private)]
         items = self.days.setdefault(day, [])
         items.append(entry)
         items.sort(key=lambda e: e[0])
@@ -668,7 +680,7 @@ def dream_tags(dream):
 class DreamStore(EventStore):
     """The dream journal: dreams.csv. A dream belongs to the morning you woke up.
 
-    Each dream is [date, feeling, tags, text, id, updated], laid out like an event so
+    Each dream is [date, feeling, tags, text, id, updated, private], laid out like an event so
     merging, deletions and syncing work the same way. feeling is "" or a DREAM_FEELINGS
     key, tags a clean_tags() text.
     """
@@ -702,8 +714,21 @@ class DreamStore(EventStore):
                     continue
                 if not eid:
                     eid = legacy_id("dream", day, feeling, tags, text_)
-                self.items.append([day, feeling, tags, text_, eid, clean_stamp(row.get("updated"))])
+                self.items.append([day, feeling, tags, text_, eid, clean_stamp(row.get("updated")),
+                                   truthy(row.get("private"))])
         self.sort()
+
+    def add(self, day, feeling, tags, text_, eid=None, updated=None, private=False):
+        dream = super().add(day, feeling, tags, text_, eid=eid, updated=updated)
+        dream.append(bool(private))
+        return dream
+
+    def set_private(self, dream, private):
+        while len(dream) < 7:
+            dream.append(False)
+        if dream[6] != bool(private):
+            dream[6] = bool(private)
+            dream[5] = now_stamp()
 
     def save(self):
         if self.changed_on_disk():
@@ -711,11 +736,13 @@ class DreamStore(EventStore):
         tmp = self.path + ".tmp"
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            w.writerow(["date", "feeling", "tags", "text", "id", "updated", "deleted"])
-            for day, feeling, tags, text_, eid, updated in self.items:
-                w.writerow([day.isoformat(), feeling, tags, text_, eid, updated, ""])
+            w.writerow(["date", "feeling", "tags", "text", "id", "updated", "deleted", "private"])
+            for d in self.items:
+                day, feeling, tags, text_, eid, updated = d[:6]
+                w.writerow([day.isoformat(), feeling, tags, text_, eid, updated, "",
+                            "1" if is_private(d, 6) else ""])
             for eid, gone in sorted(self.deleted.items()):
-                w.writerow(["", "", "", "", eid, "", gone])
+                w.writerow(["", "", "", "", eid, "", gone, ""])
         os.replace(tmp, self.path)
         self.mtime = file_mtime(self.path)
 
@@ -1736,12 +1763,13 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             items = store.entries(d)
             notes = ""
             lines = []
-            if include_notes:
+            if include_notes:    # private notes never go in the report
                 lines += [("%s  %s" % (e[0], " ".join(e[2].split()))).strip()
-                          for e in items if e[2].strip()]
+                          for e in items if e[2].strip() and not is_private(e, 7)]
             day_dreams = dreams.on(d) if show_dreams else []
-            if dream_mode == "text":
-                lines += [tr("Dream: %s") % " ".join(x[3].split()) for x in day_dreams if x[3].strip()]
+            if dream_mode == "text":   # private dreams are counted, but their text stays out
+                lines += [tr("Dream: %s") % " ".join(x[3].split()) for x in day_dreams
+                          if x[3].strip() and not is_private(x, 6)]
             notes = "\n".join(lines)
             h = 12
             if notes:
@@ -2474,7 +2502,8 @@ def stores_from_json(doc):
         note = str(item.get("note") or "")[:20000]
         mood, energy, anxiety = level(item.get("mood")), level(item.get("energy")), level(item.get("anxiety"))
         if mood or energy or anxiety or note.strip():
-            store.add(day, time, mood, note, energy, anxiety, eid=eid, updated=stamp)
+            store.add(day, time, mood, note, energy, anxiety, eid=eid, updated=stamp,
+                      private=item.get("private") is True)
     for item in (doc.get("events") or [])[:20000]:
         if not isinstance(item, dict):
             continue
@@ -2516,7 +2545,8 @@ def dreams_from_json(doc):
         tags = clean_tags(item.get("tags") if isinstance(item.get("tags"), (list, str)) else "")
         text_ = str(item.get("text") or "")[:50000]
         if eid and stamp and (feeling or tags or text_.strip()):
-            dreams.add(day, feeling, tags, text_, eid=eid, updated=stamp)
+            dreams.add(day, feeling, tags, text_, eid=eid, updated=stamp,
+                       private=item.get("private") is True)
     for item in (doc.get("deleted") or [])[:200000]:
         if isinstance(item, dict) and item.get("type") == "dream":
             eid, gone = str(item.get("id") or "")[:64], clean_stamp(item.get("deleted"))
@@ -2526,8 +2556,9 @@ def dreams_from_json(doc):
 
 
 def stores_to_json(store, events, dreams=None):
-    entries = [{"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
-                "anxiety": e[4], "note": e[2], "updated": e[6]}
+    entries = [dict({"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
+                     "anxiety": e[4], "note": e[2], "updated": e[6]},
+                    **({"private": True} if is_private(e, 7) else {}))
                for day in sorted(store.days) for e in store.days[day]]
     evs = [{"id": e[4], "date": e[0].isoformat(), "kind": e[1], "title": e[2], "note": e[3],
             "updated": e[5]} for e in events.items]
@@ -2538,8 +2569,10 @@ def stores_to_json(store, events, dreams=None):
     doc = {"app": "Moodlog", "version": VERSION, "server_time": now_stamp(),
            "entries": entries, "events": evs, "deleted": deleted}
     if dreams is not None:
-        doc["dreams"] = [{"id": d[4], "date": d[0].isoformat(), "feeling": d[1],
-                          "tags": dream_tags(d), "text": d[3], "updated": d[5]} for d in dreams.items]
+        doc["dreams"] = [dict({"id": d[4], "date": d[0].isoformat(), "feeling": d[1],
+                               "tags": dream_tags(d), "text": d[3], "updated": d[5]},
+                              **({"private": True} if is_private(d, 6) else {}))
+                         for d in dreams.items]
         deleted += [{"id": eid, "type": "dream", "deleted": gone} for eid, gone in dreams.deleted.items()]
     return doc
 
@@ -3554,10 +3587,12 @@ class CalendarView(Canvas):
                 moods = [e[1] for e in win.store.entries(day) if e[1]]
                 future = day > today
                 self.cells.append((x, y, size, size, day))
-                if len(moods) > 1:
+                if len(moods) > 1 and win.prefs["several"] == "grid":
                     self.draw_grid(cr, x, y, size, day, moods, th)
                     self.draw_marks(cr, x, y, size, day, today, th)
                     continue
+                if len(moods) > 1:              # only the latest mood of the day
+                    mood = moods[-1]
                 rounded_rect(cr, x, y, size, size, th["radius"])
                 if mood:
                     src(cr, th["moods"][mood])
@@ -3571,9 +3606,14 @@ class CalendarView(Canvas):
                     ink = th["ink"]
                 text(cr, self, str(day.day), x + 7, y + 4, 8.5, ink, bold=(day == today),
                      alpha=0.35 if future else (0.9 if mood else 0.6))
+                dot_x = x + size - 9
+                if len(moods) > 1:              # "×3": how many moods that day
+                    text(cr, self, "×%d" % len(moods), x + size - 6, y + 4, 7.5, ink, ax=1,
+                         alpha=0.8)
+                    dot_x = x + size - 25
                 if win.store.has_note(day):  # small corner dot = this day has a note
                     src(cr, ink, 0.85)
-                    cr.arc(x + size - 9, y + 10, 2.6, 0, 2 * math.pi)
+                    cr.arc(dot_x, y + 10, 2.6, 0, 2 * math.pi)
                     cr.fill()
                 self.draw_marks(cr, x, y, size, day, today, th)
 
@@ -3628,7 +3668,7 @@ class CalendarView(Canvas):
         events = win.events.on(day)
         if events:
             draw_event_badge(cr, x + 10, y + size - 10, 7.5, th)
-        dreams = win.dreams.on(day)
+        dreams = win.dreams.on(day) if win.prefs["dreams"] else []
         if dreams:
             draw_dream_badge(cr, x + size - 10, y + size - 10, 7.5, th)
         if day == today and day != win.selected:
@@ -4463,6 +4503,12 @@ class DreamWindow(Gtk.Window):
         frame = Gtk.Frame()
         frame.set_child(scroll)
         col.append(frame)
+        self.private_check = Gtk.CheckButton(label=tr("Private: only counted in the doctor report, never its text"))
+        prefs = win.prefs
+        self.private_check.set_active(is_private(dream, 6) if dream else
+                                      bool(prefs["private_tick"] and prefs["private_default"]))
+        self.private_check.set_visible(bool(prefs["private_tick"]))
+        col.append(self.private_check)
         hint = Gtk.Label(label=tr("Write it down soon after waking: dreams fade fast. Didn't remember "
                                   "one? Tick that box, it counts too."), xalign=0, wrap=True)
         hint.add_css_class("dim-label")
@@ -4508,10 +4554,13 @@ class DreamWindow(Gtk.Window):
         if not (feeling or tags or text_):
             self.fail(tr("Write a few words, or pick how it felt or a tag."))
             return
+        private = self.private_check.get_active() and self.win.prefs["private_tick"]
         if self.dream:
             self.win.dreams.update(self.dream, day, feeling, tags, text_)
+            if self.win.prefs["private_tick"]:
+                self.win.dreams.set_private(self.dream, private)
         else:
-            self.win.dreams.add(day, feeling, tags, text_)
+            self.win.dreams.add(day, feeling, tags, text_, private=private)
         if self.win.save_dreams():
             self.close()
         else:
@@ -4689,14 +4738,15 @@ class ReportWindow(Gtk.Window):
         self.health_check = Gtk.CheckButton(label=tr("Include sleep from my phone"), active=True)
         self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
         self.meds_check = Gtk.CheckButton(label=tr("Include medication from Apple Health"), active=True)
-        self.meds_check.set_visible(bool(win.meds.doses))
+        self.meds_check.set_visible(bool(win.meds.doses) and win.prefs["medication"])
+        self.meds_check.set_active(win.prefs["medication"])
         self.dreams_check = Gtk.CheckButton(label=tr("Include dreams (how many, and nightmare nights)"))
         self.dream_text_check = Gtk.CheckButton(label=tr("Also what the dreams were about"))
         self.dream_text_check.set_margin_start(28)
         # Always clickable: ticking the text also ticks dreams, unticking dreams unticks both.
         self.dreams_check.connect("toggled", lambda b: b.get_active() or self.dream_text_check.set_active(False))
         self.dream_text_check.connect("toggled", lambda b: b.get_active() and self.dreams_check.set_active(True))
-        has_dreams = bool(win.dreams.items)
+        has_dreams = bool(win.dreams.items) and win.prefs["dreams"]
         self.dreams_check.set_visible(has_dreams)
         self.dream_text_check.set_visible(has_dreams)
         for wdg in (self.notes_check, notes_hint, self.health_check, self.meds_check,
@@ -4789,6 +4839,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.9.0", "2026-11-21", [
+        "Private notes and dreams: tick Private on a note and it never goes in the doctor report; a private dream is only counted there, never shown. In Customize you can hide the tick, or make new ones start private.",
+        "Customize your experience (☰ menu, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest.",
+    ]),
     ("2.8.1", "2026-11-21", [
         "Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken or Skipped.",
     ]),
@@ -4916,6 +4970,10 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("1.3.0", "2026-11-21", [
+        "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and iPhone.",
+        "Customize your experience (Settings, the tour, and once after updating): turn off Dreams, and choose whether days with several moods show all of them in a grid or only the latest.",
+    ]),
     ("1.2.0", "2026-11-20", [
         "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
         "The report for your doctor, now on the phone too: a PDF to share, print or save (the Charts tab).",
@@ -4943,6 +5001,10 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("1.7.0", "2026-11-21", [
+        "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android.",
+        "Customize your experience (Settings, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest.",
+    ]),
     ("1.6.7", "2026-11-21", [
         "Backup: the screen for saving or restoring the backup file now always has its Save button.",
     ]),
@@ -5586,6 +5648,135 @@ def card(child, title=None):
 
 # ----------------------------------------------------------------- welcome tour
 
+# ----------------------------------------------------------------- customize
+
+PREF_DEFAULTS = {"dreams": True, "medication": True, "several": "grid",   # several: grid|latest
+                 "private_tick": True, "private_default": False}
+
+
+def load_prefs():
+    prefs = dict(PREF_DEFAULTS)
+    saved = load_config().get("prefs")
+    if isinstance(saved, dict):
+        prefs.update({k: v for k, v in saved.items() if k in PREF_DEFAULTS})
+    return prefs
+
+
+class SeveralPreview(Gtk.DrawingArea):
+    """A tiny calendar day with three moods: as a grid, or only the latest."""
+
+    def __init__(self, mode):
+        super().__init__()
+        self.mode = mode
+        self.set_content_width(46)
+        self.set_content_height(46)
+        self.set_halign(Gtk.Align.CENTER)
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _a, cr, w, h):
+        th = theme()
+        x, y, size = 2, 2, min(w, h) - 4
+        cr.save()
+        rounded_rect(cr, x, y, size, size, 8)
+        cr.clip()
+        if self.mode == "latest":
+            src(cr, th["moods"][4])
+            cr.paint()
+            draw_face(cr, x + size / 2, y + size * 0.55, size * 0.24, 4, FACE_INK[4], outline=False)
+        else:
+            src(cr, th["ink"], 0.06)
+            cr.paint()
+            moods, gap, top = [2, 3, 4], 2, size * 0.22
+            tw, th_ = (size - gap) / 2, (size - top - gap) / 2
+            for i, m in enumerate(moods):
+                r, c = divmod(i, 2)
+                cr.rectangle(x + c * (tw + gap), y + top + r * (th_ + gap), tw, th_)
+                src(cr, th["moods"][m])
+                cr.fill()
+        cr.restore()
+
+
+def customize_options(win):
+    """The switches of "Customize your experience": in the tour and in its own window."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+
+    def switch_row(key, title, hint):
+        row = Gtk.Box(spacing=12)
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        name = Gtk.Label(label=title, xalign=0)
+        name.add_css_class("heading")
+        texts.append(name)
+        sub = Gtk.Label(label=hint, xalign=0, wrap=True, max_width_chars=30)
+        sub.add_css_class("dim-label")
+        sub.add_css_class("caption")
+        texts.append(sub)
+        row.append(texts)
+        sw = Gtk.Switch(active=bool(win.prefs[key]), valign=Gtk.Align.CENTER)
+        sw.connect("notify::active", lambda w, _p: win.set_pref(key, w.get_active()))
+        row.append(sw)
+        return row
+
+    box.append(switch_row("dreams", tr("Dreams"),
+                          tr("The Dreams tab and the moons on the calendar. Your dreams are kept "
+                             "even when it's off.")))
+    box.append(switch_row("medication", tr("Medication"),
+                          tr("Doses from Apple Health, sent by Moodlog for iPhone.")))
+    box.append(switch_row("private_tick", tr("Private notes and dreams"),
+                          tr("A Private tick on each note and dream: private notes never go in the "
+                             "doctor report, and private dreams are only counted.")))
+    default_row = switch_row("private_default", tr("New ones start private"),
+                             tr("Every new note and dream is ticked private. You can still untick it."))
+    default_row.set_sensitive(bool(win.prefs["private_tick"]))
+    win.connect_pref("private_tick", lambda on: default_row.set_sensitive(on))
+    box.append(default_row)
+    label = Gtk.Label(label=tr("Days with several moods"), xalign=0)
+    label.add_css_class("heading")
+    box.append(label)
+    choices = Gtk.Box(spacing=8, homogeneous=True)
+    first = None
+    for mode, caption in (("grid", tr("All of them, in a grid")), ("latest", tr("Only the latest"))):
+        btn = Gtk.ToggleButton(active=win.prefs["several"] == mode)
+        if first is None:
+            first = btn
+        else:
+            btn.set_group(first)
+        inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        for side in ("top", "bottom"):
+            getattr(inner, "set_margin_" + side)(6)
+        inner.append(SeveralPreview(mode))
+        inner.append(Gtk.Label(label=caption, wrap=True, justify=Gtk.Justification.CENTER,
+                               max_width_chars=14))
+        btn.set_child(inner)
+        btn.connect("toggled", lambda b, m=mode: b.get_active() and win.set_pref("several", m))
+        choices.append(btn)
+    box.append(choices)
+    return box
+
+
+class CustomizeWindow(Gtk.Window):
+    """Customize your experience: turn parts of Moodlog on or off."""
+
+    def __init__(self, win):
+        super().__init__(title=tr("Customize your experience"), transient_for=win, modal=True)
+        self.set_default_size(440, -1)
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        title = Gtk.Label(label=tr("Customize your experience"), xalign=0)
+        title.add_css_class("title-3")
+        col.append(title)
+        intro = Gtk.Label(label=tr("Turn off what you don't need. Nothing is deleted, and you can "
+                                   "change this any time from the ☰ menu."),
+                          xalign=0, wrap=True, max_width_chars=1)
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        col.append(customize_options(win))
+        done = Gtk.Button(label=tr("Done"), halign=Gtk.Align.END)
+        done.add_css_class("suggested-action")
+        done.connect("clicked", lambda *_: self.close())
+        col.append(done)
+        self.set_child(col)
+
 TOUR_STEPS = [
     # (what to highlight, title, text)
     (None, tr("Welcome to Moodlog"),
@@ -5618,6 +5809,9 @@ TOUR_STEPS = [
     ("sync", tr("Your phone can help"),
      tr("Phone sync brings in your sleep and steps, and syncs with Moodlog on your iPhone or Android phone. Optional "
         "too: Moodlog works fine without it.")),
+    ("customize", tr("Customize your experience"),
+     tr("Turn off what you don't need. Nothing is deleted, and you can change it later from the "
+        "☰ menu.")),
     ("menu", tr("If you ever need me again"),
      tr("Style, language and this tour live in this menu. You can watch the tour again "
         "whenever you like.")),
@@ -5707,7 +5901,8 @@ class TourOverlay(Gtk.Overlay):
         row.append(Gtk.Box(hexpand=True))
         for b in (self.back, self.next):
             row.append(b)
-        for wdg in (self.face, self.title, self.body, self.dots, row):
+        self.extra = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        for wdg in (self.face, self.title, self.body, self.extra, self.dots, row):
             self.card.append(wdg)
         self.add_overlay(self.card)
 
@@ -5722,7 +5917,7 @@ class TourOverlay(Gtk.Overlay):
 
     def target(self, key):
         """The widget a step points at, and its spotlight rectangle in overlay coordinates."""
-        if key is None:
+        if key is None or key == "customize":
             return None
         if key.startswith("tab:"):
             name = key[4:]
@@ -5758,6 +5953,11 @@ class TourOverlay(Gtk.Overlay):
     def go(self, step):
         if step < 0:
             return
+        if 0 <= step < len(TOUR_STEPS) and TOUR_STEPS[step][0] == "tab:dreams" \
+                and not self.win.prefs["dreams"]:
+            step += 1 if step > self.step else -1      # dreams turned off: skip that step
+            if step < 0:
+                return
         if step >= len(TOUR_STEPS):
             self.close()
             return
@@ -5767,6 +5967,13 @@ class TourOverlay(Gtk.Overlay):
         self.step, self.t0 = step, None
         key, title, body = TOUR_STEPS[step]
         self.face.set_visible(key is None)
+        child = self.extra.get_first_child()
+        while child:
+            self.extra.remove(child)
+            child = self.extra.get_first_child()
+        if key == "customize":
+            self.extra.append(customize_options(self.win))
+        self.extra.set_visible(key == "customize")
         self.title.set_text(title)
         self.body.set_text(body)
         self.dots.set_text(" ".join("●" if i == step else "○" for i in range(len(TOUR_STEPS))))
@@ -5938,6 +6145,7 @@ class Window(Adw.ApplicationWindow):
         self.store = Store()
         self.health = HealthStore()
         self.meds = MedicationStore()
+        self.prefs = load_prefs()
         self.events = EventStore()
         self.dreams = DreamStore()
         self.link = GridgetsLink(self.store)
@@ -6016,6 +6224,10 @@ class Window(Adw.ApplicationWindow):
         remind_action.connect("activate", lambda *_: ReminderWindow(self).present())
         self.add_action(remind_action)
         news_menu.prepend(tr("Reminder and kind word…"), "win.reminder")
+        custom_action = Gio.SimpleAction.new("customize", None)
+        custom_action.connect("activate", lambda *_: CustomizeWindow(self).present())
+        self.add_action(custom_action)
+        news_menu.prepend(tr("Customize your experience…"), "win.customize")
         main_menu.append_section(None, news_menu)
         menu_btn = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=main_menu)
         menu_btn.set_tooltip_text(tr("Style, language and what's new"))
@@ -6044,6 +6256,7 @@ class Window(Adw.ApplicationWindow):
         self.stack.add_titled(self.build_notes_page(), "notes", tr("Notes"))
         self.stack.add_titled(self.build_dreams_page(), "dreams", tr("Dreams"))
         self.stack.add_titled(self.build_events_page(), "events", tr("Events"))
+        GLib.idle_add(lambda: self.apply_prefs() and False)
         self.stack.connect("notify::visible-child", lambda *_: self.refresh())
 
         self.banner = Gtk.Box(spacing=12)
@@ -6097,6 +6310,13 @@ class Window(Adw.ApplicationWindow):
             pass
         if seen is not None or has_data:  # an update, also from versions before 2.1
             ChangelogWindow(self, since=seen).present()
+            if not cfg.get("customize_seen"):     # once, for people who saw the tour before 2.9
+                cfg["customize_seen"] = True
+                try:
+                    save_config(cfg)
+                except OSError:
+                    pass
+                CustomizeWindow(self).present()
         elif not cfg.get("tour_done"):    # a brand-new install: show the welcome tour
             self.start_tour()
         return False
@@ -6108,6 +6328,41 @@ class Window(Adw.ApplicationWindow):
         self.tour = TourOverlay(self, self.end_tour)
         self.tour_root.add_overlay(self.tour)
 
+    def connect_pref(self, key, callback):
+        """Call callback(value) whenever that preference changes."""
+        self._pref_listeners = getattr(self, "_pref_listeners", [])
+        self._pref_listeners.append((key, callback))
+
+    def set_pref(self, key, value):
+        if self.prefs.get(key) == value:
+            return
+        self.prefs[key] = value
+        for k, callback in getattr(self, "_pref_listeners", []):
+            if k == key:
+                try:
+                    callback(value)
+                except Exception:   # a widget that's gone: ignore
+                    pass
+        cfg = load_config()
+        cfg["prefs"] = dict(self.prefs)
+        try:
+            save_config(cfg)
+        except OSError:
+            pass
+        self.apply_prefs()
+
+    def apply_prefs(self):
+        """Show or hide the parts turned on or off in Customize."""
+        page = self.stack.get_page(self.stack.get_child_by_name("dreams"))
+        if page is not None:
+            page.set_visible(bool(self.prefs["dreams"]))
+        if not self.prefs["dreams"] and self.stack.get_visible_child_name() == "dreams":
+            self.stack.set_visible_child_name("log")
+        self.private_check.set_visible(bool(self.prefs["private_tick"]))
+        self.rebuild_day_events()
+        self.rebuild_entries()
+        self.redraw_all()
+
     def end_tour(self):
         if self.tour is None:
             return
@@ -6115,6 +6370,7 @@ class Window(Adw.ApplicationWindow):
         self.tour = None
         cfg = load_config()
         cfg["tour_done"] = True
+        cfg["customize_seen"] = True
         try:
             save_config(cfg)
         except OSError:
@@ -6275,8 +6531,14 @@ class Window(Adw.ApplicationWindow):
         scale_hint.add_css_class("dim-label")
         scale_hint.add_css_class("caption")
         self.scales_box.append(scale_hint)
-        note_label = Gtk.Label(label=tr("Note"), xalign=0)
-        note_label.add_css_class("heading")
+        note_title = Gtk.Label(label=tr("Note"), xalign=0, hexpand=True)
+        note_title.add_css_class("heading")
+        self.private_check = Gtk.CheckButton(label=tr("Private"))
+        self.private_check.set_tooltip_text(tr("Never in the doctor report"))
+        self.private_check.connect("toggled", self.on_private_toggled)
+        note_label = Gtk.Box(spacing=8)
+        note_label.append(note_title)
+        note_label.append(self.private_check)
         self.note_view = Gtk.TextView()
         self.note_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         for side in ("top", "bottom", "left", "right"):
@@ -6435,7 +6697,7 @@ class Window(Adw.ApplicationWindow):
             btn.set_child(box)
             btn.connect("clicked", lambda _b, e=event: self.open_event(e))
             self.day_events.append(btn)
-        dreams = self.dreams.on(self.selected)
+        dreams = self.dreams.on(self.selected) if self.prefs["dreams"] else []
         for dream in dreams:
             btn = Gtk.Button()
             btn.add_css_class("flat")
@@ -6445,10 +6707,15 @@ class Window(Adw.ApplicationWindow):
             label = Gtk.Label(label=tr("Dream: %s") % dream_title(dream), xalign=0, hexpand=True)
             label.set_ellipsize(Pango.EllipsizeMode.END)
             box.append(label)
+            if is_private(dream, 6) and self.prefs["private_tick"]:
+                lock = Gtk.Image.new_from_icon_name("changes-prevent-symbolic")
+                lock.set_tooltip_text(tr("Private: only counted in the doctor report, never its text"))
+                lock.add_css_class("dim-label")
+                box.append(lock)
             btn.set_child(box)
             btn.connect("clicked", lambda _b, d=dream: self.open_dream(d))
             self.day_events.append(btn)
-        doses = self.meds.on(self.selected)
+        doses = self.meds.on(self.selected) if self.prefs["medication"] else []
         if doses:
             self.day_events.append(medication_button(doses))
         self.day_events.set_visible(bool(events or dreams or doses))
@@ -6713,6 +6980,8 @@ class Window(Adw.ApplicationWindow):
         for m, btn in self.face_buttons.items():
             btn.set_active(bool(entry) and m == entry[1])
         self.note_view.get_buffer().set_text(entry[2] if entry else "")
+        self.private_check.set_active(is_private(entry, 7) if entry else
+                                      bool(self.prefs["private_tick"] and self.prefs["private_default"]))
         for index, buttons in self.scale_buttons.items():
             for value, btn in buttons.items():
                 btn.set_active(bool(entry) and entry[index] == value)
@@ -6822,6 +7091,16 @@ class Window(Adw.ApplicationWindow):
         self.commit()
         self.calendar.queue_draw()
 
+    def on_private_toggled(self, _check):
+        if self._loading or self.current is None:
+            return      # a new entry: the tick is read when it's created
+        while len(self.current) < 8:
+            self.current.append(False)
+        self.current[7] = self.private_check.get_active()
+        self.store.touch(self.current)
+        self.schedule_save()
+        self.rebuild_entries()
+
     def on_entry_row(self, _list, row):
         self.apply_time()
         self.current = row.entry
@@ -6855,7 +7134,8 @@ class Window(Adw.ApplicationWindow):
             value = self.read_time() or ""
             if day == dt.date.today() and not self._time_touched:
                 value = dt.datetime.now().strftime("%H:%M")
-            self.current = self.store.add(day, value, mood, note, energy, anxiety)
+            private = self.prefs["private_tick"] and self.private_check.get_active()
+            self.current = self.store.add(day, value, mood, note, energy, anxiety, private=private)
             self._loading = True
             self.time_entry.set_text(self.current[0])
             self.time_entry.remove_css_class("error")
@@ -6907,6 +7187,11 @@ class Window(Adw.ApplicationWindow):
             snippet.set_ellipsize(Pango.EllipsizeMode.END)
             snippet.add_css_class("dim-label")
             box.append(snippet)
+            if is_private(entry, 7) and self.prefs["private_tick"]:
+                lock = Gtk.Image.new_from_icon_name("changes-prevent-symbolic")
+                lock.set_tooltip_text(tr("Private: never in the doctor report"))
+                lock.add_css_class("dim-label")
+                box.append(lock)
             row.set_child(box)
             self.entry_list.append(row)
         self.entry_scroll.set_visible(bool(items))

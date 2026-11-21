@@ -135,8 +135,9 @@ class AppStore(private val file: File?) {
 
     // ---------------------------------------------------------------- changing
 
-    fun addEntry(date: String, time: String, mood: Int, energy: Int, anxiety: Int, note: String) {
-        entries = entries + Entry(newId(), date, time, mood, energy, anxiety, note, Stamp.now())
+    fun addEntry(date: String, time: String, mood: Int, energy: Int, anxiety: Int, note: String,
+                 private: Boolean = false) {
+        entries = entries + Entry(newId(), date, time, mood, energy, anxiety, note, Stamp.now(), private)
         changed()
     }
 
@@ -169,8 +170,8 @@ class AppStore(private val file: File?) {
         changed()
     }
 
-    fun addDream(date: String, feeling: String, tags: List<String>, text: String) {
-        dreams = dreams + Dream(newId(), date, feeling, tags, text, Stamp.now())
+    fun addDream(date: String, feeling: String, tags: List<String>, text: String, private: Boolean = false) {
+        dreams = dreams + Dream(newId(), date, feeling, tags, text, Stamp.now(), private)
         changed()
     }
 

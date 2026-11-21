@@ -17,10 +17,20 @@ struct TourStep {
     let pointsAtTabs: Bool
     let title: String
     let text: String
+    var customize = false // the card shows the Customize options
+}
+
+/// Where a tab sits in the tab bar (0...), when Dreams may be hidden.
+func tabPosition(_ tag: Int) -> (index: Int, count: Int) {
+    Prefs.dreams ? (tag, 5) : (tag > 2 ? tag - 1 : tag, 4)
 }
 
 enum Tour {
     static var steps: [TourStep] {
+        return all.filter { Prefs.dreams || $0.tab != 2 }
+    }
+
+    private static var all: [TourStep] {
         return [
             TourStep(tab: 0, target: nil, pointsAtTabs: false,
                      title: tr("Welcome to Moodlog"),
@@ -43,6 +53,10 @@ enum Tour {
             TourStep(tab: 4, target: nil, pointsAtTabs: true,
                      title: tr("Your PC and Apple Health"),
                      text: tr("Here you can connect to Moodlog on your PC and send sleep and steps from Apple Health. All optional: the app works on its own too. You can watch this tour again from here.")),
+            TourStep(tab: 0, target: nil, pointsAtTabs: false,
+                     title: tr("Customize your experience"),
+                     text: tr("Turn off what you don't need. Nothing is deleted, and you can change this any time in Settings."),
+                     customize: true),
             TourStep(tab: 0, target: nil, pointsAtTabs: false,
                      title: tr("That's all, really"),
                      text: tr("Everything stays on your phone, private. Log a mood whenever you feel like it; even once a day is plenty. You've got this.")),
@@ -77,7 +91,8 @@ struct TourOverlay: View {
             let barHeight = geo.safeAreaInsets.bottom + 54          // the tab bar, left visible
             let hole = step.target.flatMap { tour.frames[$0] }?.insetBy(dx: -6, dy: -6) ?? .zero
             let centred = step.target == nil && !step.pointsAtTabs
-            let tabX = (CGFloat(step.tab ?? 0) + 0.5) * size.width / 5
+            let place = tabPosition(step.tab ?? 0)
+            let tabX = (CGFloat(place.index) + 0.5) * size.width / CGFloat(place.count)
             let cardWidth = min(size.width - 32, 360)
             let lift = size.height - barHeight
             let roomBelow = hole != .zero && hole.maxY + 200 < lift
@@ -117,11 +132,15 @@ struct TourOverlay: View {
 
     private func card(step: TourStep, index: Int, count: Int) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            if step.target == nil && !step.pointsAtTabs {
+            if step.target == nil && !step.pointsAtTabs && !step.customize {
                 TourFace().frame(width: 76, height: 76).frame(maxWidth: .infinity)
             }
             Text(step.title).font(.title3.weight(.semibold))
             Text(step.text).font(.subheadline).fixedSize(horizontal: false, vertical: true)
+            if step.customize {
+                VStack(alignment: .leading, spacing: 12) { CustomizeOptions() }
+                    .font(.subheadline)
+            }
             HStack(spacing: 5) {
                 ForEach(0..<count, id: \.self) { i in
                     Circle().fill(i == index ? Color.primary : Color.secondary.opacity(0.35))

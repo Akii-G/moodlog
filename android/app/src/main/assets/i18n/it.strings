@@ -287,3 +287,22 @@
 "Done" = "Fine";
 "Version %@" = "Versione %@";
 "New" = "Nuovo";
+
+/* Customize */
+"The Dreams tab and the moons on the calendar. Your dreams are kept even when it's off." = "La scheda Sogni e le lune sul calendario. I tuoi sogni restano salvati anche quando è spento.";
+"Days with several moods" = "Giorni con più umori";
+"All of them, in a grid" = "Tutti, in una griglia";
+"Only the latest" = "Solo l'ultimo";
+"Customize your experience" = "Personalizza la tua esperienza";
+"Turn off what you don't need. Nothing is deleted, and you can change this any time in Settings." = "Spegni quello che non ti serve. Non viene cancellato niente, e puoi cambiarlo quando vuoi in Impostazioni.";
+"Turn off what you don't need. Nothing is deleted." = "Spegni quello che non ti serve. Non viene cancellato niente.";
+
+/* Private notes and dreams */
+"Private notes and dreams" = "Note e sogni privati";
+"A Private tick on each note and dream: private notes never go in the doctor report, and private dreams are only counted." = "Una spunta Privato su ogni nota e sogno: le note private non finiscono mai nel resoconto per il medico, e i sogni privati vengono solo contati.";
+"New ones start private" = "I nuovi partono privati";
+"Every new note and dream is ticked private. You can still untick it." = "Ogni nuova nota e sogno è già spuntato come privato. Puoi sempre togliere la spunta.";
+"Private note" = "Nota privata";
+"Private dream" = "Sogno privato";
+"A private note never goes in the doctor report." = "Una nota privata non finisce mai nel resoconto per il medico.";
+"A private dream is only counted in the doctor report; what it was about is never shown." = "Un sogno privato viene solo contato nel resoconto per il medico; di cosa parlava non viene mai mostrato.";

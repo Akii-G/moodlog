@@ -146,9 +146,10 @@ final class AppStore {
 
     // MARK: - Changing
 
-    func addEntry(date: String, time: String, mood: Int, energy: Int, anxiety: Int, note: String) {
+    func addEntry(date: String, time: String, mood: Int, energy: Int, anxiety: Int, note: String,
+                  isPrivate: Bool = false) {
         entries.append(Entry(id: AppStore.newID(), date: date, time: time, mood: mood, energy: energy,
-                             anxiety: anxiety, note: note, updated: Stamp.now()))
+                             anxiety: anxiety, note: note, updated: Stamp.now(), isPrivate: isPrivate ? true : nil))
         changed()
     }
 
@@ -188,9 +189,9 @@ final class AppStore {
         changed()
     }
 
-    func addDream(date: String, feeling: String, tags: [String], text: String) {
+    func addDream(date: String, feeling: String, tags: [String], text: String, isPrivate: Bool = false) {
         dreams.append(Dream(id: AppStore.newID(), date: date, feeling: feeling, tags: tags, text: text,
-                            updated: Stamp.now()))
+                            updated: Stamp.now(), isPrivate: isPrivate ? true : nil))
         changed()
     }
 

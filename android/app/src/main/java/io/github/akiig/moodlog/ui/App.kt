@@ -53,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.tr
 
-private data class Tab(val title: String, val icon: ImageVector)
+private data class Tab(val title: String, val icon: ImageVector, val index: Int = 0)
 
 @Composable
 fun MoodlogApp() {
@@ -64,12 +64,15 @@ fun MoodlogApp() {
     var showPrivacy by rememberSaveable { mutableStateOf(false) }
 
     val tabs = listOf(
-        Tab(tr("Log"), Icons.Filled.CalendarMonth),
-        Tab(tr("Charts"), Icons.AutoMirrored.Outlined.ShowChart),
-        Tab(tr("Dreams"), Icons.Filled.Bedtime),
-        Tab(tr("Events"), Icons.Filled.Flag),
-        Tab(tr("Settings"), Icons.Filled.Settings),
-    )
+        Tab(tr("Log"), Icons.Filled.CalendarMonth, 0),
+        Tab(tr("Charts"), Icons.AutoMirrored.Outlined.ShowChart, 1),
+        Tab(tr("Dreams"), Icons.Filled.Bedtime, 2),
+        Tab(tr("Events"), Icons.Filled.Flag, 3),
+        Tab(tr("Settings"), Icons.Filled.Settings, 4),
+    ).filter { app.showDreams || it.index != 2 }
+    Tour.showDreams = app.showDreams
+    LaunchedEffect(app.showDreams) { if (!app.showDreams && tab == 2) tab = 0 }
+    var showCustomize by remember { mutableStateOf(false) }
 
     // after an update: "What's new" once. A brand-new install (nothing logged yet) gets the tour.
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -86,6 +89,9 @@ fun MoodlogApp() {
             // coming from a version that didn't record this: mark only this version as new
             whatsNewSince = if (since == "0") io.github.akiig.moodlog.WhatsNew.load(context).getOrNull(1)?.version ?: "0" else since
             showWhatsNew = true
+        } else if (!app.prefs.customizeSeen && !app.openToday) {
+            app.prefs.customizeSeen = true
+            showCustomize = true
         }
     }
 
@@ -127,11 +133,17 @@ fun MoodlogApp() {
                 if (tab == it) { openDay = null; showPrivacy = false }
                 tab = it
             }
-            if (showWhatsNew) WhatsNewDialog(whatsNewSince) { showWhatsNew = false }
+            if (showWhatsNew) WhatsNewDialog(whatsNewSince) {
+                showWhatsNew = false
+                // after an update: "Customize your experience" once, right after What's new
+                if (!app.prefs.customizeSeen) { app.prefs.customizeSeen = true; showCustomize = true }
+            }
+            if (showCustomize) CustomizeDialog { showCustomize = false }
             if (tour.step != null) {
                 TourOverlay(tour, onTab = { tab = it; openDay = null; showPrivacy = false }) {
                     tour.step = null
                     app.prefs.tourDone = true
+                    app.prefs.customizeSeen = true
                     tab = 0
                 }
             }
@@ -150,12 +162,12 @@ private fun TabBar(tabs: List<Tab>, selected: Int, modifier: Modifier, onSelect:
             .clip(RoundedCornerShape(32.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(5.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            tabs.forEachIndexed { i, t ->
-                val on = i == selected
+            tabs.forEach { t ->
+                val on = t.index == selected
                 val ink by animateColorAsState(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, label = "ink")
                 val pill by animateColorAsState(if (on) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent, label = "pill")
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(26.dp)).background(pill)
-                    .clickable { onSelect(i) }
+                    .clickable { onSelect(t.index) }
                     .semantics { this.selected = on; role = Role.Tab }
                     .padding(vertical = 7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(t.icon, null, Modifier.size(24.dp), tint = ink)

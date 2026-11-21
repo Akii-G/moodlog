@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,6 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -77,7 +81,7 @@ fun DayScreen(day: String, startAdding: Boolean = false, onBack: () -> Unit) {
                 }
                 ActionRow(tr("Add an event, e.g. a medication change")) { addingEvent = true }
             }
-            Section(tr("Dreams")) {
+            if (LocalApp.current.showDreams) Section(tr("Dreams")) {
                 for (d in store.dreamsOn(day)) {
                     DreamRow(d) { editingDream = d }
                     Line()
@@ -110,8 +114,12 @@ fun EntryRow(entry: Entry, onClick: () -> Unit) {
                 if (entry.anxiety > 0) Text("A${entry.anxiety}", style = MaterialTheme.typography.labelMedium, color = Palette.anxiety, fontWeight = FontWeight.SemiBold)
             }
             if (entry.note.isNotEmpty()) {
-                Text(entry.note, maxLines = 2, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (entry.private && LocalApp.current.privateTick) Icon(Icons.Filled.Lock, tr("Private note"),
+                        Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(entry.note, maxLines = 2, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }
@@ -130,13 +138,16 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
     var energy by remember { mutableIntStateOf(original?.energy ?: 0) }
     var anxiety by remember { mutableIntStateOf(original?.anxiety ?: 0) }
     var note by remember { mutableStateOf(original?.note ?: "") }
+    val app = LocalApp.current
+    var private by remember { mutableStateOf(original?.private ?: (app.privateTick && app.privateDefault)) }
     var pickTime by remember { mutableStateOf(false) }
     val empty = mood == 0 && energy == 0 && anxiety == 0 && note.isBlank()
 
     EditorDialog(tr(if (original == null) "New entry" else "Edit entry"), !empty, onClose, onSave = {
         val t = if (hasTime) Day.timeString(time) else ""
-        if (original != null) store.update(original.copy(time = t, mood = mood, energy = energy, anxiety = anxiety, note = note))
-        else store.addEntry(day, t, mood, energy, anxiety, note)
+        val keep = if (app.privateTick) private else (original?.private ?: false)
+        if (original != null) store.update(original.copy(time = t, mood = mood, energy = energy, anxiety = anxiety, note = note, private = keep))
+        else store.addEntry(day, t, mood, energy, anxiety, note, keep)
         onClose()
     }) {
         Section(tr("How do you feel?"), padded = false) {
@@ -155,9 +166,13 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
                 ValueRow(tr("At"), Day.timeString(time)) { pickTime = true }
             }
         }
-        Section(tr("Note")) {
+        Section(tr("Note"), footer = if (app.privateTick) tr("A private note never goes in the doctor report.") else null) {
             FieldRow("", note, { note = it }, tr("A few words about it"), minLines = 3,
                 keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
+            if (app.privateTick) {
+                Line()
+                SwitchRow(tr("Private note"), private) { private = it }
+            }
         }
         if (original != null) {
             Section { ActionRow(tr("Delete this entry"), destructive = true) { store.delete(original); onClose() } }

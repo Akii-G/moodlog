@@ -12,6 +12,8 @@ struct DayView: View {
     @State private var editingDream: Dream?
     @State private var addingDream = false
     @State private var doses: [DoseRecord] = []
+    @AppStorage("showDreams") private var showDreams = true
+    @AppStorage("showMedication") private var showMedication = true
 
     var body: some View {
         let entries = store.entries(on: day)
@@ -65,7 +67,7 @@ struct DayView: View {
                     Label("Add an event, e.g. a medication change", systemImage: "flag")
                 }
             }
-            if Medications.isOn {
+            if Medications.isOn && showMedication {
                 Section {
                     if doses.isEmpty {
                         Text("No doses logged in Apple Health on this day.").foregroundStyle(.secondary)
@@ -95,6 +97,7 @@ struct DayView: View {
                     Text("From the Health app.")
                 }
             }
+            if showDreams {
             Section("Dreams") {
                 ForEach(dreams) { dream in
                     Button {
@@ -112,6 +115,7 @@ struct DayView: View {
                 } label: {
                     Label("Add a dream from this night", systemImage: "moon.stars")
                 }
+            }
             }
         }
         .navigationTitle(day == Day.today ? tr("Today") : Day.pretty(day, style: "EEE d MMM"))
@@ -156,7 +160,12 @@ struct EntryRow: View {
                     if entry.anxiety > 0 { Text("A\(entry.anxiety)").font(.caption).foregroundStyle(Palette.anxiety) }
                 }
                 if !entry.note.isEmpty {
-                    Text(entry.note).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        if entry.hidden && Prefs.privateTick {
+                            Image(systemName: "lock.fill").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Text(entry.note).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -178,6 +187,8 @@ struct EntryEditor: View {
     @State private var energy: Int
     @State private var anxiety: Int
     @State private var note: String
+    @State private var isPrivate: Bool
+    @AppStorage("privateTick") private var privateTick = true
 
     init(day: String, original: Entry?) {
         self.day = day
@@ -191,6 +202,7 @@ struct EntryEditor: View {
         _energy = State(initialValue: original?.energy ?? 0)
         _anxiety = State(initialValue: original?.anxiety ?? 0)
         _note = State(initialValue: original?.note ?? "")
+        _isPrivate = State(initialValue: original.map { $0.hidden } ?? (Prefs.privateTick && Prefs.privateDefault))
     }
 
     private var isEmpty: Bool {
@@ -218,9 +230,16 @@ struct EntryEditor: View {
                         DatePicker("At", selection: $time, displayedComponents: .hourAndMinute)
                     }
                 }
-                Section("Note") {
+                Section {
                     TextField("A few words about it", text: $note, axis: .vertical)
                         .lineLimit(3...10)
+                    if privateTick {
+                        Toggle(isOn: $isPrivate) { Label("Private note", systemImage: "lock.fill") }
+                    }
+                } header: {
+                    Text("Note")
+                } footer: {
+                    if privateTick { Text("A private note never goes in the doctor report.") }
                 }
                 if let original = original {
                     Section {
@@ -253,9 +272,11 @@ struct EntryEditor: View {
             entry.energy = energy
             entry.anxiety = anxiety
             entry.note = note
+            if privateTick { entry.isPrivate = isPrivate ? true : nil }
             store.update(entry)
         } else {
-            store.addEntry(date: day, time: t, mood: mood, energy: energy, anxiety: anxiety, note: note)
+            store.addEntry(date: day, time: t, mood: mood, energy: energy, anxiety: anxiety, note: note,
+                           isPrivate: privateTick && isPrivate)
         }
         dismiss()
     }

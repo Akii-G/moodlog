@@ -125,8 +125,13 @@ struct DayCell: View {
     @Environment(AppStore.self) private var store
     let day: String
 
+    @AppStorage("severalMoods") private var several = "grid"
+    @AppStorage("showDreams") private var showDreams = true
+
     var body: some View {
-        let moods = store.moods(on: day)
+        let all = store.moods(on: day)
+        let latestOnly = several == "latest" && all.count > 1
+        let moods = latestOnly ? [all[all.count - 1]] : all
         let isToday = day == Day.today
         let future = day > Day.today
         ZStack(alignment: .topLeading) {
@@ -149,8 +154,12 @@ struct DayCell: View {
                 if !store.events(on: day).isEmpty {
                     Image(systemName: "flag.fill").font(.system(size: 7))
                 }
-                if !store.dreams(on: day).isEmpty {
+                if showDreams && !store.dreams(on: day).isEmpty {
                     Image(systemName: "moon.fill").font(.system(size: 7))
+                }
+                if latestOnly {
+                    Text("×\(all.count)").font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(Palette.faceInk(moods[0])).opacity(0.8)
                 }
             }
             .padding(.horizontal, 5)
@@ -164,7 +173,7 @@ struct DayCell: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibility(moods))
+        .accessibilityLabel(accessibility(all))
     }
 
     private var dayNumber: String {

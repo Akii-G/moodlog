@@ -21,6 +21,7 @@ you open it.
   - [Keep a dream journal](#keep-a-dream-journal)
   - [Bring a report to your doctor](#bring-a-report-to-your-doctor)
   - [A gentle reminder, and a kind word](#a-gentle-reminder-and-a-kind-word)
+  - [Make it yours](#make-it-yours)
   - [Use it on your iPhone too](#use-it-on-your-iphone-too)
   - [Or on your Android phone](#or-on-your-android-phone)
   - [Make it yours](#make-it-yours)
@@ -93,6 +94,17 @@ word**) or the phone (**Settings → Reminder**). No streaks, no guilt.
 After a few very hard days close together, the Log shows a short, kind note with a
 helpline (Telefono Amico in Italian, Find A Helpline in English). It never tells
 anyone, and you can hide it or turn it off.
+
+### Make it yours
+
+**Customize your experience** (in the tour, ☰ on the PC, **Settings** on the phones)
+turns off what you don't need: Dreams, or Medication on the PC and iPhone. Nothing is
+deleted, it's only hidden. You also choose how days with several moods look on the
+calendar: all of them in a small grid, or only the latest one with a "×3".
+
+Any note or dream can be ticked **Private**: a private note never goes in the report
+for your doctor, and a private dream is only counted there, never shown. In Customize
+you can hide the tick, or have every new note and dream start private.
 
 ### Use it on your iPhone too
 
@@ -175,7 +187,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.8.1_all.deb
+    sudo apt install ./moodlog_2.9.0_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).

@@ -79,4 +79,16 @@ class FeaturesTest {
         assertEquals("2026-01-01" to "2026-11-20", ReportPeriod.YEAR.range(s, "2026-11-20"))
         assertEquals("2026-10-11" to "2026-11-20", ReportPeriod.ALL.range(s, "2026-11-20"))
     }
+
+    /** Private notes and dreams: "private": true only when set, and it survives a round trip. */
+    @Test fun privateFlag() {
+        val e = Entry("e1", "2026-11-20", "09:00", 3, 0, 0, "secret", "2026-11-20T08:00:00.000Z", private = true)
+        val plain = e.copy(id = "e2", private = false)
+        assertEquals(true, e.json().optBoolean("private"))
+        assertEquals(false, plain.json().has("private"))
+        assertEquals(true, Entry.from(org.json.JSONObject(e.json().toString())).private)
+        assertEquals(false, Entry.from(org.json.JSONObject("""{"id":"x","date":"2026-11-20","note":"old"}""")).private)
+        val d = Dream("d1", "2026-11-20", "neutral", listOf("vivid"), "text", "2026-11-20T08:00:00.000Z", private = true)
+        assertEquals(true, Dream.from(org.json.JSONObject(d.json().toString())).private)
+    }
 }

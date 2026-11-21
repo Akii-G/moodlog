@@ -10,6 +10,8 @@ struct ReportView: View {
     @State private var notes = false
     @State private var sleep = true
     @State private var medication = true
+    @AppStorage("showDreams") private var showDreams = true
+    @AppStorage("showMedication") private var showMedication = true
     @State private var dreams = false
     @State private var dreamText = false
     @State private var busy = false
@@ -33,11 +35,13 @@ struct ReportView: View {
                 Section {
                     Toggle("Include my notes", isOn: $notes)
                     if HealthSender.isAvailable { Toggle("Include sleep from Apple Health", isOn: $sleep) }
-                    if Medications.isOn { Toggle("Include medication from Apple Health", isOn: $medication) }
-                    Toggle("Include dreams (how many, and nightmare nights)", isOn: $dreams)
-                        .onChange(of: dreams) { _, on in if !on { dreamText = false } }
-                    Toggle("Also what the dreams were about", isOn: $dreamText)
-                        .onChange(of: dreamText) { _, on in if on { dreams = true } }
+                    if Medications.isOn && showMedication { Toggle("Include medication from Apple Health", isOn: $medication) }
+                    if showDreams {
+                        Toggle("Include dreams (how many, and nightmare nights)", isOn: $dreams)
+                            .onChange(of: dreams) { _, on in if !on { dreamText = false } }
+                        Toggle("Also what the dreams were about", isOn: $dreamText)
+                            .onChange(of: dreamText) { _, on in if on { dreams = true } }
+                    }
                 } header: {
                     Text("Include")
                 } footer: {
@@ -72,7 +76,7 @@ struct ReportView: View {
         let nights = sleep && HealthSender.isAvailable ? (await HealthSender.nightlySleep(from: start, to: end) ?? [:]) : [:]
         var doses: [DoseRecord] = []
         var meds: [MedicationInfo] = []
-        if medication && Medications.isOn, let from = Day.date(start), let last = Day.date(end),
+        if medication && showMedication && Medications.isOn, let from = Day.date(start), let last = Day.date(end),
            let to = Day.calendar.date(byAdding: .day, value: 1, to: last) {
             doses = await Medications.doses(from: from, to: to)
             meds = await Medications.list()
@@ -81,7 +85,7 @@ struct ReportView: View {
             .appendingPathComponent(tr("Moodlog report") + " \(start) – \(end).pdf")
         do {
             try Report(store: store, start: start, end: end, includeNotes: notes, sleep: nights,
-                       includeDreams: dreams, dreamText: dreams && dreamText, doses: doses, meds: meds).write(to: url)
+                       includeDreams: dreams && showDreams, dreamText: dreams && dreamText && showDreams, doses: doses, meds: meds).write(to: url)
             file = url
         } catch {
             message = error.localizedDescription

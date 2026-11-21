@@ -11,6 +11,15 @@ struct Entry: Codable, Identifiable, Hashable {
     var anxiety: Int      // 1-5, 0 = not given
     var note: String
     var updated: String   // UTC change time, e.g. 2026-11-19T05:20:31.123Z
+    /// Ticked private: never in the doctor report. Sent as "private": true only when set.
+    var isPrivate: Bool? = nil
+
+    var hidden: Bool { isPrivate == true }
+
+    enum CodingKeys: String, CodingKey {
+        case id, date, time, mood, energy, anxiety, note, updated
+        case isPrivate = "private"
+    }
 }
 
 struct MoodEvent: Codable, Identifiable, Hashable {
@@ -30,6 +39,15 @@ struct Dream: Codable, Identifiable, Hashable {
     var tags: [String]    // nightmare, vivid, recurring, lucid, forgotten
     var text: String
     var updated: String
+    /// Ticked private: counted in the doctor report, but its text never shown.
+    var isPrivate: Bool? = nil
+
+    var hidden: Bool { isPrivate == true }
+
+    enum CodingKeys: String, CodingKey {
+        case id, date, feeling, tags, text, updated
+        case isPrivate = "private"
+    }
 
     var isNightmare: Bool { return tags.contains("nightmare") || feeling == "disturbing" }
 

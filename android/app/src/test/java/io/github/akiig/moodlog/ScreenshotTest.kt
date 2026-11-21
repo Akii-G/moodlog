@@ -28,6 +28,9 @@ abstract class Screens(private val lang: String) {
             val app = ApplicationProvider.getApplicationContext<Application>()
             val state = AppState.get(app)
             state.prefs.tourDone = true
+            state.prefs.customizeSeen = true
+            state.chooseDreams(true); state.chooseSeveral("grid")
+            state.choosePrivateTick(true); state.choosePrivateDefault(false)
             state.prefs.server = "http://pop-os.local:8765"
             state.prefs.token = "sample-token-0123456789"
             state.prefs.autoSync = false
@@ -94,6 +97,23 @@ abstract class Screens(private val lang: String) {
         report()
     }
 
+    /** The tour's "Customize your experience" step, and the calendar with only the latest mood. */
+    @Test fun customize() {
+        val state = AppState.get(ApplicationProvider.getApplicationContext())
+        rule.runOnUiThread { state.tour.start(); state.tour.step = io.github.akiig.moodlog.ui.Tour.steps.indexOfFirst { it.customize } }
+        rule.mainClock.advanceTimeBy(2000)
+        shot("customize-tour")
+        rule.onAllNodes(hasText(tr("Only the latest")))[0].performScrollTo().performClick()
+        rule.waitForIdle()
+        org.junit.Assert.assertEquals("latest", state.prefs.several)
+        rule.onAllNodes(hasText(tr("Skip tour")))[0].performScrollTo().performClick()
+        rule.runOnUiThread { state.chooseDreams(false) }
+        rule.waitForIdle()
+        shot("customize-latest")
+        org.junit.Assert.assertTrue(rule.onAllNodes(hasText(tr("Dreams"))).fetchSemanticsNodes().isEmpty())
+        rule.runOnUiThread { state.chooseDreams(true); state.chooseSeveral("grid") }
+    }
+
     /** The doctor report's pages, drawn onto images instead of a PDF. */
     private fun report() {
         val store = AppState.get(ApplicationProvider.getApplicationContext()).store
@@ -126,11 +146,13 @@ class ScreensItalian : Screens("it") {
 
     @Test fun whatsNew() {
         rule.waitForIdle()
-        if (rule.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().size < 2) {
+        var tries = 0
+        while (rule.onAllNodes(androidx.compose.ui.test.isRoot()).fetchSemanticsNodes().size < 2 && tries++ < 4) {
             rule.onAllNodes(hasText(tr("Settings")))[0].performClick()
             rule.waitForIdle()
             val row = rule.onAllNodes(hasText(tr("What's new")))
             row[row.fetchSemanticsNodes().size - 1].performScrollTo().performClick()
+            rule.mainClock.advanceTimeBy(1000)
             rule.waitForIdle()
         }
         rule.onAllNodes(androidx.compose.ui.test.isRoot())[1].captureRoboImage("build/screenshots/it_whatsnew.png")

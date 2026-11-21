@@ -25,7 +25,7 @@ assert again.is_nightmare(again.items[0]) and not again.is_nightmare(again.items
 assert m.dream_details(again.items[0]) == "Disturbing · Nightmare, Vivid"
 assert m.dream_title(again.items[0]) == "Falling, then the sea"
 assert m.dream_title(again.items[1]) == "Didn't remember"
-assert open(ds.path).readline().strip() == "date,feeling,tags,text,id,updated,deleted"
+assert open(ds.path).readline().strip() == "date,feeling,tags,text,id,updated,deleted,private"
 
 # a row with nothing in it is not a dream
 open(os.path.join(d, "x.csv"), "w").write("date,feeling,tags,text\n2026-11-01,,,\n2026-11-02,weird,,dreamt\n")

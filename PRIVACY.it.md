@@ -2,7 +2,7 @@
 
 *Read in English: [PRIVACY.md](PRIVACY.md)*
 
-Ultimo aggiornamento: 20 novembre 2026. Vale per Moodlog per PC 2.8.0, Moodlog per iPhone 1.6.0 e Moodlog per Android 1.2.0, e per le versioni successive.
+Ultimo aggiornamento: 21 novembre 2026. Vale per Moodlog per PC 2.9.0, Moodlog per iPhone 1.7.0 e Moodlog per Android 1.3.0, e per le versioni successive.
 
 ## In breve
 
@@ -50,7 +50,7 @@ Su Android funziona allo stesso modo con Connessione Salute: l'app legge passi, 
 
 **Backup (facoltativo).** Sui telefoni puoi scegliere un file o una cartella, per esempio in Google Drive o iCloud Drive. Moodlog ci tiene una copia di tutto dopo ogni modifica. Moodlog scrive solo il file; lo carica l'app Drive o iCloud Drive, secondo l'informativa di Google o di Apple. Puoi smettere quando vuoi in Impostazioni → Backup.
 
-**Report ed esportazioni.** Il report PDF, il foglio di calcolo e il file CSV vengono salvati dove scegli tu. Cosa farne dopo (per esempio mandarli al tuo medico) lo decidi tu.
+**Report ed esportazioni.** Il report PDF, il foglio di calcolo e il file CSV vengono salvati dove scegli tu. Cosa farne dopo (per esempio mandarli al tuo medico) lo decidi tu. Una nota spuntata come **Privata** non finisce mai nel report, anche quando includi le note; un sogno privato viene solo contato, e di cosa parlava non viene mai mostrato. Note e sogni privati restano nei tuoi dati, nei backup e nella sincronizzazione come tutto il resto.
 
 **Promemoria e parola gentile.** Il promemoria giornaliero è una notifica creata sul tuo dispositivo; non viene inviato niente da nessuna parte. La parola gentile nei giorni difficili viene calcolata sul tuo dispositivo da ciò che hai registrato; non avvisa nessuno, e toccare una linea di ascolto apre solo il telefono o il browser.
 

@@ -55,7 +55,7 @@ fun ReportDialog(onClose: () -> Unit) {
         val nights = if (sleep && canSleep) (try { app.health.nightlySleep(start, end) } catch (e: Exception) { null }) ?: emptyMap() else emptyMap()
         val file = File(context.cacheDir, "reports/" + tr("Moodlog report") + " $start – $end.pdf")
         return withContext(Dispatchers.Default) {
-            Report(app.store, start, end, notes, nights, dreams, dreams && dreamText).write(file)
+            Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams).write(file)
         }
     }
 
@@ -92,10 +92,12 @@ fun ReportDialog(onClose: () -> Unit) {
                 Line()
                 SwitchRow(tr("Include sleep from Health Connect"), sleep) { sleep = it }
             }
-            Line()
-            SwitchRow(tr("Include dreams (how many, and nightmare nights)"), dreams) { dreams = it; if (!it) dreamText = false }
-            Line()
-            SwitchRow(tr("Also what the dreams were about"), dreamText) { dreamText = it; if (it) dreams = true }
+            if (app.showDreams) {
+                Line()
+                SwitchRow(tr("Include dreams (how many, and nightmare nights)"), dreams) { dreams = it; if (!it) dreamText = false }
+                Line()
+                SwitchRow(tr("Also what the dreams were about"), dreamText) { dreamText = it; if (it) dreams = true }
+            }
         }
         Section(footer = message.ifEmpty { null }) {
             ActionRow(tr("Share PDF…"), busy = busy) {

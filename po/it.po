@@ -2052,3 +2052,75 @@ msgstr "Backup: le Impostazioni avvisano quando Moodlog non riesce più a raggiu
 
 msgid "Backup: the screen for saving or restoring the backup file now always has its Save button."
 msgstr "Backup: la schermata per salvare o ripristinare il file di backup ora ha sempre il pulsante Salva."
+
+msgid "The Dreams tab and the moons on the calendar. Your dreams are kept even when it's off."
+msgstr "La scheda Sogni e le lune sul calendario. I tuoi sogni restano salvati anche quando è spento."
+
+msgid "Doses from Apple Health, sent by Moodlog for iPhone."
+msgstr "Le dosi da Salute di Apple, inviate da Moodlog per iPhone."
+
+msgid "Days with several moods"
+msgstr "Giorni con più umori"
+
+msgid "All of them, in a grid"
+msgstr "Tutti, in una griglia"
+
+msgid "Only the latest"
+msgstr "Solo l'ultimo"
+
+msgid "Customize your experience"
+msgstr "Personalizza la tua esperienza"
+
+msgid "Turn off what you don't need. Nothing is deleted, and you can change this any time from the ☰ menu."
+msgstr "Spegni quello che non ti serve. Non viene cancellato niente, e puoi cambiarlo quando vuoi dal menu ☰."
+
+msgid "Done"
+msgstr "Fatto"
+
+msgid "Turn off what you don't need. Nothing is deleted, and you can change it later from the ☰ menu."
+msgstr "Spegni quello che non ti serve. Non viene cancellato niente, e puoi cambiarlo più tardi dal menu ☰."
+
+msgid "Customize your experience…"
+msgstr "Personalizza la tua esperienza…"
+
+msgid "Customize your experience (☰ menu, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest."
+msgstr "Personalizza la tua esperienza (menu ☰, la guida, e una volta dopo l'aggiornamento): spegni Sogni o Farmaci, e scegli se i giorni con più umori li mostrano tutti in una griglia o solo l'ultimo."
+
+msgid "Customize your experience (Settings, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest."
+msgstr "Personalizza la tua esperienza (Impostazioni, la guida, e una volta dopo l'aggiornamento): spegni Sogni o Farmaci, e scegli se i giorni con più umori li mostrano tutti in una griglia o solo l'ultimo."
+
+msgid "Customize your experience (Settings, the tour, and once after updating): turn off Dreams, and choose whether days with several moods show all of them in a grid or only the latest."
+msgstr "Personalizza la tua esperienza (Impostazioni, la guida, e una volta dopo l'aggiornamento): spegni Sogni, e scegli se i giorni con più umori li mostrano tutti in una griglia o solo l'ultimo."
+
+msgid "Private: only counted in the doctor report, never its text"
+msgstr "Privato: nel resoconto per il medico viene solo contato, mai il testo"
+
+msgid "Private notes and dreams"
+msgstr "Note e sogni privati"
+
+msgid "A Private tick on each note and dream: private notes never go in the doctor report, and private dreams are only counted."
+msgstr "Una spunta Privato su ogni nota e sogno: le note private non finiscono mai nel resoconto per il medico, e i sogni privati vengono solo contati."
+
+msgid "New ones start private"
+msgstr "I nuovi partono privati"
+
+msgid "Every new note and dream is ticked private. You can still untick it."
+msgstr "Ogni nuova nota e sogno è già spuntato come privato. Puoi sempre togliere la spunta."
+
+msgid "Private"
+msgstr "Privata"
+
+msgid "Never in the doctor report"
+msgstr "Mai nel resoconto per il medico"
+
+msgid "Private: never in the doctor report"
+msgstr "Privata: mai nel resoconto per il medico"
+
+msgid "Private notes and dreams: tick Private on a note and it never goes in the doctor report; a private dream is only counted there, never shown. In Customize you can hide the tick, or make new ones start private."
+msgstr "Note e sogni privati: spunta Privata su una nota e non finirà mai nel resoconto per il medico; un sogno privato lì viene solo contato, mai mostrato. In Personalizza puoi nascondere la spunta, o far partire privati i nuovi."
+
+msgid "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android."
+msgstr "Note e sogni privati: una nota privata non finisce mai nel resoconto per il medico, e un sogno privato lì viene solo contato. Si sincronizzano con il PC e Android."
+
+msgid "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and iPhone."
+msgstr "Note e sogni privati: una nota privata non finisce mai nel resoconto per il medico, e un sogno privato lì viene solo contato. Si sincronizzano con il PC e l'iPhone."

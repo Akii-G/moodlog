@@ -23,10 +23,11 @@ data class Entry(
     val anxiety: Int,      // 1-5, 0 = not given
     val note: String,
     val updated: String,   // UTC change time, e.g. 2026-11-19T05:20:31.123Z
+    val private: Boolean = false,   // never in the doctor report
 ) {
     fun json(): JSONObject = JSONObject().put("id", id).put("date", date).put("time", time)
         .put("mood", mood).put("energy", energy).put("anxiety", anxiety).put("note", note)
-        .put("updated", updated)
+        .put("updated", updated).also { if (private) it.put("private", true) }
 
     fun sameContent(o: Entry) = date == o.date && time == o.time && mood == o.mood &&
         energy == o.energy && anxiety == o.anxiety && note == o.note
@@ -34,7 +35,7 @@ data class Entry(
     companion object {
         fun from(o: JSONObject) = Entry(o.getString("id"), o.getString("date"), o.optString("time"),
             o.optInt("mood"), o.optInt("energy"), o.optInt("anxiety"), o.optString("note"),
-            o.optString("updated"))
+            o.optString("updated"), o.optBoolean("private", false))
     }
 }
 
@@ -65,6 +66,7 @@ data class Dream(
     val tags: List<String>, // nightmare, vivid, recurring, lucid, forgotten
     val text: String,
     val updated: String,
+    val private: Boolean = false,   // counted in the doctor report, its text never shown
 ) {
     val isNightmare get() = "nightmare" in tags || feeling == "disturbing"
 
@@ -80,6 +82,7 @@ data class Dream(
 
     fun json(): JSONObject = JSONObject().put("id", id).put("date", date).put("feeling", feeling)
         .put("tags", JSONArray(tags)).put("text", text).put("updated", updated)
+        .also { if (private) it.put("private", true) }
 
     fun sameContent(o: Dream) = date == o.date && feeling == o.feeling && tags == o.tags && text == o.text
 
@@ -87,7 +90,8 @@ data class Dream(
         fun from(o: JSONObject): Dream {
             val arr = o.optJSONArray("tags") ?: JSONArray()
             return Dream(o.getString("id"), o.getString("date"), o.optString("feeling"),
-                (0 until arr.length()).map { arr.getString(it) }, o.optString("text"), o.optString("updated"))
+                (0 until arr.length()).map { arr.getString(it) }, o.optString("text"), o.optString("updated"),
+                o.optBoolean("private", false))
         }
     }
 }

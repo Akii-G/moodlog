@@ -338,10 +338,10 @@ class Report(
         if (!dreamText) return
         for (d in ds) {
             val line = listOf(Day.pretty(d.date, "d MMM yyyy"), d.details).filter { it.isNotEmpty() }.joinToString(" · ")
-            val h = measure(line, 8f, W - 2 * M, true) + (if (d.text.isNotEmpty()) measure(d.text, 8.5f, W - 2 * M) else 0f) + 6f
+            val h = measure(line, 8f, W - 2 * M, true) + (if (d.text.isNotEmpty() && !d.private) measure(d.text, 8.5f, W - 2 * M) else 0f) + 6f
             ensure(h)
             y += text(line, M, y, 8f, muted, bold = true)
-            if (d.text.isNotEmpty()) y += text(d.text, M, y, 8.5f, ink)
+            if (d.text.isNotEmpty() && !d.private) y += text(d.text, M, y, 8.5f, ink)   // private: counted only
             y += 6f
         }
     }
@@ -366,7 +366,7 @@ class Report(
             val hasDream = includeDreams && store.dreamsOn(d).isNotEmpty()
             if (es.isEmpty() && store.eventsOn(d).isEmpty() && !hasDream && sleep[d] == null) continue
             val moodText = es.filter { it.mood > 0 }.joinToString(", ") { Mood.name(it.mood) }.ifEmpty { "–" }
-            val notes = if (includeNotes) es.mapNotNull { e -> e.note.takeIf { it.isNotEmpty() }?.let { (if (e.time.isNotEmpty()) e.time + " " else "") + it } }
+            val notes = if (includeNotes) es.filter { !it.private }.mapNotNull { e -> e.note.takeIf { it.isNotEmpty() }?.let { (if (e.time.isNotEmpty()) e.time + " " else "") + it } }
                 .joinToString("\n") else ""
             val cells = mutableListOf(Day.pretty(d, "EEE d MMM"), moodText,
                 es.map { it.energy }.filter { it > 0 }.takeIf { it.isNotEmpty() }?.average()?.let { one(it) } ?: "",

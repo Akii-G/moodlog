@@ -4,6 +4,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.9.0 (2026-11-21)
+
+- Private notes and dreams: tick Private on a note and it never goes in the doctor report; a private dream is only counted there, never shown. In Customize you can hide the tick, or make new ones start private.
+- Customize your experience (☰ menu, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest.
+
 ### 2.8.1 (2026-11-21)
 
 - Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken or Skipped.
@@ -127,6 +132,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.7.0 (2026-11-21)
+
+- Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android.
+- Customize your experience (Settings, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest.
+
 ### 1.6.7 (2026-11-21)
 
 - Backup: the screen for saving or restoring the backup file now always has its Save button.
@@ -197,6 +207,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.
 
 ## Moodlog for Android
+
+### 1.3.0 (2026-11-21)
+
+- Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and iPhone.
+- Customize your experience (Settings, the tour, and once after updating): turn off Dreams, and choose whether days with several moods show all of them in a grid or only the latest.
 
 ### 1.2.0 (2026-11-20)
 

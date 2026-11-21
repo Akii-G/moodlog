@@ -73,6 +73,24 @@ class Prefs(context: Context) {
         get() = p.getString("kindDismissed", "") ?: ""
         set(v) = p.edit().putString("kindDismissed", v).apply()
 
+    // Customize your experience
+    var showDreams: Boolean
+        get() = p.getBoolean("showDreams", true)
+        set(v) = p.edit().putBoolean("showDreams", v).apply()
+    /** Days with several moods: "grid" shows them all, "latest" only the last one. */
+    var several: String
+        get() = p.getString("severalMoods", "grid") ?: "grid"
+        set(v) = p.edit().putString("severalMoods", v).apply()
+    var privateTick: Boolean
+        get() = p.getBoolean("privateTick", true)
+        set(v) = p.edit().putBoolean("privateTick", v).apply()
+    var privateDefault: Boolean
+        get() = p.getBoolean("privateDefault", false)
+        set(v) = p.edit().putBoolean("privateDefault", v).apply()
+    var customizeSeen: Boolean
+        get() = p.getBoolean("customizeSeen", false)
+        set(v) = p.edit().putBoolean("customizeSeen", v).apply()
+
     /** The version whose "What's new" was last shown. */
     var lastSeenVersion: String
         get() = p.getString("lastSeenVersion", "") ?: ""

@@ -77,6 +77,13 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
+                    CustomizeOptions()
+                } header: {
+                    Text("Customize your experience")
+                } footer: {
+                    Text("Turn off what you don't need. Nothing is deleted.")
+                }
+                Section {
                     TextField("Address, e.g. http://pop-os.local:8765", text: $server)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)

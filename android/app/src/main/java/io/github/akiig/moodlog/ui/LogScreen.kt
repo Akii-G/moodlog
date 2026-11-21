@@ -202,13 +202,16 @@ private fun Summary(store: AppStore, month: LocalDate) {
  */
 @Composable
 fun DayCell(store: AppStore, day: String, onClick: () -> Unit) {
-    val moods = store.moodsOn(day)
+    val app = LocalApp.current
+    val all = store.moodsOn(day)
+    val latestOnly = app.several == "latest" && all.size > 1
+    val moods = if (latestOnly) listOf(all.last()) else all
     val isToday = day == Day.today
     val future = day > Day.today
     val shape = RoundedCornerShape(12.dp)
     val single = moods.size == 1
-    val description = if (moods.isEmpty()) tr("%@, nothing logged", Day.pretty(day))
-                      else Day.pretty(day) + ", " + moods.joinToString(", ") { Mood.name(it) }
+    val description = if (all.isEmpty()) tr("%@, nothing logged", Day.pretty(day))
+                      else Day.pretty(day) + ", " + all.joinToString(", ") { Mood.name(it) }
     val ink = if (single) Palette.faceInk(moods[0]) else MaterialTheme.colorScheme.onSurface
     val fixed = Density(LocalDensity.current.density, 1f)
     Column(
@@ -230,7 +233,9 @@ fun DayCell(store: AppStore, day: String, onClick: () -> Unit) {
                     modifier = Modifier.alpha(if (future) 0.35f else 0.9f))
                 Spacer(Modifier.weight(1f))
                 if (store.eventsOn(day).isNotEmpty()) Icon(Icons.Filled.Flag, null, Modifier.size(9.dp), tint = ink)
-                if (store.dreamsOn(day).isNotEmpty()) Icon(Icons.Filled.Bedtime, null, Modifier.size(9.dp), tint = ink)
+                if (app.showDreams && store.dreamsOn(day).isNotEmpty()) Icon(Icons.Filled.Bedtime, null, Modifier.size(9.dp), tint = ink)
+                if (latestOnly) Text("×" + all.size, fontSize = 9.sp, color = ink, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, modifier = Modifier.alpha(0.8f))
             }
         }
         Box(Modifier.fillMaxWidth().weight(1f)) {

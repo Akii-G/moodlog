@@ -73,7 +73,12 @@ struct DreamRow: View {
                         .filter { !$0.isEmpty }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary)
                 if !dream.text.isEmpty {
-                    Text(dream.text).lineLimit(4)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        if dream.hidden && Prefs.privateTick {
+                            Image(systemName: "lock.fill").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Text(dream.text).lineLimit(4)
+                    }
                 }
             }
             Spacer(minLength: 0)
@@ -92,6 +97,8 @@ struct DreamEditor: View {
     @State private var feeling: String
     @State private var tags: Set<String>
     @State private var text: String
+    @State private var isPrivate: Bool
+    @AppStorage("privateTick") private var privateTick = true
 
     init(original: Dream?, day: String) {
         self.original = original
@@ -99,6 +106,7 @@ struct DreamEditor: View {
         _feeling = State(initialValue: original?.feeling ?? "")
         _tags = State(initialValue: Set(original?.tags ?? []))
         _text = State(initialValue: original?.text ?? "")
+        _isPrivate = State(initialValue: original.map { $0.hidden } ?? (Prefs.privateTick && Prefs.privateDefault))
     }
 
     private var isEmpty: Bool {
@@ -117,9 +125,16 @@ struct DreamEditor: View {
                         }
                     }
                 }
-                Section("What did you dream?") {
+                Section {
                     TextField("A few words, or as much as you remember", text: $text, axis: .vertical)
                         .lineLimit(4...16)
+                    if privateTick {
+                        Toggle(isOn: $isPrivate) { Label("Private dream", systemImage: "lock.fill") }
+                    }
+                } header: {
+                    Text("What did you dream?")
+                } footer: {
+                    if privateTick { Text("A private dream is only counted in the doctor report; what it was about is never shown.") }
                 }
                 Section {
                     ForEach(DreamTag.allCases) { tag in
@@ -163,9 +178,11 @@ struct DreamEditor: View {
             dream.feeling = feeling
             dream.tags = ordered
             dream.text = clean
+            if privateTick { dream.isPrivate = isPrivate ? true : nil }
             store.update(dream)
         } else {
-            store.addDream(date: Day.string(date), feeling: feeling, tags: ordered, text: clean)
+            store.addDream(date: Day.string(date), feeling: feeling, tags: ordered, text: clean,
+                           isPrivate: privateTick && isPrivate)
         }
         dismiss()
     }

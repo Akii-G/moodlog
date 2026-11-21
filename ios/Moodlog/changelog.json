@@ -1,5 +1,19 @@
 [
  {
+  "version": "1.7.0",
+  "date": "2026-11-21",
+  "items": {
+   "en": [
+    "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android.",
+    "Customize your experience (Settings, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest."
+   ],
+   "it": [
+    "Note e sogni privati: una nota privata non finisce mai nel resoconto per il medico, e un sogno privato lì viene solo contato. Si sincronizzano con il PC e Android.",
+    "Personalizza la tua esperienza (Impostazioni, la guida, e una volta dopo l'aggiornamento): spegni Sogni o Farmaci, e scegli se i giorni con più umori li mostrano tutti in una griglia o solo l'ultimo."
+   ]
+  }
+ },
+ {
   "version": "1.6.7",
   "date": "2026-11-21",
   "items": {

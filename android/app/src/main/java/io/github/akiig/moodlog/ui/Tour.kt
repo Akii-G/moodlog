@@ -88,10 +88,16 @@ fun Modifier.tourTarget(name: String, tour: TourState) =
     onGloballyPositioned { tour.frames[name] = it.boundsInRoot() }
 
 data class TourStep(val tab: Int?, val target: String?, val pointsAtTabs: Boolean,
-                    val title: String, val text: String)
+                    val title: String, val text: String, val customize: Boolean = false)
 
 object Tour {
+    /** Dreams turned off: no Dreams step. */
+    var showDreams = true
+
     val steps: List<TourStep>
+        get() = all.filter { showDreams || it.tab != 2 }
+
+    private val all: List<TourStep>
         get() = listOf(
             TourStep(0, null, false, tr("Welcome to Moodlog"),
                 tr("Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you.")),
@@ -107,6 +113,9 @@ object Tour {
                 tr("Started a new medication, or something big happened? Add it here, and Moodlog shows how you felt in the two weeks before and after.")),
             TourStep(4, null, true, tr("Your PC and Health Connect"),
                 tr("Here you can connect to Moodlog on your PC and send sleep and steps from Health Connect. All optional: the app works on its own too. You can watch this tour again from here.")),
+            TourStep(0, null, false, tr("Customize your experience"),
+                tr("Turn off what you don't need. Nothing is deleted, and you can change this any time in Settings."),
+                customize = true),
             TourStep(0, null, false, tr("That's all, really"),
                 tr("Everything stays on your phone, private. Log a mood whenever you feel like it; even once a day is plenty. You've got this.")),
         )
@@ -130,7 +139,9 @@ fun TourOverlay(tour: TourState, onTab: (Int) -> Unit, onFinish: () -> Unit) {
         val hole = step.target?.let { tour.frames[it] }?.inflate(with(density) { 6.dp.toPx() }) ?: Rect.Zero
         val showScreen = step.pointsAtTabs && step.target == null && index > 1
         val dim by animateFloatAsState(if (showScreen) 0.18f else 0.6f, label = "dim")
-        val tabX = ((step.tab ?: 0) + 0.5f) * w / 5
+        val tabCount = if (Tour.showDreams) 5 else 4
+        val tabIndex = (step.tab ?: 0).let { if (!Tour.showDreams && it > 2) it - 1 else it }
+        val tabX = (tabIndex + 0.5f) * w / tabCount
         var cardHeight by remember { mutableStateOf(0) }
         val centred = step.target == null && !step.pointsAtTabs
         val margin = with(density) { 16.dp.toPx() }
@@ -174,11 +185,12 @@ fun TourOverlay(tour: TourState, onTab: (Int) -> Unit, onFinish: () -> Unit) {
                 shadowElevation = 12.dp,
             ) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (s.target == null && !s.pointsAtTabs) {
+                    if (s.target == null && !s.pointsAtTabs && !s.customize) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TourFace() }
                     }
                     Text(s.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text(s.text, style = MaterialTheme.typography.bodyMedium)
+                    if (s.customize) Column { CustomizeOptions() }
                     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         for (d in steps.indices) {
                             Box(Modifier.size(6.dp).clip(CircleShape).background(

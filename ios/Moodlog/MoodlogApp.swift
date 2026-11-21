@@ -86,6 +86,9 @@ struct ContentView: View {
     @AppStorage("lastSeenVersion") private var lastSeenVersion = ""
     @State private var tab = 0
     @State private var whatsNew: WhatsNewItem?
+    @State private var customizing = false
+    @AppStorage("customizeSeen") private var customizeSeen = false
+    @AppStorage("showDreams") private var showDreams = true
 
     var body: some View {
         TabView(selection: $tab) {
@@ -95,9 +98,11 @@ struct ContentView: View {
             ChartsView()
                 .tabItem { Label("Charts", systemImage: "chart.xyaxis.line") }
                 .tag(1)
-            DreamsView()
-                .tabItem { Label("Dreams", systemImage: "moon.stars") }
-                .tag(2)
+            if showDreams {
+                DreamsView()
+                    .tabItem { Label("Dreams", systemImage: "moon.stars") }
+                    .tag(2)
+            }
             EventsView()
                 .tabItem { Label("Events", systemImage: "flag") }
                 .tag(3)
@@ -110,6 +115,7 @@ struct ContentView: View {
                 TourOverlay(tour: tour, tab: $tab) {
                     withAnimation(.easeOut(duration: 0.25)) { tour.step = nil }
                     tourDone = true
+                    customizeSeen = true
                     tab = 0
                 }
                 .transition(.opacity)
@@ -128,9 +134,17 @@ struct ContentView: View {
                 tour.start()
             } else if let since, !launch.openToday {
                 whatsNew = WhatsNewItem(since: since)
+            } else if !customizeSeen && !launch.openToday {
+                customizeSeen = true
+                customizing = true
             }
         }
-        .sheet(item: $whatsNew) { item in WhatsNewView(since: item.since) }
+        .onChange(of: showDreams) { _, on in if !on && tab == 2 { tab = 0 } }
+        .sheet(item: $whatsNew, onDismiss: {
+            // after an update: "Customize your experience" once, right after What's new
+            if !customizeSeen { customizeSeen = true; customizing = true }
+        }) { item in WhatsNewView(since: item.since) }
+        .sheet(isPresented: $customizing) { CustomizeSheet() }
     }
 }
 

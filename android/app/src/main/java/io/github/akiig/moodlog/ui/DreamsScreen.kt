@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material3.Icon
@@ -98,7 +99,11 @@ fun DreamRow(dream: Dream, onClick: () -> Unit) {
             Text(listOf(Day.pretty(dream.date, "EEEE d MMMM yyyy"), dream.details).filter { it.isNotEmpty() }
                 .joinToString(" · "), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (dream.text.isNotEmpty()) Text(dream.text, maxLines = 4, style = MaterialTheme.typography.bodyLarge)
+            if (dream.text.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (dream.private && LocalApp.current.privateTick) Icon(Icons.Filled.Lock, tr("Private dream"),
+                    Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(dream.text, maxLines = 4, style = MaterialTheme.typography.bodyLarge)
+            }
         }
     }
 }
@@ -110,14 +115,17 @@ fun DreamEditor(original: Dream?, day: String, onClose: () -> Unit) {
     var feeling by remember { mutableStateOf(original?.feeling ?: "") }
     var tags by remember { mutableStateOf(original?.tags?.toSet() ?: emptySet()) }
     var text by remember { mutableStateOf(original?.text ?: "") }
+    val app = LocalApp.current
+    var private by remember { mutableStateOf(original?.private ?: (app.privateTick && app.privateDefault)) }
     var pickDate by remember { mutableStateOf(false) }
     val empty = feeling.isEmpty() && tags.isEmpty() && text.isBlank()
 
     EditorDialog(tr(if (original == null) "Add a dream" else "Edit dream"), !empty, onClose, onSave = {
         val ordered = DreamTag.entries.map { it.raw }.filter { it in tags }
         val clean = text.trim()
-        if (original != null) store.update(original.copy(date = date, feeling = feeling, tags = ordered, text = clean))
-        else store.addDream(date, feeling, ordered, clean)
+        val keep = if (app.privateTick) private else (original?.private ?: false)
+        if (original != null) store.update(original.copy(date = date, feeling = feeling, tags = ordered, text = clean, private = keep))
+        else store.addDream(date, feeling, ordered, clean, keep)
         onClose()
     }) {
         Section {
@@ -128,9 +136,13 @@ fun DreamEditor(original: Dream?, day: String, onClose: () -> Unit) {
                 Segmented(listOf("" to "–") + DreamFeeling.entries.map { it.raw to it.label }, feeling) { feeling = it }
             }
         }
-        Section(tr("What did you dream?")) {
+        Section(tr("What did you dream?"), footer = if (app.privateTick) tr("A private dream is only counted in the doctor report; what it was about is never shown.") else null) {
             FieldRow("", text, { text = it }, tr("A few words, or as much as you remember"), minLines = 5,
                 keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
+            if (app.privateTick) {
+                Line()
+                SwitchRow(tr("Private dream"), private) { private = it }
+            }
         }
         Section(footer = tr("Didn't remember a dream? Turn that on: it counts too.")) {
             DreamTag.entries.forEachIndexed { i, t ->

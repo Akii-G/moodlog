@@ -221,6 +221,10 @@ fun SettingsScreen(onPrivacy: () -> Unit, onWhatsNew: () -> Unit = {}) {
                 }
             }
 
+            Section(tr("Customize your experience"), footer = tr("Turn off what you don't need. Nothing is deleted.")) {
+                CustomizeOptions()
+            }
+
             Section(footer = tr("After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time.")) {
                 SwitchRow(tr("A kind word on hard days"), kindWord) { kindWord = it; prefs.kindWord = it }
             }

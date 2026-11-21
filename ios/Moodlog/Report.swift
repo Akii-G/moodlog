@@ -346,9 +346,9 @@ final class Report {
         guard dreamText else { return }
         for d in ds {
             let head = [Day.pretty(d.date, style: "d MMM yyyy"), d.details].filter { !$0.isEmpty }.joined(separator: " · ")
-            ensure(measure(head, 8, W - 2 * M, bold: true) + (d.text.isEmpty ? 0 : measure(d.text, 8.5, W - 2 * M)) + 6)
+            ensure(measure(head, 8, W - 2 * M, bold: true) + (d.text.isEmpty || d.hidden ? 0 : measure(d.text, 8.5, W - 2 * M)) + 6)
             y += text(head, M, y, 8, muted, bold: true)
-            if !d.text.isEmpty { y += text(d.text, M, y, 8.5, ink) }
+            if !d.text.isEmpty && !d.hidden { y += text(d.text, M, y, 8.5, ink) }   // private: counted only
             y += 6
         }
     }
@@ -380,7 +380,7 @@ final class Report {
             cells.append(store.events(on: d).isEmpty ? "" : "●")
             if includeDreams { cells.append(hasDream ? (store.dreams(on: d).contains { $0.isNightmare } ? tr("bad") : "●") : "") }
             if includeNotes {
-                cells.append(es.filter { !$0.note.isEmpty }.map { ($0.time.isEmpty ? "" : $0.time + " ") + $0.note }.joined(separator: "\n"))
+                cells.append(es.filter { !$0.note.isEmpty && !$0.hidden }.map { ($0.time.isEmpty ? "" : $0.time + " ") + $0.note }.joined(separator: "\n"))
             }
             let rowH = max(cols.indices.map { measure(cells[$0], 8, cols[$0].1 - 4) }.max() ?? 10, 10) + 4
             if y + rowH > Report.H - 48 { newPage(); head() }
