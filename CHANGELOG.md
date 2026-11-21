@@ -6,7 +6,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.8.1 (2026-11-21)
 
-- Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken, Skipped or Not taken yet.
+- Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken or Skipped.
 
 ### 2.8.0 (2026-11-20)
 
@@ -127,9 +127,13 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.6.6 (2026-11-21)
+
+- Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance.
+
 ### 1.6.5 (2026-11-21)
 
-- Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too).
+- Medication: each day lists the doses with a pill in the colour of their status, the time and the amount.
 
 ### 1.6.4 (2026-11-20)
 

@@ -304,9 +304,10 @@
 "Reading Health…" = "Lettura di Salute…";
 "Health gives the names of all your medications: nothing to name here." = "Salute dà i nomi di tutti i tuoi farmaci: qui non c'è niente da nominare.";
 "The backup was saved, but Moodlog can't update it there (%@). Try another place, for example iCloud Drive." = "Il backup è stato salvato, ma Moodlog non può aggiornarlo lì (%@). Prova un altro posto, per esempio iCloud Drive.";
-"Couldn't write the backup (%@). Choose the file again." = "Non è stato possibile scrivere il backup (%@). Scegli di nuovo il file.";
 "Health doesn't tell Moodlog the names of these medications. Open Health → Medications: the groups below are in the same order as its medication log. Type each name once." = "Salute non dice a Moodlog i nomi di questi farmaci. Apri Salute → Farmaci: i gruppi qui sotto sono nello stesso ordine del suo registro farmaci. Scrivi ogni nome una volta sola.";
 "Taken as needed" = "Farmaci assunti al bisogno";
 "No doses in the last 90 days" = "Nessuna dose negli ultimi 90 giorni";
 "Not taken yet" = "Non ancora presa";
 "Not logged" = "Non registrata";
+"Moodlog can't reach the backup file any more (%@). Tap Choose another file… and save it again." = "Moodlog non riesce più a raggiungere il file di backup (%@). Tocca Scegli un altro file… e salvalo di nuovo.";
+"Moodlog can't reach the backup file any more. Tap Choose another file… and save it again." = "Moodlog non riesce più a raggiungere il file di backup. Tocca Scegli un altro file… e salvalo di nuovo.";

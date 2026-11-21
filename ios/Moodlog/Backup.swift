@@ -70,14 +70,31 @@ enum Backup {
     /// Where the file is, e.g. "Moodlog backup › moodlog-backup.json"; nil when none was chosen.
     static var placeName: String? { UserDefaults.standard.string(forKey: "backupFileName") }
 
+    /// Why the saved file can't be reached, when it can't (shown in Settings).
+    nonisolated(unsafe) static var problem: String?
+
     private static func file() -> URL? {
         if let picked { return picked }
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        guard let data = UserDefaults.standard.data(forKey: key) else {
+            problem = tr("No backup file chosen.")
+            return nil
+        }
         var stale = false
-        guard let url = try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale) else { return nil }
-        if stale { try? remember(file: url) }
-        return url
+        do {
+            let url = try URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
+            if stale { try? remember(file: url) }
+            picked = url
+            problem = nil
+            return url
+        } catch {
+            problem = error.localizedDescription
+            return nil
+        }
     }
+
+    /// True when a file was chosen but Moodlog can no longer reach it (for example after
+    /// installing a new version with a sideloading app, which can change how iOS sees the app).
+    static var lostFile: Bool { placeName != nil && file() == nil }
 
     /// Writes the backup over the saved file; true if it worked.
     @MainActor
@@ -89,7 +106,10 @@ enum Backup {
     /// not create new ones next to it, which is what an "atomic" save would need.
     @MainActor
     static func writeError(_ store: AppStore) -> String? {
-        guard let url = file() else { return tr("No backup file chosen.") }
+        guard let url = file() else {
+            return tr("Moodlog can't reach the backup file any more (%@). Tap Choose another file… and save it again.",
+                      problem ?? tr("No backup file chosen."))
+        }
         let data: Data
         do { data = try content(store) } catch { return error.localizedDescription }
         let ok = url.startAccessingSecurityScopedResource()

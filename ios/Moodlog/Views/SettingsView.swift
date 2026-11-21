@@ -193,10 +193,15 @@ struct SettingsView: View {
 
                 Section {
                     if let place = backupPlace {
+                        if Backup.lostFile {
+                            Label(tr("Moodlog can't reach the backup file any more. Tap Choose another file… and save it again."),
+                                  systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
                         LabeledContent("File", value: place)
                         LabeledContent("Last backup", value: lastBackup.isEmpty ? tr("not yet") : lastBackup)
                         Button("Back up now") {
-                            backupMessage = Backup.writeError(store).map { tr("Couldn't write the backup (%@). Choose the file again.", $0) } ?? tr("Backup saved in %@.", place)
+                            backupMessage = Backup.writeError(store) ?? tr("Backup saved in %@.", place)
                             lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? lastBackup
                         }
                         Button("Choose another file…") { chooseFile() }

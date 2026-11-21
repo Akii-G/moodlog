@@ -2040,3 +2040,12 @@ msgstr "Farmaci: un pulsante Farmaci in ogni giorno apre l'elenco delle dosi di 
 
 msgid "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too)."
 msgstr "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità, e mostra anche le dosi non ancora prese (arrivano anche al PC)."
+
+msgid "Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken or Skipped."
+msgstr "Farmaci: un pulsante Farmaci in ogni giorno apre l'elenco delle dosi di quel giorno, ognuna con una pillola del colore del suo stato, l'orario, la quantità e Presa o Saltata."
+
+msgid "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount."
+msgstr "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità."
+
+msgid "Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
+msgstr "Backup: le Impostazioni avvisano quando Moodlog non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."

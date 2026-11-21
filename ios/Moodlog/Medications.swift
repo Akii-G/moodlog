@@ -1,7 +1,7 @@
 import Foundation
 import HealthKit
 
-/// One dose in the Health app: "taken", "skipped", or "pending" (scheduled, not answered yet).
+/// One dose logged in the Health app: "taken" or "skipped".
 struct DoseRecord: Hashable, Identifiable {
     let id: String
     let name: String
@@ -90,7 +90,7 @@ enum Medications {
             switch event.logStatus {
             case .taken: status = "taken"
             case .skipped: status = "skipped"
-            default: status = "pending"   // not answered yet, snoozed, or the reminder didn't go out
+            default: return nil   // not answered: Health doesn't list future doses, so these aren't shown
             }
             let amount: Double? = event.doseQuantity
             return DoseRecord(id: event.uuid.uuidString, name: names(event.medicationConceptIdentifier), time: event.startDate,

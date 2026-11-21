@@ -1,13 +1,25 @@
 [
  {
+  "version": "1.6.6",
+  "date": "2026-11-21",
+  "items": {
+   "en": [
+    "Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
+   ],
+   "it": [
+    "Backup: le Impostazioni avvisano quando Moodlog non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."
+   ]
+  }
+ },
+ {
   "version": "1.6.5",
   "date": "2026-11-21",
   "items": {
    "en": [
-    "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too)."
+    "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount."
    ],
    "it": [
-    "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità, e mostra anche le dosi non ancora prese (arrivano anche al PC)."
+    "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità."
    ]
   }
  },
