@@ -8890,6 +8890,44 @@ class App(Adw.Application):
         win.present()
 
 
+def diag(path):
+    """`moodlog --diag FILE`: starts GTK step by step and writes each step to FILE, to see
+    where a crash happens on a new system."""
+    out = open(path, "w")
+
+    def step(text):
+        out.write(text + "\n")
+        out.flush()
+        os.fsync(out.fileno())
+    for key in ("GTK_DATA_PREFIX", "GTK_EXE_PREFIX", "GDK_PIXBUF_MODULE_FILE", "GI_TYPELIB_PATH",
+                "XDG_DATA_DIRS", "GSETTINGS_SCHEMA_DIR", "GSK_RENDERER", "GIO_MODULE_DIR"):
+        step("%s=%s" % (key, os.environ.get(key)))
+    step("gtk init")
+    Gtk.init()
+    step("display %s" % Gdk.Display.get_default())
+    step("adw init")
+    Adw.init()
+    step("style manager %s" % Adw.StyleManager.get_default().get_dark())
+    step("icon theme")
+    theme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default())
+    step("has edit-copy-symbolic: %s" % theme.has_icon("edit-copy-symbolic"))
+    step("window")
+    win = Gtk.Window(title="diag")
+    win.set_child(Gtk.Label(label="Moodlog"))
+    step("present")
+    win.present()
+    loop = GLib.MainLoop()
+    GLib.timeout_add(1500, loop.quit)
+    step("loop")
+    loop.run()
+    step("adw application")
+    app = Adw.Application(application_id=APP_ID + ".Diag")
+    app.connect("activate", lambda a: (step("activated"), a.quit()))
+    app.run([])
+    step("done")
+    return 0
+
+
 def main(argv):
     if sys.stdout is None or sys.stderr is None:
         # the Windows .exe has no console: messages go to a small log, for bug reports
@@ -8916,6 +8954,8 @@ def main(argv):
         _trace_file = open(os.environ["MOODLOG_TRACE"], "w")
         faulthandler.enable(_trace_file, all_threads=True)
         faulthandler.dump_traceback_later(0.5, repeat=True, file=_trace_file)
+    if "--diag" in argv:
+        return diag(argv[argv.index("--diag") + 1])
     if "--version" in argv:
         print("Moodlog", VERSION)
         return 0
