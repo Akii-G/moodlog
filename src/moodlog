@@ -8902,10 +8902,12 @@ def main(argv):
             log = open(os.devnull, "w")
         sys.stdout = sys.stdout or log
         sys.stderr = sys.stderr or log
+
+    if IS_WINDOWS:
         try:
             import faulthandler
-            faulthandler.enable(log)     # a crash leaves its Python stack in the log
-        except (ValueError, OSError, RuntimeError):
+            faulthandler.enable(sys.stderr)     # a crash leaves its Python stack in the log
+        except (ValueError, OSError, RuntimeError, AttributeError):
             pass
     if "--version" in argv:
         print("Moodlog", VERSION)

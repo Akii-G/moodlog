@@ -45,6 +45,18 @@ jobs:
             echo "== $t"; python "$t"
           done
 
+      - name: Try the app from source (before bundling)
+        env:
+          MOODLOG_NO_WHATS_NEW: "1"
+          PYTHONFAULTHANDLER: "1"
+        run: |
+          export MOODLOG_DATA_DIR=$(mktemp -d) MOODLOG_CONFIG_DIR=$(mktemp -d)
+          python src/moodlog > src-out.txt 2>&1 &
+          pid=$!
+          sleep 12
+          if kill -0 $pid 2>/dev/null; then echo "running from source: OK"; kill $pid; else echo "closed by itself"; fi
+          cat src-out.txt
+
       - name: Bundle with PyInstaller
         run: |
           set -e
