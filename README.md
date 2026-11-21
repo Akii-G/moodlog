@@ -175,7 +175,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.8.0_all.deb
+    sudo apt install ./moodlog_2.8.1_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).

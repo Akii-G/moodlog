@@ -1,14 +1,32 @@
 import Foundation
 import HealthKit
 
-/// One dose logged in the Health app: taken or skipped (other answers aren't kept).
+/// One dose in the Health app: "taken", "skipped", or "pending" (scheduled, not answered yet).
 struct DoseRecord: Hashable, Identifiable {
     let id: String
     let name: String
     let time: Date
-    let taken: Bool
+    let status: String
     let amount: Double?
     let unit: String
+
+    var taken: Bool { status == "taken" }
+    var liquid: Bool { unit.lowercased().hasSuffix("ml") }
+
+    /// "× 1", "× 1 mL" ("" when Health has no amount).
+    var amountText: String {
+        guard let amount, amount > 0 else { return "" }
+        let number = amount == amount.rounded() ? String(Int(amount)) : String(format: "%g", amount)
+        return "× " + number + (["", "count", "1"].contains(unit) ? "" : " \(unit)")
+    }
+
+    var statusText: String {
+        switch status {
+        case "taken": return tr("Taken")
+        case "skipped": return tr("Skipped")
+        default: return day >= Day.today ? tr("Not taken yet") : tr("Not logged")
+        }
+    }
 
     var day: String { Day.string(time) }
     var clock: String { Day.timeString(time) }
@@ -68,15 +86,15 @@ enum Medications {
         let names = await nameLookup()
         let events = await doseEvents(from: start, to: end)
         return events.compactMap { event -> DoseRecord? in
-            let taken: Bool
+            let status: String
             switch event.logStatus {
-            case .taken: taken = true
-            case .skipped: taken = false
-            default: return nil
+            case .taken: status = "taken"
+            case .skipped: status = "skipped"
+            default: status = "pending"   // not answered yet, snoozed, or the reminder didn't go out
             }
             let amount: Double? = event.doseQuantity
             return DoseRecord(id: event.uuid.uuidString, name: names(event.medicationConceptIdentifier), time: event.startDate,
-                              taken: taken, amount: amount, unit: event.unit.unitString)
+                              status: status, amount: amount, unit: event.unit.unitString)
         }
         .sorted { $0.time < $1.time }
     }
@@ -104,7 +122,7 @@ enum Medications {
         }
         for d in doses {
             let amount = d.amount.map { String($0) } ?? ""
-            out.append("dose;\(iso.string(from: d.time));\(d.taken ? "taken" : "skipped");\(amount);\(clean(d.unit));\(clean(d.name))")
+            out.append("dose;\(iso.string(from: d.time));\(d.status);\(amount);\(clean(d.unit));\(clean(d.name))")
         }
         return (out, all)
     }
@@ -229,7 +247,8 @@ enum Medications {
             let last = mine.last.map { e -> DoseRecord in
                 let amount: Double? = e.doseQuantity
                 return DoseRecord(id: e.uuid.uuidString, name: tr("Medication %@", "\(i + 1)"), time: e.startDate,
-                                  taken: e.logStatus == .taken, amount: amount, unit: e.unit.unitString)
+                                  status: e.logStatus == .taken ? "taken" : (e.logStatus == .skipped ? "skipped" : "pending"),
+                                  amount: amount, unit: e.unit.unitString)
             }
             // The usual scheduled time, like the groups in Health's medication log.
             var times: [String: Int] = [:]

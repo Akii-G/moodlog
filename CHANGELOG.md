@@ -4,6 +4,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.8.1 (2026-11-21)
+
+- Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken, Skipped or Not taken yet.
+
 ### 2.8.0 (2026-11-20)
 
 - Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.
@@ -122,6 +126,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file.
 
 ## Moodlog for iPhone
+
+### 1.6.5 (2026-11-21)
+
+- Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too).
 
 ### 1.6.4 (2026-11-20)
 

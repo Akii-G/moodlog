@@ -1945,10 +1945,10 @@ msgid "As logged in Apple Health. Doses that were neither ticked as taken nor as
 msgstr "Come registrato in Salute di Apple. Le dosi non segnate né come prese né come saltate non sono contate."
 
 msgid "Taken"
-msgstr "Prese"
+msgstr "Presa"
 
 msgid "Skipped"
-msgstr "Saltate"
+msgstr "Saltata"
 
 msgid "First in period"
 msgstr "Prima nel periodo"
@@ -2002,3 +2002,41 @@ msgstr "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco 
 
 msgid "Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed."
 msgstr "Farmaci: Moodlog chiede i nomi a Salute in più modi, e se Salute non li dà comunque, la schermata dei nomi è organizzata come il registro farmaci di Salute: per orario, poi quelli al bisogno."
+
+msgid "Doses taken"
+msgstr "Prese"
+
+msgid "Doses skipped"
+msgstr "Saltate"
+
+msgid "Not taken yet"
+msgstr "Non ancora presa"
+
+msgid "Not logged"
+msgstr "Non registrata"
+
+msgid "%d taken"
+msgid_plural "%d taken"
+msgstr[0] "%d presa"
+msgstr[1] "%d prese"
+
+msgid "%d skipped"
+msgid_plural "%d skipped"
+msgstr[0] "%d saltata"
+msgstr[1] "%d saltate"
+
+msgid "%d not logged"
+msgid_plural "%d not logged"
+msgstr[0] "%d non registrata"
+msgstr[1] "%d non registrate"
+
+msgid "%d not taken yet"
+msgid_plural "%d not taken yet"
+msgstr[0] "%d da prendere"
+msgstr[1] "%d da prendere"
+
+msgid "Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken, Skipped or Not taken yet."
+msgstr "Farmaci: un pulsante Farmaci in ogni giorno apre l'elenco delle dosi di quel giorno, ognuna con una pillola del colore del suo stato, l'orario, la quantità e Presa, Saltata o Non ancora presa."
+
+msgid "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too)."
+msgstr "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità, e mostra anche le dosi non ancora prese (arrivano anche al PC)."

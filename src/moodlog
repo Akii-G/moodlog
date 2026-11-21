@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.8.0"
+VERSION = "2.8.1"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -1658,7 +1658,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         pdf.text(note, M, pdf.y, 8, ink["muted"], width=W - 2 * M)
         pdf.y += h + 8
         colx = [M, M + 210, M + 270, M + 330, M + 420]
-        heads = [tr("Medication"), tr("Taken"), tr("Skipped"), tr("First in period"),
+        heads = [tr("Medication"), tr("Doses taken"), tr("Doses skipped"), tr("First in period"),
                  tr("Last in period")]
 
         def med_head():
@@ -2264,7 +2264,7 @@ def parse_payload(body):
 
 # ----------------------------------------------------------------- medications (from Apple Health)
 
-DOSE_STATUSES = ("taken", "skipped")
+DOSE_STATUSES = ("taken", "skipped", "pending")   # pending: scheduled, not answered in Health
 
 
 class MedicationStore:
@@ -2336,6 +2336,8 @@ class MedicationStore:
         """[(name, taken, skipped, first day, last day)] for the doses in the period."""
         out = {}
         for day, _t, status, _a, _u, name in self.between(start, end):
+            if status == "pending":
+                continue
             row = out.setdefault(name, [0, 0, day, day])
             row[0 if status == "taken" else 1] += 1
             row[2], row[3] = min(row[2], day), max(row[3], day)
@@ -2349,6 +2351,60 @@ def dose_text(dose):
     if amount:
         what += " " + ("%g" % amount) + (" " + unit if unit and unit not in ("count", "1") else "")
     return ("%s %s" % (time, what)).strip()
+
+
+def dose_amount(dose):
+    """'× 1', '× 1 mL', or '' when Health has no amount."""
+    amount, unit = dose[3], dose[4]
+    if not amount:
+        return ""
+    return "× %g" % amount + (" " + unit if unit and unit not in ("count", "1") else "")
+
+
+def dose_status(dose, today=None):
+    status = dose[2]
+    if status == "taken":
+        return tr("Taken")
+    if status == "skipped":
+        return tr("Skipped")
+    return tr("Not taken yet") if dose[0] >= (today or dt.date.today()) else tr("Not logged")
+
+
+def draw_pill(cr, cx, cy, r, status, liquid=False):
+    """A small pill (or a drop, for liquids) in the colour of the dose's status."""
+    colour = {"taken": "#34c759", "skipped": "#8e8e93"}.get(status, "#ff9f0a")
+    cr.save()
+    cr.translate(cx, cy)
+    if liquid:
+        cr.move_to(0, -r)
+        cr.curve_to(r * 0.9, -r * 0.1, r * 0.75, r, 0, r)
+        cr.curve_to(-r * 0.75, r, -r * 0.9, -r * 0.1, 0, -r)
+        cr.close_path()
+        src(cr, colour)
+        cr.fill()
+    else:
+        cr.rotate(-math.pi / 4)
+        w, h = r * 0.62, r * 1.9
+        def capsule():
+            cr.new_path()
+            cr.arc(0, -h / 2 + w, w, math.pi, 0)
+            cr.arc(0, h / 2 - w, w, 0, math.pi)
+            cr.close_path()
+        capsule()
+        cr.save()
+        cr.clip()
+        src(cr, colour)
+        cr.rectangle(-w, -h / 2, 2 * w, h / 2)
+        cr.fill()
+        src(cr, colour, 0.35)
+        cr.rectangle(-w, 0, 2 * w, h / 2)
+        cr.fill()
+        cr.restore()
+        capsule()
+        src(cr, colour)
+        cr.set_line_width(max(1.0, r * 0.12))
+        cr.stroke()
+    cr.restore()
 
 
 def take_medication_lines(text):
@@ -3094,6 +3150,9 @@ frame { border-radius: 14px; }
 frame > border { border-radius: 14px; }
 popover > contents { border-radius: 18px; padding: 6px; }
 popover modelbutton { border-radius: 10px; min-height: 32px; }
+popover.medication-popover > contents { padding: 10px; }
+popover.medication-popover .boxed-list { border-radius: 16px; }
+popover.medication-popover .boxed-list > row { min-height: 52px; }
 switch { border-radius: 999px; }
 switch slider { border-radius: 999px; }
 checkbutton check { border-radius: 7px; }
@@ -3118,6 +3177,8 @@ windowcontrols > button:backdrop { background-color: rgba(128,128,128,0.35); }
 """
 
 _TAHOE_LIGHT = _TAHOE_COMMON + """
+.dose-taken { color: #248a3d; } .dose-pending { color: #c93400; }
+popover.medication-popover .boxed-list { background-color: rgba(255,255,255,0.55); border: 1px solid rgba(0,0,0,0.06); }
 label, entry, text, textview { color: #1d1d1f; }
 .dim-label, label.dim-label { color: rgba(60,60,67,0.62); }
 window.background {
@@ -3174,6 +3235,8 @@ switch:checked { background-color: #34c759; }
 """
 
 _TAHOE_DARK = _TAHOE_COMMON + """
+.dose-taken { color: #30d158; } .dose-pending { color: #ff9f0a; }
+popover.medication-popover .boxed-list { background-color: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
 label, entry, text, textview { color: #f5f5f7; }
 .dim-label, label.dim-label { color: rgba(235,235,245,0.6); }
 window.background {
@@ -3247,7 +3310,10 @@ def apply_style(name):
                ".tour-card { background-color: @window_bg_color; color: @window_fg_color; "
                "border-radius: 18px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }\n"
                ".kind-word { background-color: alpha(@accent_bg_color, 0.10); border-radius: 12px; "
-               "padding: 14px; }")
+               "padding: 14px; }\n"
+               ".dose-taken { color: @success_color; font-weight: 600; }\n"
+               ".dose-skipped { opacity: 0.65; font-weight: 600; }\n"
+               ".dose-pending { color: @warning_color; font-weight: 600; }")
         try:
             base.load_from_string(css)
         except AttributeError:
@@ -4240,6 +4306,98 @@ class EventIcon(Gtk.DrawingArea):
         draw_event_badge(cr, w / 2, h / 2, min(w, h) / 2 - 1, theme())
 
 
+class PillIcon(Gtk.DrawingArea):
+    def __init__(self, size=22, status="taken", liquid=False):
+        super().__init__()
+        self.set_content_width(size)
+        self.set_content_height(size)
+        self.set_valign(Gtk.Align.CENTER)
+        self.status, self.liquid = status, liquid
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _a, cr, w, h):
+        draw_pill(cr, w / 2, h / 2, min(w, h) / 2 - 1, self.status, self.liquid)
+
+
+def medication_button(doses, today=None):
+    """'Medication · 4 taken · 1 skipped': opens the list of every dose that day."""
+    counts = {k: sum(1 for d in doses if d[2] == k) for k in DOSE_STATUSES}
+    bits = []
+    if counts["taken"]:
+        bits.append(trn("%d taken", "%d taken", counts["taken"]) % counts["taken"])
+    if counts["skipped"]:
+        bits.append(trn("%d skipped", "%d skipped", counts["skipped"]) % counts["skipped"])
+    if counts["pending"]:
+        n = counts["pending"]
+        future = doses and doses[0][0] >= (today or dt.date.today())
+        bits.append((trn("%d not taken yet", "%d not taken yet", n) if future
+                     else trn("%d not logged", "%d not logged", n)) % n)
+    main = "taken" if counts["taken"] else ("skipped" if counts["skipped"] else "pending")
+
+    button = Gtk.MenuButton()
+    button.add_css_class("flat")
+    button.add_css_class("medication-button")
+    button.set_tooltip_text(tr("From Apple Health, sent by Moodlog for iPhone"))
+    head = Gtk.Box(spacing=8)
+    head.append(PillIcon(22, main))
+    head.append(Gtk.Label(label=tr("Medication"), xalign=0))
+    summary = Gtk.Label(label=" · ".join(bits), xalign=0, hexpand=True)
+    summary.add_css_class("dim-label")
+    summary.set_ellipsize(Pango.EllipsizeMode.END)
+    head.append(summary)
+    button.set_child(head)
+
+    pop = Gtk.Popover()
+    pop.add_css_class("medication-popover")
+    col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+    for side in ("top", "bottom", "start", "end"):
+        getattr(col, "set_margin_" + side)(8)
+    title = Gtk.Label(label=tr("Medication"), xalign=0)
+    title.add_css_class("heading")
+    col.append(title)
+    rows = Gtk.ListBox()
+    rows.set_selection_mode(Gtk.SelectionMode.NONE)
+    rows.add_css_class("boxed-list")
+    for dose in sorted(doses, key=lambda d: (d[1], d[5].lower())):
+        line = Gtk.Box(spacing=12)
+        for side in ("top", "bottom"):
+            getattr(line, "set_margin_" + side)(8)
+        line.set_margin_start(12)
+        line.set_margin_end(12)
+        liquid = (dose[4] or "").lower().endswith("ml")
+        line.append(PillIcon(26, dose[2], liquid))
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=1, hexpand=True)
+        name = Gtk.Label(label=dose[5], xalign=0)
+        name.set_ellipsize(Pango.EllipsizeMode.END)
+        name.set_max_width_chars(34)
+        texts.append(name)
+        when = Gtk.Label(label=" · ".join(x for x in (dose[1], dose_amount(dose)) if x), xalign=0)
+        when.add_css_class("dim-label")
+        when.add_css_class("caption")
+        texts.append(when)
+        line.append(texts)
+        status = Gtk.Label(label=dose_status(dose, today), xalign=1)
+        status.add_css_class("dose-" + dose[2])
+        line.append(status)
+        row = Gtk.ListBoxRow(activatable=False)
+        row.set_child(line)
+        rows.append(row)
+    scroll = Gtk.ScrolledWindow()
+    scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+    scroll.set_propagate_natural_height(True)
+    scroll.set_max_content_height(460)
+    scroll.set_min_content_width(380)
+    scroll.set_child(rows)
+    col.append(scroll)
+    note = Gtk.Label(label=tr("From Apple Health, sent by Moodlog for iPhone"), xalign=0)
+    note.add_css_class("dim-label")
+    note.add_css_class("caption")
+    col.append(note)
+    pop.set_child(col)
+    button.set_popover(pop)
+    return button
+
+
 class DreamIcon(Gtk.DrawingArea):
     def __init__(self, size=30):
         super().__init__()
@@ -4631,6 +4789,9 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.8.1", "2026-11-21", [
+        "Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken, Skipped or Not taken yet.",
+    ]),
     ("2.8.0", "2026-11-20", [
         "Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.",
     ]),
@@ -4782,6 +4943,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("1.6.5", "2026-11-21", [
+        "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too).",
+    ]),
     ("1.6.4", "2026-11-20", [
         "Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed.",
     ]),
@@ -6280,16 +6444,7 @@ class Window(Adw.ApplicationWindow):
             self.day_events.append(btn)
         doses = self.meds.on(self.selected)
         if doses:
-            label = Gtk.Label(xalign=0, wrap=True)
-            label.set_margin_start(10)
-            label.set_margin_top(2)
-            label.set_margin_bottom(2)
-            parts = [dose_text(d) + ("" if d[2] == "taken" else " (%s)" % tr("skipped"))
-                     for d in doses]
-            label.set_text(tr("Medication: %s") % ", ".join(parts))
-            label.set_tooltip_text(tr("From Apple Health, sent by Moodlog for iPhone"))
-            label.add_css_class("dim-label")
-            self.day_events.append(label)
+            self.day_events.append(medication_button(doses))
         self.day_events.set_visible(bool(events or dreams or doses))
 
     # -- dreams

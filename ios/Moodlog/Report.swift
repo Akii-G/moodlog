@@ -299,9 +299,9 @@ final class Report {
     /// The same section as the PC's report: per medication, doses taken and skipped in the period.
     private func medicationTable() {
         let M = Report.M, W = Report.W
-        if doses.isEmpty { return }
+        if !doses.contains(where: { $0.status != "pending" }) { return }
         var rows: [String: (taken: Int, skipped: Int, first: String, last: String)] = [:]
-        for d in doses {
+        for d in doses where d.status != "pending" {
             var r = rows[d.name] ?? (0, 0, d.day, d.day)
             if d.taken { r.taken += 1 } else { r.skipped += 1 }
             r.first = min(r.first, d.day); r.last = max(r.last, d.day)

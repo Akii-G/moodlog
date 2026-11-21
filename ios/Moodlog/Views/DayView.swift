@@ -70,15 +70,23 @@ struct DayView: View {
                     if doses.isEmpty {
                         Text("No doses logged in Apple Health on this day.").foregroundStyle(.secondary)
                     }
-                    ForEach(doses) { dose in
+                    ForEach(doses.sorted { ($0.clock, $0.name) < ($1.clock, $1.name) }) { dose in
+                        let colour: Color = dose.status == "taken" ? .green : (dose.status == "skipped" ? .gray : .orange)
                         HStack(spacing: 12) {
-                            Text(dose.clock).font(.subheadline.monospacedDigit()).foregroundStyle(.secondary)
-                            Image(systemName: "pills.fill").foregroundStyle(Palette.health)
-                            Text(dose.what)
+                            Image(systemName: dose.liquid ? "drop.fill" : "pills.fill")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 30, height: 30)
+                                .background(Circle().fill(colour))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(dose.name).lineLimit(1)
+                                Text([dose.clock, dose.amountText].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
                             Spacer(minLength: 4)
-                            Text(dose.taken ? tr("Taken") : tr("Skipped"))
-                                .font(.subheadline)
-                                .foregroundStyle(dose.taken ? Palette.health : .secondary)
+                            Text(dose.statusText)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(dose.status == "skipped" ? Color.secondary : colour)
                         }
                     }
                 } header: {

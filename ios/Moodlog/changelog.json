@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.6.5",
+  "date": "2026-11-21",
+  "items": {
+   "en": [
+    "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount, and also shows the doses not taken yet (they go to the PC too)."
+   ],
+   "it": [
+    "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità, e mostra anche le dosi non ancora prese (arrivano anche al PC)."
+   ]
+  }
+ },
+ {
   "version": "1.6.4",
   "date": "2026-11-20",
   "items": {
