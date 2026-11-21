@@ -8909,6 +8909,13 @@ def main(argv):
             faulthandler.enable(sys.stderr)     # a crash leaves its Python stack in the log
         except (ValueError, OSError, RuntimeError, AttributeError):
             pass
+    if os.environ.get("MOODLOG_TRACE"):
+        # for bug hunting: the Python stack every half second, and on a crash
+        import faulthandler
+        global _trace_file
+        _trace_file = open(os.environ["MOODLOG_TRACE"], "w")
+        faulthandler.enable(_trace_file, all_threads=True)
+        faulthandler.dump_traceback_later(0.5, repeat=True, file=_trace_file)
     if "--version" in argv:
         print("Moodlog", VERSION)
         return 0
