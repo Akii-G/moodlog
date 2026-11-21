@@ -78,5 +78,5 @@ Filename: "{app}\Moodlog.exe"; Description: "{cm:Launch}"; Flags: nowait postins
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/IM Moodlog.exe /F"; Flags: runhidden; RunOnceId: "StopMoodlog"
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""{cm:SyncRule}"""; Flags: runhidden; RunOnceId: "DelSyncRule"
-Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""Moodlog reminder"" /F"; Flags: runhidden runasoriginaluser; RunOnceId: "DelReminder"
-Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v ""Moodlog phone sync"" /f"; Flags: runhidden runasoriginaluser; RunOnceId: "DelAutostart"
+Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""Moodlog reminder"" /F"; Flags: runhidden; RunOnceId: "DelReminder"
+Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v ""Moodlog phone sync"" /f"; Flags: runhidden; RunOnceId: "DelAutostart"
