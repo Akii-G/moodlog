@@ -32,4 +32,7 @@ a = Analysis(
 pyz = PYZ(a.pure)
 exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="Moodlog", icon=os.path.join(SPECPATH, "moodlog.ico"),
           console=False, debug=False, strip=False, upx=False)
-coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="Moodlog")
+# the same app with a console window, for bug reports: errors show in the console
+debug = EXE(pyz, a.scripts, [], exclude_binaries=True, name="Moodlog-console", icon=os.path.join(SPECPATH, "moodlog.ico"),
+            console=True, debug=False, strip=False, upx=False)
+coll = COLLECT(exe, debug, a.binaries, a.datas, strip=False, upx=False, name="Moodlog")

@@ -92,6 +92,13 @@ jobs:
           }
           Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue
           Get-ChildItem dist\Moodlog -Recurse -Filter *.exe | Select-Object FullName
+          if ($failed) {
+            $env:GSK_RENDERER = ""; $env:G_MESSAGES_DEBUG = ""; $env:PYTHONFAULTHANDLER = "1"
+            $c = Start-Process dist\Moodlog\Moodlog-console.exe -PassThru -RedirectStandardError "$env:RUNNER_TEMP\cerr.txt" -RedirectStandardOutput "$env:RUNNER_TEMP\cout.txt"
+            Start-Sleep -Seconds 12
+            "console exited: $($c.HasExited) $($c.ExitCode)"
+            Get-Content "$env:RUNNER_TEMP\cerr.txt", "$env:RUNNER_TEMP\cout.txt"
+          }
           if ($failed) { throw "Moodlog closed by itself" }
 
       - name: Make the installer
