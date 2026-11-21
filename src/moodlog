@@ -162,7 +162,9 @@ def fmt_date(day, pattern):
              "%B": MONTHS[day.month - 1], "%b": MONTHS_SHORT[day.month - 1]}
     if LANG_CODE == "it":   # Italian writes day and month names in lower case mid-sentence
         names = {k: v.lower() for k, v in names.items()}
-    out = day.strftime(re.sub("%[aAbB]", lambda m: names[m.group(0)].replace("%", "%%"), pattern))
+    # "%-d" (day without a leading zero) is glibc only: Windows' C library crashes on it
+    names["%-d"] = str(day.day)
+    out = day.strftime(re.sub("%(?:[aAbB]|-d)", lambda m: names[m.group(0)].replace("%", "%%"), pattern))
     return out[:1].upper() + out[1:] if LANG_CODE == "it" else out
 
 
