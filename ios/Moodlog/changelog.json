@@ -1,5 +1,17 @@
 [
  {
+  "version": "1.8.1",
+  "date": "2026-11-21",
+  "items": {
+   "en": [
+    "Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone."
+   ],
+   "it": [
+    "Sincronizzazione: i questionari compilati sull'iPhone ora arrivano al PC. Nella 1.8.0 restavano sul telefono."
+   ]
+  }
+ },
+ {
   "version": "1.8.0",
   "date": "2026-11-21",
   "items": {

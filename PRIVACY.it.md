@@ -2,7 +2,7 @@
 
 *Read in English: [PRIVACY.md](PRIVACY.md)*
 
-Ultimo aggiornamento: 21 novembre 2026. Vale per Moodlog per PC 2.10.0, Moodlog per iPhone 1.8.0 e Moodlog per Android 1.4.0, e per le versioni successive.
+Ultimo aggiornamento: 21 novembre 2026. Vale per Moodlog per PC 2.10.0, Moodlog per iPhone 1.8.1 e Moodlog per Android 1.4.0, e per le versioni successive.
 
 ## In breve
 

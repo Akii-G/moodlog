@@ -137,6 +137,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for iPhone
 
+### 1.8.1 (2026-11-21)
+
+- Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone.
+
 ### 1.8.0 (2026-11-21)
 
 - Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.

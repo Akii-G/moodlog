@@ -2224,3 +2224,6 @@ msgstr "Questionari per il medico (menu ☰): PHQ-9 sull'umore basso e GAD-7 sul
 
 msgid "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
 msgstr "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Moodlog mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
+
+msgid "Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone."
+msgstr "Sincronizzazione: i questionari compilati sull'iPhone ora arrivano al PC. Nella 1.8.0 restavano sul telefono."
