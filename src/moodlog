@@ -8902,6 +8902,11 @@ def main(argv):
             log = open(os.devnull, "w")
         sys.stdout = sys.stdout or log
         sys.stderr = sys.stderr or log
+        try:
+            import faulthandler
+            faulthandler.enable(log)     # a crash leaves its Python stack in the log
+        except (ValueError, OSError, RuntimeError):
+            pass
     if "--version" in argv:
         print("Moodlog", VERSION)
         return 0
