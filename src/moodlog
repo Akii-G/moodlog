@@ -8924,7 +8924,22 @@ def diag(path):
     app = Adw.Application(application_id=APP_ID + ".Diag")
     app.connect("activate", lambda a: (step("activated"), a.quit()))
     app.run([])
-    step("done")
+    step("done with the basics; now Moodlog itself, logging each call")
+    me = os.path.basename(__file__) if "__file__" in globals() else "moodlog"
+
+    def prof(frame, event, _arg):
+        if event == "call" and frame.f_code.co_filename.endswith(me):
+            out.write("%s:%d %s\n" % (frame.f_code.co_name, frame.f_lineno, ""))
+            out.flush()
+        elif event == "c_call":
+            out.write("  c %s\n" % getattr(_arg, "__qualname__", _arg))
+            out.flush()
+    sys.setprofile(prof)
+    real = App(None)
+    GLib.timeout_add(4000, lambda: real.quit())
+    real.run([sys.argv[0]])
+    sys.setprofile(None)
+    step("Moodlog ran and quit")
     return 0
 
 

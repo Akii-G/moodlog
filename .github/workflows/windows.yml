@@ -73,7 +73,7 @@ jobs:
           $env:MOODLOG_NO_WHATS_NEW = "1"
           New-Item -ItemType Directory -Force $env:MOODLOG_DATA_DIR, $env:MOODLOG_CONFIG_DIR | Out-Null
           $d = Start-Process dist\Moodlog\Moodlog-console.exe -ArgumentList "--diag", "$env:RUNNER_TEMP\diag.txt" -PassThru -Wait
-          "diag exit: $($d.ExitCode)"; Get-Content "$env:RUNNER_TEMP\diag.txt"
+          "diag exit: $($d.ExitCode)"; Get-Content "$env:RUNNER_TEMP\diag.txt" -Tail 80
           $p = Start-Process dist\Moodlog\Moodlog.exe -ArgumentList "--report", "$env:RUNNER_TEMP\report.pdf" -PassThru -Wait
           if (!(Test-Path "$env:RUNNER_TEMP\report.pdf")) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "no report" }
           foreach ($lang in "it", "en", "cairo") {
