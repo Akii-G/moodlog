@@ -1,6 +1,6 @@
 # Moodlog
 
-A small, private mood tracker for Linux, with companion apps for iPhone and Android. Log how
+A small, private mood tracker for Linux and Windows, with companion apps for iPhone and Android. Log how
 you feel in one click, see how things go over weeks and months, mark events such as
 a medication change, keep a dream journal, and bring a clear PDF report to your
 doctor. No account and no cloud: everything stays in plain files on your devices.
@@ -206,9 +206,14 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.11.0_all.deb
+    sudo apt install ./moodlog_2.12.0_all.deb
 
-Remove it with `sudo apt remove moodlog`; your data is kept. For the phone apps, see
+Remove it with `sudo apt remove moodlog`; your data is kept.
+
+**On Windows 11 or 10**, download `Moodlog-Setup-<version>.exe` from the same release
+and open it. Windows may warn that the app is from an unknown publisher, because the
+installer isn't signed: choose *More info → Run anyway*. It's the same app, phone sync
+included; your data is in `%LOCALAPPDATA%\Moodlog`, and it stays there if you uninstall. For the phone apps, see
 [`ios/README.md`](ios/README.md) and [`android/README.md`](android/README.md).
 
 ## Your data

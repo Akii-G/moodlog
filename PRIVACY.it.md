@@ -2,7 +2,7 @@
 
 *Read in English: [PRIVACY.md](PRIVACY.md)*
 
-Ultimo aggiornamento: 21 novembre 2026. Vale per Moodlog per PC 2.11.0, Moodlog per iPhone 1.9.0 e Moodlog per Android 1.5.0, e per le versioni successive.
+Ultimo aggiornamento: 21 novembre 2026. Vale per Moodlog per PC 2.12.0, Moodlog per iPhone 1.9.0 e Moodlog per Android 1.5.0, e per le versioni successive.
 
 ## In breve
 
@@ -19,7 +19,7 @@ Moodlog è un progetto personale gratuito e open source di Giosuè ([Akii-G su G
 
 Tutto quello che inserisci: umori e le loro note, tag, eventi (come un cambio di farmaco), sogni e, se lo attivi, i dati di salute dal tuo telefono.
 
-- **Sul PC** sta in semplici file nella tua cartella dei dati: `~/.local/share/moodlog/`, se non ne hai scelta un'altra. I file sono `moods.csv`, `events.csv`, `dreams.csv`, `health.csv` e, se usi i farmaci da Salute di Apple, `medications.json`. I questionari che compili (PHQ-9, GAD-7) sono in `surveys.json`. Le impostazioni sono in `~/.config/moodlog/config.json`. Il token della sincronizzazione è in `sync.json`, e una riga sull'ultima sincronizzazione è in `sync-last.txt`.
+- **Sul PC** sta in semplici file nella tua cartella dei dati: `~/.local/share/moodlog/`, se non ne hai scelta un'altra. I file sono `moods.csv`, `events.csv`, `dreams.csv`, `health.csv` e, se usi i farmaci da Salute di Apple, `medications.json`. I questionari che compili (PHQ-9, GAD-7) sono in `surveys.json`. Le impostazioni sono in `~/.config/moodlog/config.json`. Su Windows la cartella dei dati è `%LOCALAPPDATA%\Moodlog` e le impostazioni sono in `%LOCALAPPDATA%\Moodlog\settings`. Il token della sincronizzazione è in `sync.json`, e una riga sull'ultima sincronizzazione è in `sync-last.txt`.
 - **Su iPhone e su Android** sta nello spazio privato dell'app, che le altre app non possono leggere.
 
 Moodlog non cifra i file sul PC. Li proteggono il tuo account utente e, se l'hai attivata quando hai installato il sistema, la cifratura del disco. Se tieni la cartella dei dati in una cartella sincronizzata da un altro programma (per esempio Syncthing, Nextcloud o Dropbox), quel programma, e qualsiasi server usi, ne terrà una copia secondo la sua informativa.
