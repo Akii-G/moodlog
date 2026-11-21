@@ -77,6 +77,7 @@ jobs:
           foreach ($lang in "it", "en", "cairo") {
             $env:MOODLOG_LANG = $(if ($lang -eq "cairo") { "it" } else { $lang })
             $env:GSK_RENDERER = $(if ($lang -eq "cairo") { "cairo" } else { "" })
+            $env:G_MESSAGES_DEBUG = $(if ($lang -eq "it") { "all" } else { "" })
             $app = Start-Process dist\Moodlog\Moodlog.exe -PassThru -RedirectStandardError "$env:RUNNER_TEMP\err-$lang.txt" -RedirectStandardOutput "$env:RUNNER_TEMP\out-$lang.txt"
             Start-Sleep -Seconds 12
             Add-Type -AssemblyName System.Windows.Forms, System.Drawing
@@ -90,6 +91,7 @@ jobs:
             Start-Sleep -Seconds 2
           }
           Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue
+          Get-ChildItem dist\Moodlog -Recurse -Filter *.exe | Select-Object FullName
           if ($failed) { throw "Moodlog closed by itself" }
 
       - name: Make the installer

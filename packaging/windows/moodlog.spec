@@ -7,9 +7,14 @@ root = os.path.abspath(os.path.join(SPECPATH, "..", ".."))
 datas = [(os.path.join(root, "po", "*.po"), "po"),
          (os.path.join(root, "data", "app.moodlog.Moodlog.svg"), "share/icons/hicolor/scalable/apps")]
 
+# GLib starts gdbus.exe for GApplication on Windows; without it GLib warns and may give up
+import shutil
+binaries = [(shutil.which("gdbus.exe") or shutil.which("gdbus"), ".")] if (shutil.which("gdbus.exe") or shutil.which("gdbus")) else []
+
 a = Analysis(
     [os.path.join(root, "build", "moodlog.py")],
     pathex=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=["http.server", "cryptography.hazmat.primitives.ciphers.aead",
                    "cryptography.hazmat.primitives.kdf.hkdf", "winreg"] + collect_submodules("openpyxl"),
