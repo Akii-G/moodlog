@@ -2,7 +2,7 @@
 
 *Leggi in italiano: [PRIVACY.it.md](PRIVACY.it.md)*
 
-Last updated: 21 November 2026. This covers Moodlog for the PC 2.12.0, Moodlog for iPhone 1.9.0 and Moodlog for Android 1.5.0, and newer.
+Last updated: 21 November 2026. This covers Moodlog for the PC 2.12.1, Moodlog for iPhone 1.9.0 and Moodlog for Android 1.5.0, and newer.
 
 ## The short version
 

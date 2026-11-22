@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.12.0"
+VERSION = "2.12.1"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -3614,7 +3614,7 @@ button.suggested-action:hover { background-color: #2b95ff; }
 button.suggested-action:active { background-color: #0071e3; }
 button.destructive-action { background-color: #ff453a; color: #ffffff; }
 button.suggested-action label, button.destructive-action label,
-togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action) label, box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) label { color: #ffffff; }
+togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action) label, box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) label, flowboxchild > button.feeling:checked:not(.flat):not(.suggested-action):not(.destructive-action) label { color: #ffffff; }
 togglebutton:checked, button:checked { font-weight: 700; }
 entry, spinbutton, dropdown > button, searchentry {
   border-radius: 12px; min-height: 32px;
@@ -3687,7 +3687,7 @@ button:not(.flat):not(.suggested-action):not(.destructive-action) {
 button:not(.flat):not(.suggested-action):not(.destructive-action):hover {
   background-color: rgba(255,255,255,0.85);
 }
-togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action), box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
+togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action), box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action), flowboxchild > button.feeling:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
   background-color: #0a84ff; color: #ffffff; border-color: #0a84ff;
 }
 button.flat:checked { background-color: rgba(10,132,255,0.16); color: #0a64d6; }
@@ -3743,7 +3743,7 @@ button:not(.flat):not(.suggested-action):not(.destructive-action) {
 button:not(.flat):not(.suggested-action):not(.destructive-action):hover {
   background-color: rgba(255,255,255,0.15);
 }
-togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action), box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
+togglebutton:checked:not(.flat):not(.suggested-action):not(.destructive-action), box > button:checked:not(.flat):not(.suggested-action):not(.destructive-action), flowboxchild > button.feeling:checked:not(.flat):not(.suggested-action):not(.destructive-action) {
   background-color: #0a84ff; color: #ffffff; border-color: #0a84ff;
 }
 button.flat:checked { background-color: rgba(10,132,255,0.28); color: #ffffff; }
@@ -3785,6 +3785,8 @@ def apply_style(name):
         css = ("headerbar stackswitcher > button { min-width: 0; padding-left: 14px; padding-right: 14px; }\n"
                ".tour-card { background-color: @window_bg_color; color: @window_fg_color; "
                "border-radius: 18px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }\n"
+               "button.feeling:checked { background-color: @accent_bg_color; color: @accent_fg_color; "
+               "font-weight: 700; }\n"
                ".kind-word { background-color: alpha(@accent_bg_color, 0.10); border-radius: 12px; "
                "padding: 14px; }\n"
                ".dose-taken { color: @success_color; font-weight: 600; }\n"
@@ -5797,6 +5799,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.12.1", "2026-11-22", [
+        "Feeling words: the ones you pick now light up in the Tahoe style too.",
+        "Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once.",
+    ]),
     ("2.12.0", "2026-11-21", [
         "Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Moodlog.",
     ]),
@@ -6107,92 +6113,95 @@ def privacy_url():
     return PRIVACY_URL_IT if LANG_CODE == "it" else PRIVACY_URL
 
 
-class ReminderWindow(Gtk.Window):
-    """The daily reminder and the kind word on hard days."""
+def option_row(title, hint, widget):
+    """A heading, a small grey hint under it, and a switch (or another control) on the right."""
+    row = Gtk.Box(spacing=12)
+    texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+    name = Gtk.Label(label=title, xalign=0)
+    name.add_css_class("heading")
+    texts.append(name)
+    sub = Gtk.Label(label=hint, xalign=0, wrap=True, max_width_chars=30)
+    sub.add_css_class("dim-label")
+    sub.add_css_class("caption")
+    texts.append(sub)
+    row.append(texts)
+    widget.set_valign(Gtk.Align.CENTER)
+    row.append(widget)
+    return row
 
-    def __init__(self, parent):
-        super().__init__(title=tr("Reminder and kind word"), transient_for=parent, modal=True)
-        self.parent_window = parent
-        self.set_default_size(460, -1)
-        cfg = load_config()
-        on, time = reminder_settings(cfg)
-        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
-        for side in ("top", "bottom", "start", "end"):
-            getattr(col, "set_margin_" + side)(20)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        row = Gtk.Box(spacing=12)
-        label = Gtk.Label(label=tr("Remind me once a day"), xalign=0, hexpand=True)
-        label.add_css_class("heading")
-        self.on_switch = Gtk.Switch(active=on, valign=Gtk.Align.CENTER)
-        row.append(label)
-        row.append(self.on_switch)
-        box.append(row)
-        trow = Gtk.Box(spacing=6)
-        trow.append(Gtk.Label(label=tr("At"), xalign=0, hexpand=True))
-        h, m = (int(x) for x in time.split(":"))
-        self.hour = Gtk.SpinButton.new_with_range(0, 23, 1)
-        self.minute = Gtk.SpinButton.new_with_range(0, 59, 5)
-        for spin, value in ((self.hour, h), (self.minute, m)):
-            spin.set_value(value)
-            spin.set_numeric(True)
-            spin.set_width_chars(2)
-            spin.connect("output", self._two_digits)
-        trow.append(self.hour)
-        trow.append(Gtk.Label(label=":"))
-        trow.append(self.minute)
-        box.append(trow)
-        note = Gtk.Label(label=tr("A quiet desktop notification, only on days you haven't logged a mood yet. "
-                                  "No streaks, no guilt: just a gentle nudge."), xalign=0, wrap=True)
-        note.add_css_class("dim-label")
-        box.append(note)
-        col.append(card(box))
+def customize_more(win):
+    """The rest of "Customize your experience" (its own window only, not the tour): the daily
+    reminder, the kind word on hard days and the Gridgets link. Each change applies at once."""
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+    cfg = load_config()
+    on, time = reminder_settings(cfg)
+    status = Gtk.Label(xalign=0, wrap=True, max_width_chars=30, visible=False)
+    status.add_css_class("error")
+    status.add_css_class("caption")
+    remind = Gtk.Switch(active=on)
+    h, m = (int(x) for x in time.split(":"))
+    hour = Gtk.SpinButton.new_with_range(0, 23, 1)
+    minute = Gtk.SpinButton.new_with_range(0, 59, 5)
 
-        kbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        krow = Gtk.Box(spacing=12)
-        klabel = Gtk.Label(label=tr("A kind word on hard days"), xalign=0, hexpand=True)
-        klabel.add_css_class("heading")
-        self.kind_switch = Gtk.Switch(active=cfg.get("kind_word", True), valign=Gtk.Align.CENTER)
-        krow.append(klabel)
-        krow.append(self.kind_switch)
-        kbox.append(krow)
-        knote = Gtk.Label(label=tr("After a few very hard days close together, the Log shows a short, kind note "
-                                   "with a helpline. It never tells anyone; you can hide it any time."),
-                          xalign=0, wrap=True)
-        knote.add_css_class("dim-label")
-        kbox.append(knote)
-        col.append(card(kbox))
-
-        self.status = Gtk.Label(xalign=0, wrap=True)
-        self.status.add_css_class("dim-label")
-        col.append(self.status)
-        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
-        cancel = Gtk.Button(label=tr("Cancel"))
-        cancel.connect("clicked", lambda *_: self.close())
-        save = Gtk.Button(label=tr("Save"))
-        save.add_css_class("suggested-action")
-        save.connect("clicked", self.on_save)
-        buttons.append(cancel)
-        buttons.append(save)
-        col.append(buttons)
-        self.set_child(col)
-
-    @staticmethod
-    def _two_digits(spin):
+    def two_digits(spin):
         spin.set_text("%02d" % spin.get_value_as_int())
         return True
+    for spin, value in ((hour, h), (minute, m)):
+        spin.set_value(value)
+        spin.set_numeric(True)
+        spin.set_width_chars(2)
+        spin.connect("output", two_digits)
+    pending = {"id": 0}
 
-    def on_save(self, *_):
-        time = "%02d:%02d" % (self.hour.get_value_as_int(), self.minute.get_value_as_int())
-        ok, err = apply_reminder(self.on_switch.get_active(), time)
-        cfg = load_config()
-        cfg["kind_word"] = self.kind_switch.get_active()
-        save_config(cfg)
-        self.parent_window.refresh_kind_word()
+    def apply_now():
+        pending["id"] = 0
+        when = "%02d:%02d" % (hour.get_value_as_int(), minute.get_value_as_int())
+        ok, err = apply_reminder(remind.get_active(), when)
+        status.set_visible(not ok)
         if not ok:
-            self.status.set_text(tr("Could not set up the reminder (%s).") % (err or tr("systemctl failed")))
-            return
-        self.close()
+            status.set_text(tr("Could not set up the reminder (%s).") % (err or tr("systemctl failed")))
+        return False
+
+    def apply_soon(*_):   # spinning through minutes shouldn't rewrite the timer each step
+        if pending["id"]:
+            GLib.source_remove(pending["id"])
+        pending["id"] = GLib.timeout_add(700, apply_now)
+    remind.connect("notify::active", apply_soon)
+    hour.connect("value-changed", apply_soon)
+    minute.connect("value-changed", apply_soon)
+    box.append(option_row(tr("Remind me once a day"),
+                          tr("A quiet notification, only on days you haven't logged a mood yet. "
+                             "No streaks, no guilt: just a gentle nudge."), remind))
+    when = Gtk.Box(spacing=6)
+    when.append(Gtk.Label(label=tr("At"), xalign=0, hexpand=True))
+    when.append(hour)
+    when.append(Gtk.Label(label=":"))
+    when.append(minute)
+    when.set_sensitive(on)
+    remind.connect("notify::active", lambda w, _p: when.set_sensitive(w.get_active()))
+    box.append(when)
+    box.append(status)
+
+    kind = Gtk.Switch(active=cfg.get("kind_word", True))
+
+    def on_kind(w, _p):
+        c = load_config()
+        c["kind_word"] = w.get_active()
+        save_config(c)
+        win.refresh_kind_word()
+    kind.connect("notify::active", on_kind)
+    box.append(option_row(tr("A kind word on hard days"),
+                          tr("After a few very hard days close together, the Log shows a short, kind note "
+                             "with a helpline. It never tells anyone; you can hide it any time."), kind))
+
+    if win.link.available():
+        link = Gtk.Switch(active=win.link.enabled)
+        link.connect("notify::active", win.on_link_toggled)
+        box.append(option_row(tr("Gridgets"),
+                              tr("Linked with the Gridgets mood widget on your desktop: moods go both ways."),
+                              link))
+    return box
 
 
 class PrivacyWindow(Gtk.Window):
@@ -6772,11 +6781,16 @@ class CustomizeWindow(Gtk.Window):
         intro.add_css_class("dim-label")
         col.append(intro)
         col.append(customize_options(win))
+        col.append(Gtk.Separator())
+        col.append(customize_more(win))
         done = Gtk.Button(label=tr("Done"), halign=Gtk.Align.END)
         done.add_css_class("suggested-action")
         done.connect("clicked", lambda *_: self.close())
         col.append(done)
-        self.set_child(col)
+        scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, propagate_natural_height=True)
+        scroll.set_max_content_height(640)
+        scroll.set_child(col)
+        self.set_child(scroll)
 
 TOUR_STEPS = [
     # (what to highlight, title, text)
@@ -7226,10 +7240,6 @@ class Window(Adw.ApplicationWindow):
         news_menu.append(tr("Show the tour"), "win.tour")
         news_menu.append(tr("What's new"), "win.changelog")
         news_menu.append(tr("Privacy"), "win.privacy")
-        remind_action = Gio.SimpleAction.new("reminder", None)
-        remind_action.connect("activate", lambda *_: ReminderWindow(self).present())
-        self.add_action(remind_action)
-        news_menu.prepend(tr("Reminder and kind word…"), "win.reminder")
         custom_action = Gio.SimpleAction.new("customize", None)
         custom_action.connect("activate", lambda *_: CustomizeWindow(self).present())
         self.add_action(custom_action)
@@ -7458,21 +7468,6 @@ class Window(Adw.ApplicationWindow):
         left.append(nav)
         left.append(self.calendar)
         left.append(self.month_summary)
-        link_label = Gtk.Label(xalign=0, hexpand=True, wrap=True,
-                               label=tr("Linked with the Gridgets mood widget on your desktop"))
-        link_label.add_css_class("dim-label")
-        link_label.add_css_class("caption")
-        self.link_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
-        self.link_switch.set_active(self.link.enabled)
-        self.link_switch.set_tooltip_text(
-            tr("A mood picked in the widget is logged here, and moods logged here show up "
-            "in the widget (after the next unlock or login)"))
-        self.link_switch.connect("notify::active", self.on_link_toggled)
-        link_row = Gtk.Box(spacing=10)
-        link_row.append(link_label)
-        link_row.append(self.link_switch)
-        link_row.set_visible(self.link.available())
-        left.append(link_row)
         left_card = card(left)
         left_card.set_hexpand(True)
 
@@ -7558,6 +7553,7 @@ class Window(Adw.ApplicationWindow):
             getattr(flow, "set_margin_" + side)(8)
         for key, label in FEELINGS:
             btn = Gtk.ToggleButton(label=label)
+            btn.add_css_class("feeling")      # lit up when picked, in every style
             btn.connect("toggled", self.on_feeling_toggled, key)
             self.feel_buttons[key] = btn
             flow.append(btn)

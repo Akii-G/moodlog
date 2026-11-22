@@ -111,8 +111,8 @@ required to reproduce, translate, display or distribute them.
 ### A gentle reminder, and a kind word
 
 If you like, Moodlog reminds you once a day at the time you choose, only on days you
-haven't logged a mood yet: a quiet notification on the PC (☰ → **Reminder and kind
-word**) or the phone (**Settings → Reminder**). No streaks, no guilt.
+haven't logged a mood yet: a quiet notification on the PC (☰ → **Customize your
+experience**) or the phone (**Settings → Reminder**). No streaks, no guilt.
 
 After a few very hard days close together, the Log shows a short, kind note with a
 helpline (Telefono Amico in Italian, Find A Helpline in English). It never tells
@@ -210,7 +210,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.12.0_all.deb
+    sudo apt install ./moodlog_2.12.1_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept.
 
@@ -234,8 +234,8 @@ stored and sent; in the app it's under ☰ → Privacy.
   Syncthing or Nextcloud syncs. Moodlog merges both computers' data and any conflict
   copies, so nothing is lost.
 - **Gridgets**: if you use the [Gridgets](https://github.com/rebatnaath/gridgets)
-  GNOME extension, Moodlog links with its mood widget both ways (switch it off at
-  the bottom of the Log tab).
+  GNOME extension, Moodlog links with its mood widget both ways (switch it off in
+  ☰ → Customize your experience).
 
 <details>
 <summary>File formats and the phone sync receiver</summary>

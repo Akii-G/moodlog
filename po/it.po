@@ -2380,3 +2380,18 @@ msgstr "Windows"
 
 msgid "Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Moodlog."
 msgstr "Moodlog per Windows 11 e 10: la stessa app, con la sincronizzazione del telefono, il promemoria giornaliero come notifica di Windows e un programma di installazione. I tuoi dati sono in %LOCALAPPDATA%\\Moodlog."
+
+msgid "Feeling words: the ones you pick now light up in the Tahoe style too."
+msgstr "Parole sulle emozioni: quelle che scegli ora si illuminano anche nello stile Tahoe."
+
+msgid "A quiet notification, only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge."
+msgstr "Una notifica discreta, solo nei giorni in cui non hai ancora registrato un umore. Niente serie da mantenere, niente sensi di colpa: solo una spinta gentile."
+
+msgid "Gridgets"
+msgstr "Gridgets"
+
+msgid "Linked with the Gridgets mood widget on your desktop: moods go both ways."
+msgstr "Collegato al widget dell'umore Gridgets sul desktop: gli umori passano in entrambe le direzioni."
+
+msgid "Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once."
+msgstr "Promemoria, parola gentile e collegamento a Gridgets ora sono in ☰ → Personalizza la tua esperienza, e si applicano subito."

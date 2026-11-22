@@ -4,6 +4,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.12.1 (2026-11-22)
+
+- Feeling words: the ones you pick now light up in the Tahoe style too.
+- Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once.
+
 ### 2.12.0 (2026-11-21)
 
 - Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\Moodlog.
