@@ -210,7 +210,7 @@ each tab as it goes.
 Download `moodlog_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
 
-    sudo apt install ./moodlog_2.12.1_all.deb
+    sudo apt install ./moodlog_2.12.2_all.deb
 
 Remove it with `sudo apt remove moodlog`; your data is kept.
 

@@ -2395,3 +2395,6 @@ msgstr "Collegato al widget dell'umore Gridgets sul desktop: gli umori passano i
 
 msgid "Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once."
 msgstr "Promemoria, parola gentile e collegamento a Gridgets ora sono in ☰ → Personalizza la tua esperienza, e si applicano subito."
+
+msgid "Windows: the round window buttons of the Tahoe style no longer stretch into tall bars."
+msgstr "Windows: i pulsanti tondi della finestra nello stile Tahoe non si allungano più in barre alte."

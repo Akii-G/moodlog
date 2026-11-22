@@ -4,6 +4,10 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ## Moodlog for the PC
 
+### 2.12.2 (2026-11-22)
+
+- Windows: the round window buttons of the Tahoe style no longer stretch into tall bars.
+
 ### 2.12.1 (2026-11-22)
 
 - Feeling words: the ones you pick now light up in the Tahoe style too.

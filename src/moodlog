@@ -33,7 +33,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.12.1"
+VERSION = "2.12.2"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -5803,6 +5803,9 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("2.12.2", "2026-11-22", [
+        "Windows: the round window buttons of the Tahoe style no longer stretch into tall bars.",
+    ]),
     ("2.12.1", "2026-11-22", [
         "Feeling words: the ones you pick now light up in the Tahoe style too.",
         "Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once.",
