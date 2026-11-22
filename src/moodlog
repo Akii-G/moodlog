@@ -8899,6 +8899,19 @@ def center_window_dots(widget):
         child = child.get_next_sibling()
 
 
+def dump_widgets(widget, depth=0):
+    """For bug hunting (MOODLOG_DUMP_TITLEBAR): each widget's CSS name, classes and size."""
+    _m, nat_h, _b, _b2 = widget.measure(Gtk.Orientation.VERTICAL, -1)
+    print("%s%s %s %dx%d nat_h=%d valign=%s" % ("  " * depth, widget.get_css_name(), widget.get_css_classes(),
+                                                 widget.get_width(), widget.get_height(), nat_h,
+                                                 widget.get_valign().value_nick), file=sys.stderr, flush=True)
+    child = widget.get_first_child()
+    while child is not None:
+        dump_widgets(child, depth + 1)
+        child = child.get_next_sibling()
+    return True
+
+
 def watch_window_dots():
     """Runs center_window_dots on every window when it appears, and again when the layout of the
     title-bar buttons changes."""
@@ -8908,6 +8921,8 @@ def watch_window_dots():
         titlebar = win.get_titlebar()
         if titlebar is not None:
             center_window_dots(titlebar)
+            if os.environ.get("MOODLOG_DUMP_TITLEBAR"):
+                GLib.timeout_add(2500, lambda: dump_widgets(titlebar) and False)
         return False
 
     def hook(model, _pos=0, _removed=0, _added=0):
