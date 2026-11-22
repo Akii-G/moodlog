@@ -293,9 +293,9 @@ enum Medications {
         let doses = await doses(from: Day.calendar.date(byAdding: .day, value: -30, to: end), to: end)
         let meds = await list()
         if meds.isEmpty {
-            return tr("Moodlog can't see any medications. Log them in the Health app, or allow them in Settings → Health → Data Access & Devices → Moodlog.")
+            return tr("Sottovoce can't see any medications. Log them in the Health app, or allow them in Settings → Health → Data Access & Devices → Sottovoce.")
         }
-        var out = trn("Moodlog can read %@ medication.", "Moodlog can read %@ medications.", meds.count) + " "
+        var out = trn("Sottovoce can read %@ medication.", "Sottovoce can read %@ medications.", meds.count) + " "
             + tr("Doses in the last 30 days: %@.", "\(doses.count)")
         if found == 0 { out += " " + tr("Health doesn't give their names: you can name them below.") }
         return out

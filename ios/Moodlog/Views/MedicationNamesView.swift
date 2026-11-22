@@ -19,7 +19,7 @@ struct MedicationNamesView: View {
                     .foregroundStyle(.secondary)
             } else {
                 Section {
-                    Text("Health doesn't tell Moodlog the names of these medications. Open Health → Medications: the groups below are in the same order as its medication log. Type each name once.")
+                    Text("Health doesn't tell Sottovoce the names of these medications. Open Health → Medications: the groups below are in the same order as its medication log. Type each name once.")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 ForEach(times, id: \.self) { time in

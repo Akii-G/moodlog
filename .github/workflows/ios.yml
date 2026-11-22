@@ -59,15 +59,15 @@ jobs:
           # re-sign the app with your Apple ID when installing.
           ldid -SMoodlog/Moodlog.entitlements Payload/Moodlog.app/Moodlog
           VERSION=$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml)
-          IPA="Moodlog-iPhone-$VERSION.ipa"
+          IPA="Sottovoce-iPhone-$VERSION.ipa"
           zip -qry "$IPA" Payload
           ls -la "$IPA"
           echo "IPA=$IPA" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Moodlog-iPhone-ipa
-          path: ios/Moodlog-iPhone-*.ipa
+          name: Sottovoce-iPhone-ipa
+          path: ios/Sottovoce-iPhone-*.ipa
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -84,7 +84,7 @@ jobs:
         run: gh release upload "$TAG" "$IPA" --clobber --repo "${{ github.repository }}"
 
       # A developer version with test buttons (Settings → "Developer: test notifications").
-      # Same app id, so it installs over Moodlog and keeps your data. Never attached to releases.
+      # Same app id, so it installs over Sottovoce (Moodlog) and keeps your data. Never attached to releases.
       - name: Build the developer version
         if: github.event_name != 'release'
         working-directory: ios
@@ -100,10 +100,10 @@ jobs:
           cp -R build-dev/Build/Products/Release-iphoneos/Moodlog.app Payload/
           ldid -SMoodlog/Moodlog.entitlements Payload/Moodlog.app/Moodlog
           VERSION=$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml)
-          zip -qry "Moodlog-iPhone-$VERSION-dev.ipa" Payload
+          zip -qry "Sottovoce-iPhone-$VERSION-dev.ipa" Payload
 
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'release'
         with:
-          name: Moodlog-iPhone-dev-ipa
-          path: ios/Moodlog-iPhone-*-dev.ipa
+          name: Sottovoce-iPhone-dev-ipa
+          path: ios/Sottovoce-iPhone-*-dev.ipa

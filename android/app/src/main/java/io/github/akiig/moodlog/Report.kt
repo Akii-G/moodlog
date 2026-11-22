@@ -110,7 +110,7 @@ class Report(
     }
 
     private fun footer() {
-        text(tr("Made with Moodlog · self-reported data, not a medical record"), M, H - 28f, 7.5f, muted)
+        text(tr("Made with Sottovoce · self-reported data, not a medical record"), M, H - 28f, 7.5f, muted)
         text(tr("Page %@", pageNo), M, H - 28f, 7.5f, muted, align = Layout.Alignment.ALIGN_OPPOSITE, width = W - 2 * M)
     }
 
@@ -151,7 +151,7 @@ class Report(
         val entries = days.flatMap { store.entriesOn(it) }
 
         y += text(tr("Mood report"), M, y, 20f, ink, bold = true) + 2f
-        y += text(tr("%@ – %@ · %@ days · made with Moodlog on %@", Day.pretty(start, "d MMM yyyy"),
+        y += text(tr("%@ – %@ · %@ days · made with Sottovoce on %@", Day.pretty(start, "d MMM yyyy"),
             Day.pretty(end, "d MMM yyyy"), days.size, Day.pretty(Day.today, "d MMM yyyy")), M, y, 9f, muted) + 14f
 
         // summary tiles
@@ -344,7 +344,7 @@ class Report(
         val list = store.surveys.filter { it.date in start..end && !it.private }
         if (list.isEmpty()) return
         heading(tr("Questionnaires"))
-        y += text(tr("Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation."),
+        y += text(tr("Answered in Sottovoce. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Sottovoce gives no interpretation."),
             M, y, 8f, muted, width = W - 2 * M) + 6f
         val widths = mutableListOf(70f, 64f, 56f, 120f, 0f).also { it[4] = W - 2 * M - it.sum() }
         val heads = listOf(tr("Date"), tr("Questionnaire"), tr("Score"), tr("Answers"), tr("Difficulty"))

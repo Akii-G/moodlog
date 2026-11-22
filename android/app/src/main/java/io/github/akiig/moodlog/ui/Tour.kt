@@ -99,7 +99,7 @@ object Tour {
 
     private val all: List<TourStep>
         get() = listOf(
-            TourStep(0, null, false, tr("Welcome to Moodlog"),
+            TourStep(0, null, false, tr("Welcome to Sottovoce"),
                 tr("Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you.")),
             TourStep(0, null, true, tr("Five tabs, down here"),
                 tr("Down here are the tabs. You'll spend most of your time in Log; the others are there whenever you want them. Let's have a quick look at each.")),
@@ -110,9 +110,9 @@ object Tour {
             TourStep(2, null, true, tr("Dreams, if you remember them"),
                 tr("A small dream journal, for the mornings you remember something. Totally optional.")),
             TourStep(3, null, true, tr("Mark what matters"),
-                tr("Started a new medication, or something big happened? Add it here, and Moodlog shows how you felt in the two weeks before and after.")),
+                tr("Started a new medication, or something big happened? Add it here, and Sottovoce shows how you felt in the two weeks before and after.")),
             TourStep(4, null, true, tr("Your PC and Health Connect"),
-                tr("Here you can connect to Moodlog on your PC and send sleep and steps from Health Connect. All optional: the app works on its own too. You can watch this tour again from here.")),
+                tr("Here you can connect to Sottovoce on your PC and send sleep and steps from Health Connect. All optional: the app works on its own too. You can watch this tour again from here.")),
             TourStep(0, null, false, tr("Customize your experience"),
                 tr("Turn off what you don't need. Nothing is deleted, and you can change this any time in Settings."),
                 customize = true),

@@ -81,7 +81,7 @@ final class Report {
     }
 
     private func footer() {
-        text(tr("Made with Moodlog · self-reported data, not a medical record"), Report.M, Report.H - 28, 7.5, muted)
+        text(tr("Made with Sottovoce · self-reported data, not a medical record"), Report.M, Report.H - 28, 7.5, muted)
         text(tr("Page %@", "\(pageNo)"), Report.M, Report.H - 28, 7.5, muted, width: Report.W - 2 * Report.M, align: .right)
     }
 
@@ -116,7 +116,7 @@ final class Report {
         let moodDays = days.filter { store.average(on: $0) != nil }
         let entries = days.flatMap { store.entries(on: $0) }
         y += text(tr("Mood report"), M, y, 20, ink, bold: true) + 2
-        y += text(tr("%@ – %@ · %@ days · made with Moodlog on %@", Day.pretty(start, style: "d MMM yyyy"),
+        y += text(tr("%@ – %@ · %@ days · made with Sottovoce on %@", Day.pretty(start, style: "d MMM yyyy"),
                      Day.pretty(end, style: "d MMM yyyy"), "\(days.count)", Day.pretty(Day.today, style: "d MMM yyyy")),
                   M, y, 9, muted) + 14
 
@@ -353,7 +353,7 @@ final class Report {
         let M = Report.M, W = Report.W
         if surveys.isEmpty { return }
         heading(tr("Questionnaires"))
-        y += text(tr("Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation."),
+        y += text(tr("Answered in Sottovoce. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Sottovoce gives no interpretation."),
                   M, y, 8, muted, width: W - 2 * M) + 6
         var widths: [CGFloat] = [70, 64, 56, 120, 0]
         widths[4] = W - 2 * M - widths.reduce(0, +)

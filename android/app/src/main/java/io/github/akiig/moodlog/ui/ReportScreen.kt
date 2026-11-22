@@ -54,7 +54,7 @@ fun ReportDialog(onClose: () -> Unit) {
     suspend fun build(): File {
         val (start, end) = period.range(app.store)
         val nights = if (sleep && canSleep) (try { app.health.nightlySleep(start, end) } catch (e: Exception) { null }) ?: emptyMap() else emptyMap()
-        val file = File(context.cacheDir, "reports/" + tr("Moodlog report") + " $start – $end.pdf")
+        val file = File(context.cacheDir, "reports/" + tr("Sottovoce report") + " $start – $end.pdf")
         return withContext(Dispatchers.Default) {
             Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams,
                 surveys && app.showQuestionnaires).write(file)

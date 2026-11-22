@@ -1,5 +1,5 @@
 [Unit]
-Description=Moodlog phone sync receiver
+Description=Sottovoce phone sync receiver
 After=network.target
 
 [Service]

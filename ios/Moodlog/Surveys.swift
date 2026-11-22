@@ -185,7 +185,7 @@ enum SurveyReminder {
 /// and that tapping it opens the right place.
 enum DevNotifications {
     static func daily(in seconds: TimeInterval = 5) async -> String {
-        guard await Reminder.requestPermission() else { return "Notifications are not allowed for Moodlog." }
+        guard await Reminder.requestPermission() else { return "Notifications are not allowed for Sottovoce." }
         let content = UNMutableNotificationContent()
         content.title = tr("How are you today?")
         content.body = tr("One tap on a face is enough.")
@@ -194,7 +194,7 @@ enum DevNotifications {
     }
 
     static func survey(in seconds: TimeInterval = 5) async -> String {
-        guard await Reminder.requestPermission() else { return "Notifications are not allowed for Moodlog." }
+        guard await Reminder.requestPermission() else { return "Notifications are not allowed for Sottovoce." }
         return await add("moodlog-dev-survey", SurveyReminder.content(), seconds)
     }
 

@@ -12,7 +12,7 @@ struct SurveysView: View {
     var body: some View {
         Form {
             Section {
-                Text("Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Moodlog shows only your score, and the report can include them for your doctor.")
+                Text("Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Sottovoce shows only your score, and the report can include them for your doctor.")
                     .font(.subheadline).foregroundStyle(.secondary)
                 ForEach(SurveyKind.allCases) { kind in
                     Button {
@@ -233,7 +233,7 @@ struct SurveyCareView: View {
                         }
                     }
                 } footer: {
-                    Text("Moodlog doesn't tell anyone: this stays on your devices.")
+                    Text("Sottovoce doesn't tell anyone: this stays on your devices.")
                 }
             }
             .navigationTitle("Thank you for answering honestly")

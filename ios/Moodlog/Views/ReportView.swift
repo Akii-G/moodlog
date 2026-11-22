@@ -87,7 +87,7 @@ struct ReportView: View {
             meds = await Medications.list()
         }
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(tr("Moodlog report") + " \(start) – \(end).pdf")
+            .appendingPathComponent(tr("Sottovoce report") + " \(start) – \(end).pdf")
         do {
             try Report(store: store, start: start, end: end, includeNotes: notes, sleep: nights,
                        includeDreams: dreams && showDreams, dreamText: dreams && dreamText && showDreams, doses: doses, meds: meds,

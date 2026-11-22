@@ -1,4 +1,4 @@
-/* Moodlog for Android: Italian. Keys are the English text (the same as the iPhone app). */
+/* Sottovoce for Android: Italian. Keys are the English text (the same as the iPhone app). */
 
 "Save" = "Salva";
 "Awful" = "Pessimo";
@@ -28,7 +28,7 @@
 "Synced at %2$@ · %1$@ changes" = "Sincronizzato alle %2$@ · %1$@ modifiche";
 "Add your PC's address and token in Settings first." = "Prima aggiungi l'indirizzo e il token del PC nelle Impostazioni.";
 "The address doesn't look right. It should be like http://pop-os.local:8765" = "L'indirizzo non sembra giusto. Dovrebbe essere tipo http://pop-os.local:8765";
-"Wrong token. Copy it again from Moodlog on your PC (Phone sync)." = "Token sbagliato. Copialo di nuovo da Moodlog sul PC (Sincronizza telefono).";
+"Wrong token. Copy it again from Sottovoce on your PC (Phone sync)." = "Token sbagliato. Copialo di nuovo da Sottovoce sul PC (Sincronizza telefono).";
 "Your PC answered with error %@." = "Il PC ha risposto con l'errore %@.";
 "Sent." = "Inviato.";
 "Not synced yet" = "Non ancora sincronizzato";
@@ -37,7 +37,7 @@
 "%@ days logged · average %@ (%@)" = "%@ giorni registrati · media %@ (%@)";
 "Nothing logged this month yet" = "Ancora niente registrato questo mese";
 "%@, nothing logged" = "%@, niente registrato";
-"Connect to Moodlog on your PC in Settings to sync." = "Collegati a Moodlog sul PC nelle Impostazioni per sincronizzare.";
+"Connect to Sottovoce on your PC in Settings to sync." = "Collegati a Sottovoce sul PC nelle Impostazioni per sincronizzare.";
 "Today" = "Oggi";
 "Previous month" = "Mese precedente";
 "Next month" = "Mese successivo";
@@ -97,7 +97,7 @@
 "Sync automatically" = "Sincronizza automaticamente";
 "Sync now" = "Sincronizza ora";
 "Sync" = "Sincronizzazione";
-"When automatic, Moodlog syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back." = "In automatico, Moodlog si sincronizza quando lo apri e pochi secondi dopo ogni modifica. Le voci inserite fuori casa restano sul telefono e si sincronizzano quando torni.";
+"When automatic, Sottovoce syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back." = "In automatico, Sottovoce si sincronizza quando lo apri e pochi secondi dopo ogni modifica. Le voci inserite fuori casa restano sul telefono e si sincronizzano quando torni.";
 "Send with each sync (at most hourly)" = "Invia a ogni sincronizzazione (al massimo una volta l'ora)";
 "Send the last 7 days now" = "Invia ora gli ultimi 7 giorni";
 "About" = "Informazioni";
@@ -131,7 +131,7 @@
 "Didn't remember a dream? Turn that on: it counts too." = "Non ricordi nessun sogno? Attiva quella voce: conta anche quello.";
 "Delete this dream" = "Elimina questo sogno";
 "Show the tour" = "Mostra la guida";
-"Welcome to Moodlog" = "Ti do il benvenuto in Moodlog";
+"Welcome to Sottovoce" = "Ti do il benvenuto in Sottovoce";
 "Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you." = "Ciao! Nessuna fretta, ti aiuto a capire come funziona l'interfaccia. Non farti spaventare, è piuttosto semplice: ci penso io a te.";
 "Five tabs, down here" = "Cinque schede, qui in basso";
 "Down here are the tabs. You'll spend most of your time in Log; the others are there whenever you want them. Let's have a quick look at each." = "Qui in basso ci sono le schede. Passerai quasi tutto il tempo in Diario; le altre sono lì quando ti servono. Diamo un'occhiata veloce a ciascuna.";
@@ -142,20 +142,20 @@
 "Dreams, if you remember them" = "I sogni, se li ricordi";
 "A small dream journal, for the mornings you remember something. Totally optional." = "Un piccolo diario dei sogni, per le mattine in cui ricordi qualcosa. Del tutto facoltativo.";
 "Mark what matters" = "Segna ciò che conta";
-"Started a new medication, or something big happened? Add it here, and Moodlog shows how you felt in the two weeks before and after." = "Hai iniziato una nuova terapia, o è successo qualcosa di importante? Aggiungilo qui, e Moodlog ti mostra come ti sentivi nelle due settimane prima e dopo.";
+"Started a new medication, or something big happened? Add it here, and Sottovoce shows how you felt in the two weeks before and after." = "Hai iniziato una nuova terapia, o è successo qualcosa di importante? Aggiungilo qui, e Sottovoce ti mostra come ti sentivi nelle due settimane prima e dopo.";
 "That's all, really" = "È tutto, davvero";
 "Everything stays on your phone, private. Log a mood whenever you feel like it; even once a day is plenty. You've got this." = "Tutto resta sul tuo telefono, in privato. Registra un umore quando ti va; anche una volta al giorno è più che sufficiente. Ci puoi riuscire!";
 "Skip tour" = "Salta la guida";
 "Back" = "Indietro";
 "Let's start" = "Iniziamo";
 "Next" = "Avanti";
-"Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted." = "Sul PC c'è una versione vecchia di Moodlog. Aggiornala alla 2.5 o successiva: ora la sincronizzazione è cifrata.";
-"Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer." = "Il PC ha inviato qualcosa di inatteso. Aggiorna Moodlog sul PC alla 2.5 o successiva.";
-"Connected to Moodlog %@ on your PC (encrypted)" = "Collegato a Moodlog %@ sul PC (cifrato)";
+"Your PC runs an older Sottovoce. Update it to 2.5 or newer: syncing is now encrypted." = "Sul PC c'è una versione vecchia di Sottovoce. Aggiornala alla 2.5 o successiva: ora la sincronizzazione è cifrata.";
+"Your PC sent something unexpected. Update Sottovoce on your PC to 2.5 or newer." = "Il PC ha inviato qualcosa di inatteso. Aggiorna Sottovoce sul PC alla 2.5 o successiva.";
+"Connected to Sottovoce %@ on your PC (encrypted)" = "Collegato a Sottovoce %@ sul PC (cifrato)";
 "Privacy" = "Privacy";
 "Your data is yours" = "I tuoi dati sono tuoi";
 "Nobody collects your data" = "Nessuno raccoglie i tuoi dati";
-"Moodlog has no account, no server, no analytics and no ads. The developer never sees anything you write." = "Moodlog non ha account, server, statistiche d'uso né pubblicità. Lo sviluppatore non vede mai niente di quello che scrivi.";
+"Sottovoce has no account, no server, no analytics and no ads. The developer never sees anything you write." = "Sottovoce non ha account, server, statistiche d'uso né pubblicità. Lo sviluppatore non vede mai niente di quello che scrivi.";
 "It stays on your devices" = "Resta sui tuoi dispositivi";
 "Everything is saved inside this app, on your own PC if you sync, and in the backup file if you pick one." = "Tutto viene salvato dentro quest'app, sul tuo PC se sincronizzi, e nel file di backup se ne scegli uno.";
 "Sync is encrypted" = "La sincronizzazione è cifrata";
@@ -167,24 +167,24 @@
 /* Android only */
 "Can't reach your PC. Is it on, with Phone sync switched on, and is your phone on the same Wi-Fi? (%@)" = "Impossibile raggiungere il PC. È acceso, con Sincronizza telefono attivo, e il telefono è sulla stessa rete Wi-Fi? (%@)";
 "Health Connect isn't available on this phone. Install it from the Play Store, then try again." = "Connessione Salute non è disponibile su questo telefono. Installala dal Play Store, poi riprova.";
-"Allow Moodlog to read steps, resting heart rate and sleep first (the button above)." = "Prima consenti a Moodlog di leggere passi, frequenza cardiaca a riposo e sonno (il pulsante qui sopra).";
+"Allow Sottovoce to read steps, resting heart rate and sleep first (the button above)." = "Prima consenti a Sottovoce di leggere passi, frequenza cardiaca a riposo e sonno (il pulsante qui sopra).";
 "No health data found for the last 7 days. Check that your watch or fitness app shares it with Health Connect." = "Nessun dato di salute negli ultimi 7 giorni. Controlla che il tuo orologio o la tua app di fitness li condivida con Connessione Salute.";
 "OK" = "OK";
-"Steps, resting heart rate and sleep are read from Health Connect only if you allow it and turn it on in Settings, and only to show them next to your mood on your PC. Moodlog never writes to Health Connect." = "Passi, frequenza cardiaca a riposo e sonno vengono letti da Connessione Salute solo se lo permetti e lo attivi nelle Impostazioni, e solo per mostrarli accanto al tuo umore sul PC. Moodlog non scrive mai in Connessione Salute.";
-"Moodlog never connects to the internet. Only the link below opens a page in your browser." = "Moodlog non si collega mai a internet. Solo il link qui sotto apre una pagina nel browser.";
-"In Moodlog on your PC, open Phone sync and switch the receiver on. Use the address and token shown there. Your phone and PC need to be on the same Wi-Fi." = "In Moodlog sul PC apri Sincronizza telefono e attiva il ricevitore. Usa l'indirizzo e il token mostrati lì. Il telefono e il PC devono essere sulla stessa rete Wi-Fi.";
+"Steps, resting heart rate and sleep are read from Health Connect only if you allow it and turn it on in Settings, and only to show them next to your mood on your PC. Sottovoce never writes to Health Connect." = "Passi, frequenza cardiaca a riposo e sonno vengono letti da Connessione Salute solo se lo permetti e lo attivi nelle Impostazioni, e solo per mostrarli accanto al tuo umore sul PC. Sottovoce non scrive mai in Connessione Salute.";
+"Sottovoce never connects to the internet. Only the link below opens a page in your browser." = "Sottovoce non si collega mai a internet. Solo il link qui sotto apre una pagina nel browser.";
+"In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there. Your phone and PC need to be on the same Wi-Fi." = "In Sottovoce sul PC apri Sincronizza telefono e attiva il ricevitore. Usa l'indirizzo e il token mostrati lì. Il telefono e il PC devono essere sulla stessa rete Wi-Fi.";
 "Health Connect" = "Connessione Salute";
-"Sends sleep, steps and resting heart rate from Health Connect to Moodlog on your PC, so you can compare them with your mood. Your watch or fitness app needs to share them with Health Connect." = "Invia sonno, passi e frequenza cardiaca a riposo da Connessione Salute a Moodlog sul PC, così puoi confrontarli con il tuo umore. Il tuo orologio o la tua app di fitness deve condividerli con Connessione Salute.";
+"Sends sleep, steps and resting heart rate from Health Connect to Sottovoce on your PC, so you can compare them with your mood. Your watch or fitness app needs to share them with Health Connect." = "Invia sonno, passi e frequenza cardiaca a riposo da Connessione Salute a Sottovoce sul PC, così puoi confrontarli con il tuo umore. Il tuo orologio o la tua app di fitness deve condividerli con Connessione Salute.";
 "Health Connect isn't on this phone yet." = "Connessione Salute non è ancora su questo telefono.";
 "Get Health Connect" = "Scarica Connessione Salute";
 "Allow access to steps, heart rate and sleep" = "Consenti l'accesso a passi, battito e sonno";
-"Moodlog can read your steps, resting heart rate and sleep." = "Moodlog può leggere passi, frequenza cardiaca a riposo e sonno.";
+"Sottovoce can read your steps, resting heart rate and sleep." = "Sottovoce può leggere passi, frequenza cardiaca a riposo e sonno.";
 "Language" = "Lingua";
 "Entries on this phone" = "Voci su questo telefono";
 "Hide token" = "Nascondi token";
 "Show token" = "Mostra token";
 "Your PC and Health Connect" = "Il tuo PC e Connessione Salute";
-"Here you can connect to Moodlog on your PC and send sleep and steps from Health Connect. All optional: the app works on its own too. You can watch this tour again from here." = "Qui puoi collegarti a Moodlog sul PC e inviare sonno e passi da Connessione Salute. Tutto facoltativo: l'app funziona anche da sola. Da qui puoi anche rivedere questa guida.";
+"Here you can connect to Sottovoce on your PC and send sleep and steps from Health Connect. All optional: the app works on its own too. You can watch this tour again from here." = "Qui puoi collegarti a Sottovoce sul PC e inviare sonno e passi da Connessione Salute. Tutto facoltativo: l'app funziona anche da sola. Da qui puoi anche rivedere questa guida.";
 "Can't find %@ on your Wi-Fi. Is the PC on and on the same Wi-Fi? If it still fails, use the other address Phone sync shows on the PC (If that fails)." = "%@ non si trova sulla tua rete Wi-Fi. Il PC è acceso e sulla stessa rete Wi-Fi? Se non funziona ancora, usa l'altro indirizzo mostrato in Sincronizza telefono sul PC (Se non funziona).";
 "On" = "Attivo";
 "Off" = "Disattivo";
@@ -192,10 +192,10 @@
 "From Phone sync on your PC" = "Da Sincronizza telefono sul PC";
 
 /* Report (from the PC) */
-"Made with Moodlog · self-reported data, not a medical record" = "Fatto con Moodlog · dati riferiti dalla persona, non è una cartella clinica";
+"Made with Sottovoce · self-reported data, not a medical record" = "Fatto con Sottovoce · dati riferiti dalla persona, non è una cartella clinica";
 "Page %@" = "Pagina %@";
 "Mood report" = "Resoconto dell'umore";
-"%@ – %@ · %@ days · made with Moodlog on %@" = "%@ – %@ · %@ giorni · fatto con Moodlog il %@";
+"%@ – %@ · %@ days · made with Sottovoce on %@" = "%@ – %@ · %@ giorni · fatto con Sottovoce il %@";
 "Days with a mood" = "Giorni con un umore";
 "%@ of %@" = "%@ su %@";
 "Average mood (1–5)" = "Umore medio (1–5)";
@@ -258,7 +258,7 @@
 "Some hard days lately" = "Qualche giorno difficile ultimamente";
 "That sounds heavy. You don't have to carry it alone: talking to someone can help, even just once." = "Sembra pesante. Non devi affrontarlo in solitudine: parlarne con qualcuno può aiutare, anche solo una volta.";
 "Thanks, hide this for now" = "Grazie, nascondi per ora";
-"Moodlog report" = "Resoconto Moodlog";
+"Sottovoce report" = "Resoconto Sottovoce";
 "Saved." = "Salvato.";
 "Couldn't save the PDF there." = "Impossibile salvare il PDF lì.";
 "A printable PDF with your mood over a period, energy and anxiety, sleep, your events with the mood before and after, and a day-by-day table." = "Un PDF stampabile con il tuo umore in un periodo, energia e ansia, sonno, gli eventi con l'umore prima e dopo, e una tabella giorno per giorno.";
@@ -268,12 +268,12 @@
 "Share PDF…" = "Condividi PDF…";
 "Restored: %@ change." = "Ripristinato: %@ modifica.";
 "Restored: %@ changes." = "Ripristinato: %@ modifiche.";
-"That file isn't a Moodlog backup." = "Quel file non è un backup di Moodlog.";
+"That file isn't a Sottovoce backup." = "Quel file non è un backup di Sottovoce.";
 "Reminder" = "Promemoria";
 "Only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge." = "Solo nei giorni in cui non hai ancora registrato un umore. Niente serie, niente sensi di colpa: solo un piccolo promemoria.";
 "Remind me once a day" = "Ricordamelo una volta al giorno";
 "Backup" = "Backup";
-"Pick a file once, for example in Google Drive, and Moodlog keeps a copy of everything there after each change. The Drive app uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, iPhone included." = "Scegli un file una volta, per esempio in Google Drive, e Moodlog ci tiene una copia di tutto dopo ogni modifica. Lo carica l'app Drive; Moodlog non va mai su internet. Puoi ripristinarlo su qualsiasi telefono, anche su iPhone.";
+"Pick a file once, for example in Google Drive, and Sottovoce keeps a copy of everything there after each change. The Drive app uploads it; Sottovoce itself never goes on the internet. You can restore it on any phone, iPhone included." = "Scegli un file una volta, per esempio in Google Drive, e Sottovoce ci tiene una copia di tutto dopo ogni modifica. Lo carica l'app Drive; Sottovoce non va mai su internet. Puoi ripristinarlo su qualsiasi telefono, anche su iPhone.";
 "Choose a backup file…" = "Scegli un file di backup…";
 "File" = "File";
 "Last backup" = "Ultimo backup";
@@ -309,7 +309,7 @@
 
 /* Questionnaires (1.4) */
 "Questionnaires" = "Questionari";
-"Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation." = "Compilati in Moodlog. Ogni risposta vale da 0 (mai) a 3 (quasi ogni giorno); il punteggio è la loro somma, su 27 per il PHQ-9 e su 21 per il GAD-7. Le risposte sono elencate nell'ordine delle domande. Moodlog non dà alcuna interpretazione.";
+"Answered in Sottovoce. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Sottovoce gives no interpretation." = "Compilati in Sottovoce. Ogni risposta vale da 0 (mai) a 3 (quasi ogni giorno); il punteggio è la loro somma, su 27 per il PHQ-9 e su 21 per il GAD-7. Le risposte sono elencate nell'ordine delle domande. Sottovoce non dà alcuna interpretazione.";
 "Questionnaire" = "Questionario";
 "Score" = "Punteggio";
 "Answers" = "Risposte";
@@ -323,7 +323,7 @@
 "Questionnaires for your doctor" = "Questionari per il medico";
 "%@ question left" = "Manca %@ domanda";
 "%@ questions left" = "Mancano %@ domande";
-"Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Moodlog shows only your score, and the report can include them for your doctor." = "Due brevi questionari che usano i medici: il PHQ-9 sull'umore basso e il GAD-7 sull'ansia. Ognuno chiede delle ultime due settimane. Moodlog mostra solo il punteggio, e il report può includerli per il tuo medico.";
+"Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Sottovoce shows only your score, and the report can include them for your doctor." = "Due brevi questionari che usano i medici: il PHQ-9 sull'umore basso e il GAD-7 sull'ansia. Ognuno chiede delle ultime due settimane. Sottovoce mostra solo il punteggio, e il report può includerli per il tuo medico.";
 "Answer %@" = "Compila il %@";
 "A notification two weeks after your last questionnaire. Nothing is sent before your first one." = "Una notifica due settimane dopo l'ultimo questionario. Prima del tuo primo questionario non arriva niente.";
 "Remind me every two weeks" = "Ricordamelo ogni due settimane";
@@ -339,7 +339,7 @@
 "Private: keep it out of the doctor report" = "Privato: non metterlo nel report per il medico";
 "Thank you for answering honestly" = "Grazie per aver risposto con sincerità";
 "You said you've had thoughts of being better off dead or of hurting yourself. That's a lot to carry, and you don't have to carry it alone. Please tell your doctor, or someone you trust, soon. If it feels heavy right now, you can talk to someone today:" = "Hai detto di aver pensato che sarebbe meglio morire o di farti del male. È tanto da portare, e non devi portarlo da solo. Parlane presto con il tuo medico o con qualcuno di cui ti fidi. Se adesso ti pesa, puoi parlare con qualcuno già oggi:";
-"Moodlog doesn't tell anyone: this stays on your devices." = "Moodlog non lo dice a nessuno: resta sui tuoi dispositivi.";
+"Sottovoce doesn't tell anyone: this stays on your devices." = "Sottovoce non lo dice a nessuno: resta sui tuoi dispositivi.";
 "Close" = "Chiudi";
 
 /* Feeling words and writing prompts */
@@ -383,3 +383,4 @@
 "Feelings" = "Emozioni";
 "Pick any that fit. Optional." = "Scegli quelle che ti somigliano. Facoltativo.";
 "Another question" = "Un'altra domanda";
+"Sottovoce — a quiet mood diary. Formerly called Moodlog." = "Sottovoce — un diario dell'umore, sottovoce. Prima si chiamava Moodlog.";

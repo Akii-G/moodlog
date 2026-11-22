@@ -1,8 +1,13 @@
 # Changelog
 
-Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own version numbers. Each GitHub release is named after the PC version and includes all three apps.
+Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their own version numbers. Each GitHub release is named after the PC version and includes all three apps.
 
-## Moodlog for the PC
+## Sottovoce for the PC
+
+### 3.0.0 (2026-11-22)
+
+- Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data, settings and phone sync stay exactly as they were.
+- Default names for backups, exports and reports now start with sottovoce-. On Linux the package is now called sottovoce and replaces moodlog; the moodlog command still works.
 
 ### 2.12.2 (2026-11-22)
 
@@ -15,7 +20,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.12.0 (2026-11-21)
 
-- Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\Moodlog.
+- Sottovoce for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\Sottovoce.
 
 ### 2.11.0 (2026-11-21)
 
@@ -24,7 +29,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.10.0 (2026-11-21)
 
-- Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.
+- Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Sottovoce shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.
 - Charts: "Most common" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart.
 
 ### 2.9.0 (2026-11-21)
@@ -38,7 +43,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.8.0 (2026-11-20)
 
-- Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.
+- Medication from Apple Health: with Sottovoce for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.
 
 ### 2.7.0 (2026-11-20)
 
@@ -47,20 +52,20 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.6.1 (2026-11-20)
 
-- Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC.
+- Sottovoce for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC.
 
 ### 2.6.0 (2026-11-19)
 
-- Moodlog for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up.
+- Sottovoce for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up.
 
 ### 2.5.1 (2026-11-19)
 
-- A privacy policy: ☰ menu → Privacy shows in short what Moodlog does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy.
+- A privacy policy: ☰ menu → Privacy shows in short what Sottovoce does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy.
 - The phone sync receiver no longer writes the address of a request to the system log in full, so a token sent in the address can't end up there.
 
 ### 2.5.0 (2026-11-19)
 
-- Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button.
+- Encrypted phone sync: Sottovoce for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button.
 
 ### 2.4.0 (2026-11-19)
 
@@ -82,7 +87,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.2.0 (2026-11-19)
 
-- Moodlog speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too.
+- Sottovoce speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too.
 
 ### 2.1.0 (2026-11-19)
 
@@ -95,7 +100,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 2.0.0 (2026-11-19)
 
-- Moodlog for iPhone: a new app that syncs moods, energy, anxiety, notes and events with Moodlog on your PC over your home Wi-Fi.
+- Sottovoce for iPhone: a new app that syncs moods, energy, anxiety, notes and events with Sottovoce on your PC over your home Wi-Fi.
 - Every entry and event now has an ID and a change time: the newest change wins, deletions sync too, and nothing is overwritten when two devices save at once.
 - Saving merges changes written meanwhile by the phone or another computer.
 - Your existing data is upgraded automatically.
@@ -113,7 +118,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 - Energy and anxiety: two optional 1–5 scales on every entry, with their own chart.
 - Report for your doctor: a printable PDF for a chosen period, with charts, events and a day-by-day table. Notes are only included if you ask.
 - Backup and restore as one .zip file; restoring saves your current data first.
-- Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Moodlog on two computers, with merging of conflict copies.
+- Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Sottovoce on two computers, with merging of conflict copies.
 
 ### 1.7.1 (2026-11-18)
 
@@ -146,14 +151,18 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.1.0 (2026-11-13)
 
-- Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Moodlog.
+- Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Sottovoce.
 - New chart comparing your mood with your health data.
 
 ### 1.0.0 (2026-11-13)
 
 - First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file.
 
-## Moodlog for iPhone
+## Sottovoce for iPhone
+
+### 2.0.0 (2026-11-22)
+
+- Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.
 
 ### 1.9.0 (2026-11-21)
 
@@ -167,7 +176,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.8.0 (2026-11-21)
 
-- Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.
+- Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.
 
 ### 1.7.0 (2026-11-21)
 
@@ -180,7 +189,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.6.6 (2026-11-21)
 
-- Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance.
+- Backup: Settings warns when Sottovoce can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance.
 
 ### 1.6.5 (2026-11-21)
 
@@ -188,23 +197,23 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.6.4 (2026-11-20)
 
-- Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed.
+- Medication: Sottovoce asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed.
 
 ### 1.6.3 (2026-11-20)
 
-- Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Moodlog now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone.
+- Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Sottovoce now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone.
 
 ### 1.6.2 (2026-11-20)
 
-- Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way.
+- Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Sottovoce asks Health for the names in a second way.
 
 ### 1.6.1 (2026-11-20)
 
-- Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again.
+- Medication: Settings now says what Sottovoce can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again.
 
 ### 1.6.0 (2026-11-20)
 
-- Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health.
+- Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Sottovoce only reads them: it never changes anything in Health.
 
 ### 1.5.0 (2026-11-20)
 
@@ -217,11 +226,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.4.1 (2026-11-19)
 
-- A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy.
+- A privacy policy: Settings → Privacy shows in short what Sottovoce does with your data, with a link to the full policy.
 
 ### 1.4.0 (2026-11-19)
 
-- Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC.
+- Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Sottovoce 2.5 or newer on the PC.
 
 ### 1.3.0 (2026-11-19)
 
@@ -229,11 +238,11 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.2.0 (2026-11-19)
 
-- Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC.
+- Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Sottovoce 2.3 on the PC.
 
 ### 1.1.0 (2026-11-19)
 
-- Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Moodlog → Language.
+- Sottovoce for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Sottovoce → Language.
 
 ### 1.0.1 (2026-11-19)
 
@@ -241,9 +250,13 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.0.0 (2026-11-19)
 
-- First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.
+- First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Sottovoce on your PC over your home Wi-Fi.
 
-## Moodlog for Android
+## Sottovoce for Android
+
+### 2.0.0 (2026-11-22)
+
+- Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.
 
 ### 1.5.0 (2026-11-21)
 
@@ -252,7 +265,7 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 
 ### 1.4.0 (2026-11-21)
 
-- Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.
+- Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.
 
 ### 1.3.0 (2026-11-21)
 
@@ -278,6 +291,6 @@ Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own ve
 ### 1.0.0 (2026-11-19)
 
 - The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian.
-- Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi.
+- Encrypted sync with Sottovoce on your PC (2.5 or newer), over your own Wi-Fi.
 - Sleep, steps and resting heart rate from Health Connect, sent to your PC if you turn it on.
 

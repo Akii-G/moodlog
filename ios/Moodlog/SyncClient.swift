@@ -16,7 +16,7 @@ enum SyncError: LocalizedError {
         case .badAddress:
             return tr("The address doesn't look right. It should be like http://pop-os.local:8765")
         case .unauthorized:
-            return tr("Wrong token. Copy it again from Moodlog on your PC (Phone sync).")
+            return tr("Wrong token. Copy it again from Sottovoce on your PC (Phone sync).")
         case .unreachable(let why):
             return tr("Can't reach your PC. Is it on, with Phone sync switched on, and is your iPhone on the same Wi-Fi? (%@)", why)
         case .server(let message):
@@ -68,7 +68,7 @@ enum SyncClient {
         guard let http = result.1 as? HTTPURLResponse else { throw SyncError.server(tr("No answer from your PC.")) }
         if http.statusCode == 401 { throw SyncError.unauthorized }
         if http.statusCode == 404 {
-            throw SyncError.server(tr("Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted."))
+            throw SyncError.server(tr("Your PC runs an older Sottovoce. Update it to 2.5 or newer: syncing is now encrypted."))
         }
         if !(200..<300).contains(http.statusCode) {
             if let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -84,14 +84,14 @@ enum SyncClient {
         }
     }
 
-    /// Checks the address and token. Returns e.g. "Connected to Moodlog 2.5.0".
+    /// Checks the address and token. Returns e.g. "Connected to Sottovoce 2.5.0".
     static func ping() async throws -> String {
         let data = try await request("/api/e/ping", payload: Data("{}".utf8))
         guard let doc = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = doc["version"] as? String else {
-            throw SyncError.server(tr("Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer."))
+            throw SyncError.server(tr("Your PC sent something unexpected. Update Sottovoce on your PC to 2.5 or newer."))
         }
-        return tr("Connected to Moodlog %@ on your PC (encrypted)", version)
+        return tr("Connected to Sottovoce %@ on your PC (encrypted)", version)
     }
 
     private struct Outgoing: Codable {
@@ -115,7 +115,7 @@ enum SyncClient {
         do {
             remote = try JSONDecoder().decode(SyncState.self, from: data)
         } catch {
-            throw SyncError.server(tr("Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer."))
+            throw SyncError.server(tr("Your PC sent something unexpected. Update Sottovoce on your PC to 2.5 or newer."))
         }
         return store.absorb(remote)
     }

@@ -1,5 +1,5 @@
 [Unit]
-Description=Moodlog daily reminder (only if no mood is logged today)
+Description=Sottovoce daily reminder (only if no mood is logged today)
 
 [Service]
 Type=simple

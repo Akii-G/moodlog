@@ -201,8 +201,8 @@ class SyncClient(
         }
         val (code, body) = result ?: throw SyncException(tr("Can't reach your PC. Is it on, with Phone sync switched on, and is your phone on the same Wi-Fi? (%@)",
             failure?.localizedMessage ?: failure?.javaClass?.simpleName ?: ""))
-        if (code == 401) throw SyncException(tr("Wrong token. Copy it again from Moodlog on your PC (Phone sync)."))
-        if (code == 404) throw SyncException(tr("Your PC runs an older Moodlog. Update it to 2.5 or newer: syncing is now encrypted."))
+        if (code == 401) throw SyncException(tr("Wrong token. Copy it again from Sottovoce on your PC (Phone sync)."))
+        if (code == 404) throw SyncException(tr("Your PC runs an older Sottovoce. Update it to 2.5 or newer: syncing is now encrypted."))
         if (code !in 200..299) {
             val message = try { JSONObject(body).optString("error") } catch (e: Exception) { "" }
             throw SyncException(message.ifEmpty { tr("Your PC answered with error %@.", code) })
@@ -210,19 +210,19 @@ class SyncClient(
         return try {
             SyncCrypto.open(body, token, path)
         } catch (e: SyncCrypto.Unreadable) {
-            throw SyncException(tr("Wrong token. Copy it again from Moodlog on your PC (Phone sync)."))
+            throw SyncException(tr("Wrong token. Copy it again from Sottovoce on your PC (Phone sync)."))
         }
     }
 
-    private val unexpected get() = tr("Your PC sent something unexpected. Update Moodlog on your PC to 2.5 or newer.")
+    private val unexpected get() = tr("Your PC sent something unexpected. Update Sottovoce on your PC to 2.5 or newer.")
 
-    /** Checks the address and token. Returns e.g. "Connected to Moodlog 2.5.0 on your PC". */
+    /** Checks the address and token. Returns e.g. "Connected to Sottovoce 2.5.0 on your PC". */
     fun ping(): String {
         val data = request("/api/e/ping", "{}".toByteArray())
         val version = try { JSONObject(String(data)).getString("version") } catch (e: Exception) {
             throw SyncException(unexpected)
         }
-        return tr("Connected to Moodlog %@ on your PC (encrypted)", version)
+        return tr("Connected to Sottovoce %@ on your PC (encrypted)", version)
     }
 
     /** Sends everything on the phone, gets the merged state back and merges it here. */
@@ -303,7 +303,7 @@ class SyncCoordinator(
             return
         }
         if (!health.hasPermissions()) {
-            healthStatus = tr("Allow Moodlog to read steps, resting heart rate and sleep first (the button above).")
+            healthStatus = tr("Allow Sottovoce to read steps, resting heart rate and sleep first (the button above).")
             return
         }
         try {

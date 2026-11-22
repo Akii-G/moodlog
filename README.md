@@ -1,10 +1,12 @@
-# Moodlog
+# Sottovoce — a quiet mood diary
+
+*Formerly called Moodlog. Same app, new name: your data and sync carry on as before.*
 
 > **The Windows version is in beta.** It's new and hasn't been used much yet, so
 > something may not work as it should. If you find a problem, please
-> [open an issue](https://github.com/Akii-G/moodlog/issues).
+> [open an issue](https://github.com/Akii-G/sottovoce/issues).
 
-A small, private mood tracker for Linux and Windows, with companion apps for iPhone and Android. Log how
+A small, private mood diary for Linux and Windows, with companion apps for iPhone and Android. Log how
 you feel in one click, see how things go over weeks and months, mark events such as
 a medication change, keep a dream journal, and bring a clear PDF report to your
 doctor. No account and no cloud: everything stays in plain files on your devices.
@@ -73,7 +75,7 @@ average mood in the two weeks before and after it.
 The **Dreams** tab is a dream journal. Each dream belongs to the morning you woke
 up: write what you remember, pick how it felt and tick tags such as nightmare,
 vivid, recurring or lucid ("Didn't remember" counts too). Nights with a dream show
-a moon in the calendar, and once there is enough data Moodlog compares your mood
+a moon in the calendar, and once there is enough data Sottovoce compares your mood
 on days after a disturbing dream with other days. Dreams are private: the doctor
 report leaves them out unless you ask.
 
@@ -98,10 +100,10 @@ charts) or a plain CSV file, which open in LibreOffice Calc, Excel or Google She
 
 Two short questionnaires doctors use, with their official words in English and
 Italian: **PHQ-9** about low mood and **GAD-7** about anxiety (☰ → **Questionnaires for
-your doctor** on the PC, **Settings → Questionnaires** on the phones). Moodlog shows
+your doctor** on the PC, **Settings → Questionnaires** on the phones). Sottovoce shows
 only your score and a chart of scores over time, never a label or a diagnosis. The
 report for your doctor can include them, with each answer, and they sync between your
-devices. Two weeks after the last one, Moodlog asks gently if you'd like to answer
+devices. Two weeks after the last one, Sottovoce asks gently if you'd like to answer
 again: a card on the PC, a notification on the phone.
 
 PHQ-9 and GAD-7 were developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt
@@ -110,7 +112,7 @@ required to reproduce, translate, display or distribute them.
 
 ### A gentle reminder, and a kind word
 
-If you like, Moodlog reminds you once a day at the time you choose, only on days you
+If you like, Sottovoce reminds you once a day at the time you choose, only on days you
 haven't logged a mood yet: a quiet notification on the PC (☰ → **Customize your
 experience**) or the phone (**Settings → Reminder**). No streaks, no guilt.
 
@@ -131,22 +133,22 @@ you can hide the tick, or have every new note and dream start private.
 
 ### Use it on your iPhone too
 
-**Moodlog for iPhone** logs moods, energy, anxiety, notes, events and dreams on
-your phone, and syncs them with Moodlog on your PC over your home Wi-Fi, even if
+**Sottovoce for iPhone** logs moods, energy, anxiety, notes, events and dreams on
+your phone, and syncs them with Sottovoce on your PC over your home Wi-Fi, even if
 you logged while away. It can also send sleep, steps and resting heart rate from
-Apple Health. Every [release](https://github.com/Akii-G/moodlog/releases) includes
-it as `Moodlog-iPhone-<version>.ipa`; see [`ios/README.md`](ios/README.md) to install
+Apple Health. Every [release](https://github.com/Akii-G/sottovoce/releases) includes
+it as `Sottovoce-iPhone-<version>.ipa`; see [`ios/README.md`](ios/README.md) to install
 it with SideStore or AltStore.
 
-<img src="docs/screenshots/iphone-log.png" alt="Moodlog for iPhone" width="300">
+<img src="docs/screenshots/iphone-log.png" alt="Sottovoce for iPhone" width="300">
 
 To connect it, open **Phone sync** on the PC, switch the receiver on, and enter the
 address and token shown there in the iPhone app's Settings.
 
-On iOS 26 or newer, Moodlog for iPhone can also read the medications you log in the
+On iOS 26 or newer, Sottovoce for iPhone can also read the medications you log in the
 Health app (**Settings → Medication**): each day shows the doses you took or skipped,
 the report for your doctor gets a Medication section, and your PC receives them with
-the health data. Moodlog only reads them and never changes anything in Health.
+the health data. Sottovoce only reads them and never changes anything in Health.
 
 On both phones, **Charts** also shows your sleep night by night next to your mood,
 and **Settings → Backup** keeps a copy of everything in iCloud Drive or Google Drive
@@ -155,14 +157,14 @@ from one phone restores on the other.
 
 ### Or on your Android phone
 
-**Moodlog for Android** does the same: moods, energy, anxiety, notes, events and
+**Sottovoce for Android** does the same: moods, energy, anxiety, notes, events and
 dreams, synced with your PC over Wi-Fi, encrypted. It can send sleep, steps and
 resting heart rate from Health Connect, which most watches and fitness apps share
-with. Every [release](https://github.com/Akii-G/moodlog/releases) includes it as
-`Moodlog-Android-<version>.apk`: open it on your phone to install it (see
+with. Every [release](https://github.com/Akii-G/sottovoce/releases) includes it as
+`Sottovoce-Android-<version>.apk`: open it on your phone to install it (see
 [`android/README.md`](android/README.md)).
 
-<img src="docs/screenshots/android-log.png" alt="Moodlog for Android" width="300">
+<img src="docs/screenshots/android-log.png" alt="Sottovoce for Android" width="300">
 
 Connect it the same way: **Phone sync** on the PC, then the address and token in the
 app's Settings.
@@ -171,9 +173,9 @@ app's Settings.
 <summary>Prefer a Shortcut for Apple Health instead of the app?</summary>
 
 A ready-made shortcut sends the last 7 days of steps, resting heart rate and sleep:
-**[Get "Moodlog Sync" for Shortcuts](https://www.icloud.com/shortcuts/db962227cb6547b4b480a1060afb0b9f)**
+**[Get "Sottovoce Sync" for Shortcuts](https://www.icloud.com/shortcuts/db962227cb6547b4b480a1060afb0b9f)**
 
-1. In Moodlog, open **Phone sync** and switch the receiver on. Keep that window
+1. In Sottovoce, open **Phone sync** and switch the receiver on. Keep that window
    open for the address and token.
 2. Open the link on your iPhone and tap **Get Shortcut**. For **Address** enter the
    address shown in Phone sync (for example `http://your-pc.local:8765/health`); for
@@ -207,14 +209,14 @@ each tab as it goes.
 
 ## Install
 
-Download `moodlog_<version>_all.deb` from the
-[latest release](https://github.com/Akii-G/moodlog/releases/latest), then:
+Download `sottovoce_<version>_all.deb` from the
+[latest release](https://github.com/Akii-G/sottovoce/releases/latest), then:
 
-    sudo apt install ./moodlog_2.12.2_all.deb
+    sudo apt install ./sottovoce_3.0.0_all.deb
 
-Remove it with `sudo apt remove moodlog`; your data is kept.
+Remove it with `sudo apt remove sottovoce`; your data is kept.
 
-**On Windows 11 or 10** (beta), download `Moodlog-Setup-<version>.exe` from the same release
+**On Windows 11 or 10** (beta), download `Sottovoce-Setup-<version>.exe` from the same release
 and open it. Windows may warn that the app is from an unknown publisher, because the
 installer isn't signed: choose *More info → Run anyway*. It's the same app, phone sync
 included; your data is in `%LOCALAPPDATA%\Moodlog`, and it stays there if you uninstall. For the phone apps, see
@@ -231,10 +233,10 @@ stored and sent; in the app it's under ☰ → Privacy.
 - **Back up and restore**: the folder button in the title bar makes one .zip with
   all your data and restores it (your current data is saved first).
 - **Two computers**: *Data folder and sync…* can keep your data in a folder that
-  Syncthing or Nextcloud syncs. Moodlog merges both computers' data and any conflict
+  Syncthing or Nextcloud syncs. Sottovoce merges both computers' data and any conflict
   copies, so nothing is lost.
 - **Gridgets**: if you use the [Gridgets](https://github.com/rebatnaath/gridgets)
-  GNOME extension, Moodlog links with its mood widget both ways (switch it off in
+  GNOME extension, Sottovoce links with its mood widget both ways (switch it off in
   ☰ → Customize your experience).
 
 <details>
@@ -251,7 +253,7 @@ stored and sent; in the app it's under ☰ → Privacy.
 The receiver is `moodlog --sync-server`, run as the systemd user service
 `moodlog-sync.service` on port 8765, and restarts itself after an update.
 
-- **Moodlog for iPhone (1.4+) is encrypted end to end:** every request and reply is
+- **Sottovoce for iPhone (1.4+) is encrypted end to end:** every request and reply is
   sealed with AES-256-GCM using a key derived from your token (HKDF-SHA256), on
   `POST /api/e/ping`, `/api/e/sync` and `/api/e/health`. The token itself is never
   sent, so someone on the same Wi-Fi sees only scrambled data.
@@ -262,14 +264,14 @@ The receiver is `moodlog --sync-server`, run as the systemd user service
   Use it only on a network you trust. Phone sync shows whether the last connection
   was encrypted, and **Change token…** makes a new token at any time.
 
-From a terminal: `moodlog --export FILE.xlsx` (or `.csv`) and
-`moodlog --report FILE.pdf --from 2026-09-01 --to 2026-11-30` (add `--notes`,
+From a terminal: `sottovoce --export FILE.xlsx` (or `.csv`) and
+`sottovoce --report FILE.pdf --from 2026-09-01 --to 2026-11-30` (add `--notes`,
 `--dreams` or `--dream-text`).
 </details>
 
 ## For developers
 
-Moodlog for the PC is one Python file, `src/moodlog` (GTK 4 and libadwaita); the
+Sottovoce for the PC is one Python file, `src/moodlog` (GTK 4 and libadwaita); the
 iPhone app is SwiftUI, in `ios/`, and the Android app is Kotlin and Jetpack Compose,
 in `android/`. GitHub Actions builds both phone apps.
 
@@ -283,10 +285,10 @@ link and the translations (`python3 test/test_store.py` and so on); the `ui*.py`
 `test/test_android_sync.py` syncs the Android app's code with the real PC receiver.
 
 **Translations** are gettext `.po` files in `po/` (PC), `.lproj` folders in
-`ios/Moodlog/` (iPhone) and `.strings` files in `android/app/src/main/assets/i18n/`
+`ios/Sottovoce/` (iPhone) and `.strings` files in `android/app/src/main/assets/i18n/`
 (Android, the same format as the iPhone's). To add a language, copy `po/moodlog.pot`
 to `po/<code>.po` and fill in the `msgstr` lines (Poedit works), add the code to
-`LANGUAGES` in `src/moodlog`, copy `ios/Moodlog/it.lproj` to `<code>.lproj` and
+`LANGUAGES` in `src/moodlog`, copy `ios/Sottovoce/it.lproj` to `<code>.lproj` and
 `it.strings` to `<code>.strings`. `tools/extract_strings.py --check`,
 `tools/extract_ios_strings.py --check` and `tools/extract_android_strings.py --check`
 list anything still missing.

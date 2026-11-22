@@ -8,7 +8,7 @@ import Foundation
 /// (Choosing a folder instead doesn't work with every iPhone and install method: the picker's
 /// Open button can do nothing. Saving one file works everywhere.)
 enum Backup {
-    static let fileName = "moodlog-backup.json"
+    static let fileName = "sottovoce-backup.json"
     private static let key = "backupFile"
 
     struct File: Codable {
@@ -69,7 +69,7 @@ enum Backup {
         UserDefaults.standard.removeObject(forKey: "backupFileName")
     }
 
-    /// Where the file is, e.g. "Moodlog backup › moodlog-backup.json"; nil when none was chosen.
+    /// Where the file is, e.g. "Sottovoce backup › sottovoce-backup.json"; nil when none was chosen.
     static var placeName: String? { UserDefaults.standard.string(forKey: "backupFileName") }
 
     /// Why the saved file can't be reached, when it can't (shown in Settings).
@@ -109,7 +109,7 @@ enum Backup {
     @MainActor
     static func writeError(_ store: AppStore) -> String? {
         guard let url = file() else {
-            return tr("Moodlog can't reach the backup file any more (%@). Tap Choose another file… and save it again.",
+            return tr("Sottovoce can't reach the backup file any more (%@). Tap Choose another file… and save it again.",
                       problem ?? tr("No backup file chosen."))
         }
         let data: Data

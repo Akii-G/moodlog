@@ -1,14 +1,14 @@
-# Moodlog for Android
+# Sottovoce for Android
 
-Moodlog on your Android phone: log your mood, energy, anxiety and a note, see your
-month and charts, mark events, keep a dream journal, and sync it all with Moodlog on
+Sottovoce on your Android phone: log your mood, energy, anxiety and a note, see your
+month and charts, mark events, keep a dream journal, and sync it all with Sottovoce on
 your PC over your own Wi-Fi, encrypted. It can also send sleep, steps and resting
 heart rate from Health Connect. In English and Italian. Android 8 or newer.
 
 ## Install
 
-1. On your phone, open the [latest release](https://github.com/Akii-G/moodlog/releases/latest)
-   and download `Moodlog-Android-<version>.apk`.
+1. On your phone, open the [latest release](https://github.com/Akii-G/sottovoce/releases/latest)
+   and download `Sottovoce-Android-<version>.apk`.
 2. Open the downloaded file. The first time, Android asks to allow installing apps from
    your browser: allow it, then go back and tap **Install**.
 3. To update, do the same with the newer `.apk`: it installs over the old one and keeps
@@ -19,13 +19,13 @@ Play Protect may say it doesn't know the app, because it isn't on Google Play. T
 
 ## Connect it to your PC
 
-1. On the PC, open Moodlog → **Phone sync** and switch the receiver on.
+1. On the PC, open Sottovoce → **Phone sync** and switch the receiver on.
 2. In the app, open **Settings** and enter the address and token shown there. Tap
    **Test connection**.
 3. The phone and the PC must be on the same Wi-Fi. If `pop-os.local` doesn't work,
    use the address Phone sync shows under "If that fails".
 
-Moodlog syncs when you open it and a few seconds after each change. Entries made
+Sottovoce syncs when you open it and a few seconds after each change. Entries made
 away from home stay on the phone and sync when you're back.
 
 ## Health Connect

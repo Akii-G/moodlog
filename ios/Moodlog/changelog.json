@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.0",
+  "date": "2026-11-22",
+  "items": {
+   "en": [
+    "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were."
+   ],
+   "it": [
+    "Moodlog ora si chiama Sottovoce — un diario dell'umore, sottovoce: un nome nuovo e un'icona più morbida. I tuoi dati e la sincronizzazione restano esattamente come prima."
+   ]
+  }
+ },
+ {
   "version": "1.9.0",
   "date": "2026-11-21",
   "items": {
@@ -32,10 +44,10 @@
   "date": "2026-11-21",
   "items": {
    "en": [
-    "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
+    "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
    ],
    "it": [
-    "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Moodlog mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
+    "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Sottovoce mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
    ]
   }
  },
@@ -70,10 +82,10 @@
   "date": "2026-11-21",
   "items": {
    "en": [
-    "Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
+    "Backup: Settings warns when Sottovoce can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
    ],
    "it": [
-    "Backup: le Impostazioni avvisano quando Moodlog non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."
+    "Backup: le Impostazioni avvisano quando Sottovoce non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."
    ]
   }
  },
@@ -94,10 +106,10 @@
   "date": "2026-11-20",
   "items": {
    "en": [
-    "Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed."
+    "Medication: Sottovoce asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed."
    ],
    "it": [
-    "Farmaci: Moodlog chiede i nomi a Salute in più modi, e se Salute non li dà comunque, la schermata dei nomi è organizzata come il registro farmaci di Salute: per orario, poi quelli al bisogno."
+    "Farmaci: Sottovoce chiede i nomi a Salute in più modi, e se Salute non li dà comunque, la schermata dei nomi è organizzata come il registro farmaci di Salute: per orario, poi quelli al bisogno."
    ]
   }
  },
@@ -106,10 +118,10 @@
   "date": "2026-11-20",
   "items": {
    "en": [
-    "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Moodlog now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone."
+    "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Sottovoce now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone."
    ],
    "it": [
-    "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco una volta sola (Impostazioni → Farmaci → Dai un nome ai farmaci). Backup: ora Moodlog sovrascrive il file di backup al suo posto, così può tenerlo aggiornato in iCloud Drive e sull'iPhone."
+    "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco una volta sola (Impostazioni → Farmaci → Dai un nome ai farmaci). Backup: ora Sottovoce sovrascrive il file di backup al suo posto, così può tenerlo aggiornato in iCloud Drive e sull'iPhone."
    ]
   }
  },
@@ -118,10 +130,10 @@
   "date": "2026-11-20",
   "items": {
    "en": [
-    "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way."
+    "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Sottovoce asks Health for the names in a second way."
    ],
    "it": [
-    "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Moodlog chiede i nomi a Salute in un secondo modo."
+    "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Sottovoce chiede i nomi a Salute in un secondo modo."
    ]
   }
  },
@@ -130,10 +142,10 @@
   "date": "2026-11-20",
   "items": {
    "en": [
-    "Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
+    "Medication: Settings now says what Sottovoce can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
    ],
    "it": [
-    "Farmaci: le Impostazioni ora dicono cosa vede Moodlog (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."
+    "Farmaci: le Impostazioni ora dicono cosa vede Sottovoce (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."
    ]
   }
  },
@@ -142,10 +154,10 @@
   "date": "2026-11-20",
   "items": {
    "en": [
-    "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health."
+    "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Sottovoce only reads them: it never changes anything in Health."
    ],
    "it": [
-    "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazioni, e ogni giorno mostra le dosi prese o saltate. Il resoconto per il medico ha una sezione Farmaci, e il tuo PC le riceve insieme ai dati di Salute. Moodlog si limita a leggerli: non cambia mai niente in Salute."
+    "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazioni, e ogni giorno mostra le dosi prese o saltate. Il resoconto per il medico ha una sezione Farmaci, e il tuo PC le riceve insieme ai dati di Salute. Sottovoce si limita a leggerli: non cambia mai niente in Salute."
    ]
   }
  },
@@ -176,10 +188,10 @@
   "date": "2026-11-19",
   "items": {
    "en": [
-    "A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy."
+    "A privacy policy: Settings → Privacy shows in short what Sottovoce does with your data, with a link to the full policy."
    ],
    "it": [
-    "Un'informativa sulla privacy: Impostazioni → Privacy mostra in breve cosa fa Moodlog con i tuoi dati, con un link all'informativa completa."
+    "Un'informativa sulla privacy: Impostazioni → Privacy mostra in breve cosa fa Sottovoce con i tuoi dati, con un link all'informativa completa."
    ]
   }
  },
@@ -188,10 +200,10 @@
   "date": "2026-11-19",
   "items": {
    "en": [
-    "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC."
+    "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Sottovoce 2.5 or newer on the PC."
    ],
    "it": [
-    "Sincronizzazione cifrata: tutto ciò che viene inviato al PC è cifrato con il tuo token (AES-256-GCM), e il token stesso non lascia mai il telefono. Serve Moodlog 2.5 o successivo sul PC."
+    "Sincronizzazione cifrata: tutto ciò che viene inviato al PC è cifrato con il tuo token (AES-256-GCM), e il token stesso non lascia mai il telefono. Serve Sottovoce 2.5 o successivo sul PC."
    ]
   }
  },
@@ -212,10 +224,10 @@
   "date": "2026-11-19",
   "items": {
    "en": [
-    "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC."
+    "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Sottovoce 2.3 on the PC."
    ],
    "it": [
-    "Diario dei sogni: una nuova scheda Sogni, una luna nel calendario nelle notti con un sogno, e i sogni della notte in ogni giorno. I sogni si sincronizzano con Moodlog 2.3 sul PC."
+    "Diario dei sogni: una nuova scheda Sogni, una luna nel calendario nelle notti con un sogno, e i sogni della notte in ogni giorno. I sogni si sincronizzano con Sottovoce 2.3 sul PC."
    ]
   }
  },
@@ -224,10 +236,10 @@
   "date": "2026-11-19",
   "items": {
    "en": [
-    "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Moodlog → Language."
+    "Sottovoce for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Sottovoce → Language."
    ],
    "it": [
-    "Moodlog per iPhone parla italiano. Segue la lingua dell'iPhone, oppure scegline una in Impostazioni → Moodlog → Lingua."
+    "Sottovoce per iPhone parla italiano. Segue la lingua dell'iPhone, oppure scegline una in Impostazioni → Sottovoce → Lingua."
    ]
   }
  },
@@ -248,10 +260,10 @@
   "date": "2026-11-19",
   "items": {
    "en": [
-    "First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi."
+    "First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Sottovoce on your PC over your home Wi-Fi."
    ],
    "it": [
-    "Prima versione: registra gli umori con energia, ansia e una nota, aggiungi eventi, sfoglia il calendario e sincronizza tutto con Moodlog sul PC tramite il Wi-Fi di casa."
+    "Prima versione: registra gli umori con energia, ansia e una nota, aggiungi eventi, sfoglia il calendario e sincronizza tutto con Sottovoce sul PC tramite il Wi-Fi di casa."
    ]
   }
  }

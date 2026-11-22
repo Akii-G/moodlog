@@ -1,14 +1,14 @@
 [Desktop Entry]
 Type=Application
-Name=Moodlog
-GenericName=Mood Tracker
+Name=Sottovoce
+GenericName=Mood Diary
 GenericName[it]=Diario dell'umore
-Comment=Log your mood each day, add notes and see charts
-Comment[it]=Registra il tuo umore ogni giorno, aggiungi note e guarda i grafici
+Comment=A quiet mood diary
+Comment[it]=Un diario dell'umore, sottovoce
 Exec=moodlog
 Icon=app.moodlog.Moodlog
 Terminal=false
 Categories=Utility;GTK;
-Keywords=mood;journal;diary;tracker;
-Keywords[it]=umore;diario;tracker;salute;
+Keywords=mood;journal;diary;tracker;moodlog;
+Keywords[it]=umore;diario;tracker;salute;moodlog;
 StartupNotify=true

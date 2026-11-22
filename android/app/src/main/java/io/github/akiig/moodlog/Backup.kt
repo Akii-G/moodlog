@@ -17,7 +17,7 @@ import org.json.JSONObject
 object Backup {
     const val MIME = "application/json"
 
-    fun fileName(): String = "moodlog-backup.json"
+    fun fileName(): String = "sottovoce-backup.json"
 
     fun content(store: AppStore): String =
         store.toJson().put("moodlog_backup", 1).put("exported", Stamp.now()).toString(1)
@@ -25,7 +25,7 @@ object Backup {
     /** Reads a backup (or a moodlog.json from the iPhone app). */
     fun parse(text: String): SyncState {
         val doc = JSONObject(text)
-        if (!doc.has("entries") && !doc.has("events") && !doc.has("dreams")) throw IllegalArgumentException("not a Moodlog backup")
+        if (!doc.has("entries") && !doc.has("events") && !doc.has("dreams")) throw IllegalArgumentException("not a Sottovoce backup")
         return SyncState.from(doc)
     }
 

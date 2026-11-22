@@ -32,8 +32,8 @@ gi.require_version("Adw", "1")
 gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
-APP_ID = "app.moodlog.Moodlog"
-VERSION = "2.12.2"
+APP_ID = "app.moodlog.Sottovoce"
+VERSION = "3.0.0"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -1239,7 +1239,7 @@ def export_xlsx(path, store, events, health, dreams=None):
     sm.column_dimensions["A"].width = 26
     for col in "BCD":
         sm.column_dimensions[col].width = 14
-    sm["A1"] = tr("Moodlog export")
+    sm["A1"] = tr("Sottovoce export")
     sm["A1"].font = Font(size=20, bold=True, color=ink)
     mood_days = store.moods()
     entries = [m for _d, _t, m in store.timed()]
@@ -1393,7 +1393,7 @@ class _Pdf:
         self.surface = cairo.PDFSurface(path, self.W, self.H)
         try:
             self.surface.set_metadata(cairo.PDF_METADATA_TITLE, tr("Mood report"))
-            self.surface.set_metadata(cairo.PDF_METADATA_CREATOR, "Moodlog " + VERSION)
+            self.surface.set_metadata(cairo.PDF_METADATA_CREATOR, "Sottovoce " + VERSION)
         except (AttributeError, Exception):
             pass
         self.cr = cairo.Context(self.surface)
@@ -1430,7 +1430,7 @@ class _Pdf:
 
     def footer(self):
         y = self.H - self.M + 4
-        self.text(tr("Made with Moodlog · self-reported data, not a medical record"), self.M, y,
+        self.text(tr("Made with Sottovoce · self-reported data, not a medical record"), self.M, y,
                   7.5, REPORT_INK["muted"])
         self.text(tr("Page %d") % self.page, self.W - self.M, y, 7.5, REPORT_INK["muted"], align=2)
 
@@ -1481,7 +1481,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
     # ---- title
     pdf.text(tr("Mood report"), M, pdf.y, 20, ink["ink"], bold=True)
     pdf.y += 30
-    sub = tr("%s – %s · %d days · made with Moodlog on %s") % (
+    sub = tr("%s – %s · %d days · made with Sottovoce on %s") % (
         fmt_date(start, "%-d %B %Y"), fmt_date(end, "%-d %B %Y"), span,
         fmt_date(dt.date.today(), "%-d %B %Y"))
     pdf.text(sub, M, pdf.y, 9, ink["muted"])
@@ -1820,9 +1820,9 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         pdf.ensure(90)
         pdf.text(tr("Questionnaires"), M, pdf.y, 12, ink["ink"], bold=True)
         pdf.y += 20
-        note = tr("Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); "
+        note = tr("Answered in Sottovoce. Each answer counts 0 (not at all) to 3 (nearly every day); "
                   "the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are "
-                  "listed in question order. Moodlog gives no interpretation.")
+                  "listed in question order. Sottovoce gives no interpretation.")
         _w, h = pdf.text(note, M, 0, 8, measure=True, width=W - 2 * M)
         pdf.text(note, M, pdf.y, 8, ink["muted"], width=W - 2 * M)
         pdf.y += h + 8
@@ -2014,9 +2014,9 @@ def read_backup(path):
                     info = {}
             files = {n: z.read(n) for n in DATA_FILES if n in names}
     except (zipfile.BadZipFile, OSError) as err:
-        raise BackupError(tr("This file is not a Moodlog backup (%s).") % err)
+        raise BackupError(tr("This file is not a Sottovoce backup (%s).") % err)
     if not any(n in files for n in CONTENT_FILES):
-        raise BackupError(tr("This file is not a Moodlog backup: it has no moods, events or "
+        raise BackupError(tr("This file is not a Sottovoce backup: it has no moods, events or "
                           "health data in it."))
     if "moods.csv" in files and not files["moods.csv"].lstrip(b"\xef\xbb\xbf").startswith(b"date"):
         raise BackupError(tr("The moods file in this backup is damaged."))
@@ -3192,7 +3192,7 @@ def run_sync_server():
     cfg = sync_config()
 
     class Handler(http.server.BaseHTTPRequestHandler):
-        server_version = "Moodlog/" + VERSION
+        server_version = "Sottovoce/" + VERSION
 
         def reply(self, code, message):
             body = (message + "\n").encode("utf-8")
@@ -3220,7 +3220,7 @@ def run_sync_server():
                     return
                 self.reply_json(200, {"app": "Moodlog", "version": VERSION})
                 return
-            self.reply(200, tr("Moodlog sync is running. Send health data with POST /health."))
+            self.reply(200, tr("Sottovoce sync is running. Send health data with POST /health."))
 
         def authorised(self):
             given = self.headers.get("Authorization", "")
@@ -3250,7 +3250,7 @@ def run_sync_server():
                 doc = unseal(token, route, self.rfile.read(length))
             except ValueError:
                 self.reply_json(401, {"error": tr("Could not read the request: the token doesn't match. "
-                                                  "Copy it again from Moodlog > Phone sync.")})
+                                                  "Copy it again from Sottovoce > Phone sync.")})
                 return
             if route == "/api/e/ping":
                 answer = {"app": "Moodlog", "version": VERSION}
@@ -3261,11 +3261,11 @@ def run_sync_server():
                     self.reply_json(400, {"error": str(err)})
                     return
                 if isinstance(doc, dict) and doc.get("app") == "android":
-                    done = trn("Moodlog for Android synced (%d change).",
-                               "Moodlog for Android synced (%d changes).", answer["changed"])
+                    done = trn("Sottovoce for Android synced (%d change).",
+                               "Sottovoce for Android synced (%d changes).", answer["changed"])
                 else:
-                    done = trn("Moodlog for iPhone synced (%d change).",
-                               "Moodlog for iPhone synced (%d changes).", answer["changed"])
+                    done = trn("Sottovoce for iPhone synced (%d change).",
+                               "Sottovoce for iPhone synced (%d changes).", answer["changed"])
                 write_sync_status(done % answer["changed"], True)
             elif route == "/api/e/health":
                 lines = doc.get("lines") if isinstance(doc, dict) else None
@@ -3292,9 +3292,9 @@ def run_sync_server():
             if not self.authorised():
                 if self.route().startswith("/api/"):
                     self.reply_json(401, {"error": tr("Wrong or missing token. Copy it again from "
-                                                   "Moodlog > Phone sync.")})
+                                                   "Sottovoce > Phone sync.")})
                     return
-                self.reply(401, tr("Wrong or missing token. Copy it again from Moodlog > Phone sync."))
+                self.reply(401, tr("Wrong or missing token. Copy it again from Sottovoce > Phone sync."))
                 return
             try:
                 length = int(self.headers.get("Content-Length", "0"))
@@ -3314,8 +3314,8 @@ def run_sync_server():
                 except (ValueError, OSError) as err:
                     self.reply_json(400, {"error": str(err)})
                     return
-                write_sync_status(trn("Moodlog for iPhone synced (%d change).",
-                                      "Moodlog for iPhone synced (%d changes).", state["changed"])
+                write_sync_status(trn("Sottovoce for iPhone synced (%d change).",
+                                      "Sottovoce for iPhone synced (%d changes).", state["changed"])
                                   % state["changed"], False)
                 self.reply_json(200, state)
                 return
@@ -3330,7 +3330,7 @@ def run_sync_server():
 
     server = http.server.ThreadingHTTPServer(("0.0.0.0", int(cfg["port"])), Handler)
     if sys.stdout is not None:    # a windowed .exe on Windows has no console
-        print("Moodlog sync listening on port %d" % cfg["port"], flush=True)
+        print("Sottovoce sync listening on port %d" % cfg["port"], flush=True)
     script = os.path.realpath(os.path.abspath(sys.argv[0]))
     if IS_WINDOWS:
         # the installer closes the receiver and runs `--resume-sync` after an update
@@ -3348,7 +3348,7 @@ def run_sync_server():
     if updated.is_set():
         # Moodlog was updated (for example by apt): carry on with the new version, in the
         # same process, so a receiver started by systemd or by hand stays up to date.
-        print("Moodlog was updated: restarting the sync receiver", flush=True)
+        print("Sottovoce was updated: restarting the sync receiver", flush=True)
         restart_self(sys.argv[1:])
     return 0
 
@@ -3513,7 +3513,7 @@ class GridgetsLink:
         return False
 
     def reconcile(self, key):
-        """Sync one month both ways. Returns True if Moodlog's own entries changed."""
+        """Sync one month both ways. Returns True if Sottovoce's own entries changed."""
         theirs, mtime = self.read_month(key)
         self.mtimes[key] = mtime
         if theirs is None:
@@ -3774,7 +3774,7 @@ _style_provider = {"css": None}
 
 
 def apply_style(name):
-    """Switch the look of every Moodlog window. 'default' removes the extra CSS."""
+    """Switch the look of every Sottovoce window. 'default' removes the extra CSS."""
     STYLE["name"] = name if name in dict(STYLES) else "default"
     display = Gdk.Display.get_default()
     if display is None:
@@ -4623,7 +4623,7 @@ class FaceIcon(Gtk.DrawingArea):
 
 # ----------------------------------------------------------------- phone sync window
 
-ANDROID_STEPS = tr("""Install Moodlog for Android: download Moodlog-Android-….apk from the latest release on GitHub (github.com/Akii-G/moodlog/releases) on your phone and open it. Android asks once to allow installing apps from your browser.
+ANDROID_STEPS = tr("""Install Sottovoce for Android: download Sottovoce-Android-….apk from the latest release on GitHub (github.com/Akii-G/sottovoce/releases) on your phone and open it. Android asks once to allow installing apps from your browser.
 
 In the app, open Settings and enter the address and token above (pop-os.local works; if it doesn't, use the "If that fails" address). Tap Test connection. Your phone and this PC must be on the same Wi-Fi.
 
@@ -4633,7 +4633,7 @@ For sleep, steps and resting heart rate: in Settings → Health Connect, allow a
 SHORTCUT_STEPS = tr("""Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.
 
 A. Build the shortcut
-1. Shortcuts → + → name it "Moodlog Sync".
+1. Shortcuts → + → name it "Sottovoce Sync".
 2. Add the action "Find Health Samples". Set Type to Steps. Add a filter: Start Date → is in the last → 7 days. Set Group By to Day.
 3. Add "Repeat with Each" (it repeats over the health samples). Inside it add a "Text" action with exactly:
       steps;START;VALUE
@@ -4649,7 +4649,7 @@ A. Build the shortcut
 9. Add "Show Result", run the shortcut and allow Health access. It should answer "OK. Stored …". If lines were skipped, the answer says why.
 
 B. Run it every day
-Automation tab → + → Time of Day → pick a time when you are normally using the phone (Health data cannot be read while the iPhone is locked) → Run Immediately → choose Moodlog Sync. Once it works, remove Show Result.
+Automation tab → + → Time of Day → pick a time when you are normally using the phone (Health data cannot be read while the iPhone is locked) → Run Immediately → choose Sottovoce Sync. Once it works, remove Show Result.
 
 Every run sends the last 7 days, so days that were missed fill in on the next run.
 Other names you can send the same way: heart_rate, hrv, active_energy.
@@ -4705,7 +4705,7 @@ def reminder_settings(cfg=None):
 
 
 def timer_text(time):
-    return ("[Unit]\nDescription=Moodlog daily reminder at %s\n\n"
+    return ("[Unit]\nDescription=Sottovoce daily reminder at %s\n\n"
             "[Timer]\nOnCalendar=*-*-* %s:00\nAccuracySec=1min\n\n"
             "[Install]\nWantedBy=timers.target\n" % (time, time))
 
@@ -4753,8 +4753,8 @@ def remind():
         reply = bus.call_sync(
             "org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications",
             "Notify", GLib.Variant("(susssasa{sv}i)", (
-                "Moodlog", 0, APP_ID, tr("How are you today?"), tr("One click on a face is enough."),
-                ["default", tr("Open Moodlog")],
+                "Sottovoce", 0, APP_ID, tr("How are you today?"), tr("One click on a face is enough."),
+                ["default", tr("Open Sottovoce")],
                 {"desktop-entry": GLib.Variant("s", APP_ID), "urgency": GLib.Variant("y", 1)}, -1)),
             GLib.VariantType("(u)"), Gio.DBusCallFlags.NONE, 10000, None)
     except GLib.Error as err:
@@ -4827,7 +4827,7 @@ def win_apply_reminder(on, time):
 
 
 def win_toast(title, body):
-    """A Windows notification; clicking it opens Moodlog (the installer registers moodlog:)."""
+    """A Windows notification; clicking it opens Sottovoce (the installer registers moodlog:)."""
     def esc(text):
         return (text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 .replace('"', "&quot;"))
@@ -4994,7 +4994,7 @@ def medication_button(doses, today=None):
     button = Gtk.MenuButton()
     button.add_css_class("flat")
     button.add_css_class("medication-button")
-    button.set_tooltip_text(tr("From Apple Health, sent by Moodlog for iPhone"))
+    button.set_tooltip_text(tr("From Apple Health, sent by Sottovoce for iPhone"))
     head = Gtk.Box(spacing=8)
     head.append(PillIcon(22, main))
     head.append(Gtk.Label(label=tr("Medication"), xalign=0))
@@ -5046,7 +5046,7 @@ def medication_button(doses, today=None):
     scroll.set_min_content_width(380)
     scroll.set_child(rows)
     col.append(scroll)
-    note = Gtk.Label(label=tr("From Apple Health, sent by Moodlog for iPhone"), xalign=0)
+    note = Gtk.Label(label=tr("From Apple Health, sent by Sottovoce for iPhone"), xalign=0)
     note.add_css_class("dim-label")
     note.add_css_class("caption")
     col.append(note)
@@ -5421,7 +5421,7 @@ class SurveyCareWindow(Gtk.Window):
             "someone you trust, soon. If it feels heavy right now, you can talk to someone today:"),
             xalign=0, wrap=True, max_width_chars=48))
         helpline_labels(box)
-        box.append(Gtk.Label(label=tr("Moodlog doesn't tell anyone: this stays on your devices."),
+        box.append(Gtk.Label(label=tr("Sottovoce doesn't tell anyone: this stays on your devices."),
                              xalign=0, wrap=True, max_width_chars=48))
         ok = Gtk.Button(label=tr("Close"), halign=Gtk.Align.END)
         ok.add_css_class("suggested-action")
@@ -5446,7 +5446,7 @@ class SurveysWindow(Gtk.Window):
         col.append(title)
         intro = Gtk.Label(label=tr(
             "Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. "
-            "Each one asks about the last two weeks. Moodlog shows only your score, and the "
+            "Each one asks about the last two weeks. Sottovoce shows only your score, and the "
             "report can include them for your doctor."), xalign=0, wrap=True, max_width_chars=1)
         intro.add_css_class("dim-label")
         col.append(intro)
@@ -5769,7 +5769,7 @@ class ReportWindow(Gtk.Window):
         if not period:
             return
         start, end = period
-        name = "moodlog-report-%s-to-%s.pdf" % (start.isoformat(), end.isoformat())
+        name = "sottovoce-report-%s-to-%s.pdf" % (start.isoformat(), end.isoformat())
         self.win._pick(tr("Save the report"), "save", lambda path: self.write(path, start, end), name)
 
     def write(self, path, start, end):
@@ -5803,6 +5803,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.0.0", "2026-11-22", [
+        "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data, settings and phone sync stay exactly as they were.",
+        "Default names for backups, exports and reports now start with sottovoce-. On Linux the package is now called sottovoce and replaces moodlog; the moodlog command still works.",
+    ]),
     ("2.12.2", "2026-11-22", [
         "Windows: the round window buttons of the Tahoe style no longer stretch into tall bars.",
     ]),
@@ -5811,14 +5815,14 @@ CHANGELOG = [
         "Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once.",
     ]),
     ("2.12.0", "2026-11-21", [
-        "Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Moodlog.",
+        "Sottovoce for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Sottovoce.",
     ]),
     ("2.11.0", "2026-11-21", [
         "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry, more precise than five faces. They show on the day, sync with the phones, and the report lists the ones you picked most often.",
         "Writing prompts: an empty note shows a gentle question, a different one each day, with a button for another. Never required. Both can be turned off in Customize.",
     ]),
     ("2.10.0", "2026-11-21", [
-        "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.",
+        "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Sottovoce shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again.",
         "Charts: \"Most common\" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart.",
     ]),
     ("2.9.0", "2026-11-21", [
@@ -5829,29 +5833,29 @@ CHANGELOG = [
         "Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken or Skipped.",
     ]),
     ("2.8.0", "2026-11-20", [
-        "Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.",
+        "Medication from Apple Health: with Sottovoce for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section.",
     ]),
     ("2.7.0", "2026-11-20", [
         "A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet.",
         "A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off.",
     ]),
     ("2.6.1", "2026-11-20", [
-        "Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC.",
+        "Sottovoce for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC.",
     ]),
     ("2.6.0", "2026-11-19", [
-        "Moodlog for Android: a new app for Android phones that syncs moods, energy, anxiety, "
+        "Sottovoce for Android: a new app for Android phones that syncs moods, energy, anxiety, "
         "notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting "
         "heart rate from Health Connect. Phone sync has the steps to set it up.",
     ]),
     ("2.5.1", "2026-11-19", [
-        "A privacy policy: \u2630 menu \u2192 Privacy shows in short what Moodlog does with your "
+        "A privacy policy: \u2630 menu \u2192 Privacy shows in short what Sottovoce does with your "
         "data (nothing leaves your devices except the encrypted phone sync), with a link to the "
         "full policy.",
         "The phone sync receiver no longer writes the address of a request to the system log in "
         "full, so a token sent in the address can't end up there.",
     ]),
     ("2.5.0", "2026-11-19", [
-        "Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your "
+        "Encrypted phone sync: Sottovoce for iPhone 1.4 encrypts everything it sends with your "
         "token, and the token itself never crosses the network. Phone sync shows whether the "
         "last connection was encrypted, and has a new Change token button.",
     ]),
@@ -5879,7 +5883,7 @@ CHANGELOG = [
         "Tabs take less room, so the window fits in half a screen again.",
     ]),
     ("2.2.0", "2026-11-19", [
-        "Moodlog speaks Italian. It follows your system language, or choose one in the \u2630 "
+        "Sottovoce speaks Italian. It follows your system language, or choose one in the \u2630 "
         "menu \u2192 Language. Dates, charts, the doctor report and exports are translated too.",
     ]),
     ("2.1.0", "2026-11-19", [
@@ -5892,8 +5896,8 @@ CHANGELOG = [
         "Screenshots of the app are now in the README.",
     ]),
     ("2.0.0", "2026-11-19", [
-        "Moodlog for iPhone: a new app that syncs moods, energy, anxiety, notes and events with "
-        "Moodlog on your PC over your home Wi-Fi.",
+        "Sottovoce for iPhone: a new app that syncs moods, energy, anxiety, notes and events with "
+        "Sottovoce on your PC over your home Wi-Fi.",
         "Every entry and event now has an ID and a change time: the newest change wins, "
         "deletions sync too, and nothing is overwritten when two devices save at once.",
         "Saving merges changes written meanwhile by the phone or another computer.",
@@ -5912,7 +5916,7 @@ CHANGELOG = [
         "Report for your doctor: a printable PDF for a chosen period, with charts, events and a "
         "day-by-day table. Notes are only included if you ask.",
         "Backup and restore as one .zip file; restoring saves your current data first.",
-        "Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Moodlog "
+        "Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Sottovoce "
         "on two computers, with merging of conflict copies.",
     ]),
     ("1.7.1", "2026-11-18", [
@@ -5939,7 +5943,7 @@ CHANGELOG = [
         "Link with the mood widget of the Gridgets GNOME extension.",
     ]),
     ("1.1.0", "2026-11-13", [
-        "Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Moodlog.",
+        "Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Sottovoce.",
         "New chart comparing your mood with your health data.",
     ]),
     ("1.0.0", "2026-11-13", [
@@ -5952,12 +5956,15 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.0.0", "2026-11-22", [
+        "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.",
+    ]),
     ("1.5.0", "2026-11-21", [
         "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.",
         "Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.",
     ]),
     ("1.4.0", "2026-11-21", [
-        "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
+        "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
     ]),
     ("1.3.0", "2026-11-21", [
         "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and iPhone.",
@@ -5983,13 +5990,16 @@ ANDROID_CHANGELOG = [
     ("1.0.0", "2026-11-19", [
         "The first version: log your mood, energy, anxiety and a note, a month calendar, "
         "charts, events, a dream journal, the welcome tour, English and Italian.",
-        "Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi.",
+        "Encrypted sync with Sottovoce on your PC (2.5 or newer), over your own Wi-Fi.",
         "Sleep, steps and resting heart rate from Health Connect, sent to your PC if you "
         "turn it on.",
     ]),
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.0", "2026-11-22", [
+        "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.",
+    ]),
     ("1.9.0", "2026-11-21", [
         "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry. They show on the day, sync with the PC, and the report lists the ones you picked most often.",
         "Writing prompts: an empty note shows a gentle question, a different one each day; tap Another question for a new one. Both can be turned off in Customize.",
@@ -5999,7 +6009,7 @@ IPHONE_CHANGELOG = [
         "Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone.",
     ]),
     ("1.8.0", "2026-11-21", [
-        "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
+        "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want.",
     ]),
     ("1.7.0", "2026-11-21", [
         "Private notes and dreams: a private note never goes in the doctor report, and a private dream is only counted there. They sync with the PC and Android.",
@@ -6009,25 +6019,25 @@ IPHONE_CHANGELOG = [
         "Backup: the screen for saving or restoring the backup file now always has its Save button.",
     ]),
     ("1.6.6", "2026-11-21", [
-        "Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance.",
+        "Backup: Settings warns when Sottovoce can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance.",
     ]),
     ("1.6.5", "2026-11-21", [
         "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount.",
     ]),
     ("1.6.4", "2026-11-20", [
-        "Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed.",
+        "Medication: Sottovoce asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed.",
     ]),
     ("1.6.3", "2026-11-20", [
-        "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Moodlog now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone.",
+        "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Sottovoce now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone.",
     ]),
     ("1.6.2", "2026-11-20", [
-        "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way.",
+        "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Sottovoce asks Health for the names in a second way.",
     ]),
     ("1.6.1", "2026-11-20", [
-        "Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again.",
+        "Medication: Settings now says what Sottovoce can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again.",
     ]),
     ("1.6.0", "2026-11-20", [
-        "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health.",
+        "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Sottovoce only reads them: it never changes anything in Health.",
     ]),
     ("1.5.0", "2026-11-20", [
         "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry.",
@@ -6038,12 +6048,12 @@ IPHONE_CHANGELOG = [
         "What's new: this list, shown once after each update and any time from Settings.",
     ]),
     ("1.4.1", "2026-11-19", [
-        "A privacy policy: Settings \u2192 Privacy shows in short what Moodlog does with your "
+        "A privacy policy: Settings \u2192 Privacy shows in short what Sottovoce does with your "
         "data, with a link to the full policy.",
     ]),
     ("1.4.0", "2026-11-19", [
         "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), "
-        "and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC.",
+        "and the token itself never leaves the phone. Needs Sottovoce 2.5 or newer on the PC.",
     ]),
     ("1.3.0", "2026-11-19", [
         "A welcome tour for new users: it switches to each tab by itself and explains it, with "
@@ -6052,18 +6062,18 @@ IPHONE_CHANGELOG = [
     ]),
     ("1.2.0", "2026-11-19", [
         "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and "
-        "the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC.",
+        "the night's dreams in each day. Dreams sync with Sottovoce 2.3 on the PC.",
     ]),
     ("1.1.0", "2026-11-19", [
-        "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in "
-        "Settings \u2192 Moodlog \u2192 Language.",
+        "Sottovoce for iPhone speaks Italian. It follows the iPhone's language, or choose one in "
+        "Settings \u2192 Sottovoce \u2192 Language.",
     ]),
     ("1.0.1", "2026-11-19", [
         "Days with several moods show a face on each tile of the calendar, like on the PC.",
     ]),
     ("1.0.0", "2026-11-19", [
         "First version: log moods with energy, anxiety and a note, add events, browse the "
-        "calendar, and sync everything with Moodlog on your PC over your home Wi-Fi.",
+        "calendar, and sync everything with Sottovoce on your PC over your home Wi-Fi.",
     ]),
 ]
 
@@ -6077,12 +6087,12 @@ def version_key(version):
 
 def changelog_markdown():
     lines = ["# Changelog", "",
-             "Moodlog for the PC, Moodlog for iPhone and Moodlog for Android have their own "
+             "Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their own "
              "version numbers. Each GitHub release is named after the PC version and includes "
              "all three apps.", ""]
-    for heading, log in (("Moodlog for the PC", CHANGELOG),
-                         ("Moodlog for iPhone", IPHONE_CHANGELOG),
-                         ("Moodlog for Android", ANDROID_CHANGELOG)):
+    for heading, log in (("Sottovoce for the PC", CHANGELOG),
+                         ("Sottovoce for iPhone", IPHONE_CHANGELOG),
+                         ("Sottovoce for Android", ANDROID_CHANGELOG)):
         lines.append("## " + heading)
         lines.append("")
         for version, day, items in log:
@@ -6093,17 +6103,17 @@ def changelog_markdown():
     return "\n".join(lines)
 
 
-PRIVACY_URL = "https://github.com/Akii-G/moodlog/blob/main/PRIVACY.md"
-PRIVACY_URL_IT = "https://github.com/Akii-G/moodlog/blob/main/PRIVACY.it.md"
+PRIVACY_URL = "https://github.com/Akii-G/sottovoce/blob/main/PRIVACY.md"
+PRIVACY_URL_IT = "https://github.com/Akii-G/sottovoce/blob/main/PRIVACY.it.md"
 
 # The short version of PRIVACY.md, shown in the app. Keep the two in step.
 PRIVACY_POINTS = [
     (tr("Nobody collects your data"),
-     tr("Moodlog has no account, no server, no analytics and no ads. "
+     tr("Sottovoce has no account, no server, no analytics and no ads. "
      "The developer never sees anything you write.")),
     (tr("It stays on your devices"),
      tr("Everything is saved in your data folder on this PC and, if you use it, "
-     "inside the Moodlog app on your phone.")),
+     "inside the Sottovoce app on your phone.")),
     (tr("Phone sync is encrypted"),
      tr("Your phone sends your entries straight to this PC over your own network, "
      "encrypted with your token. The token itself is never sent.")),
@@ -6111,7 +6121,7 @@ PRIVACY_POINTS = [
      tr("Steps, resting heart rate, sleep and, from the iPhone, medication are read only "
      "if you turn it on in the phone app, and only to show them next to your mood.")),
     (tr("No internet"),
-     tr("Moodlog never connects to the internet. Only a link you click, like the one "
+     tr("Sottovoce never connects to the internet. Only a link you click, like the one "
      "below, opens a page in your browser.")),
 ]
 
@@ -6269,18 +6279,18 @@ class ChangelogWindow(Gtk.Window):
     """The full changelog; versions newer than the one last opened are marked as new."""
 
     def __init__(self, parent, since=None):
-        super().__init__(title=tr("What's new in Moodlog"), transient_for=parent, modal=True)
+        super().__init__(title=tr("What's new in Sottovoce"), transient_for=parent, modal=True)
         self.set_default_size(560, 640)
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(20)
-        head = Gtk.Label(label=tr("What's new in Moodlog %s") % VERSION, xalign=0, wrap=True)
+        head = Gtk.Label(label=tr("What's new in Sottovoce %s") % VERSION, xalign=0, wrap=True)
         head.add_css_class("title-2")
         col.append(head)
         if since and version_key(since) < version_key(VERSION):
             sub = tr("You updated from version %s. The changes since then are marked as new.") % since
         else:
-            sub = tr("The full history of Moodlog, newest first.")
+            sub = tr("The full history of Sottovoce, newest first.")
         sub_label = Gtk.Label(label=sub, xalign=0, wrap=True)
         sub_label.add_css_class("dim-label")
         col.append(sub_label)
@@ -6386,14 +6396,14 @@ class DataWindow(Gtk.Window):
         row.append(open_btn)
         col.append(card(row))
 
-        sync_head = Gtk.Label(label=tr("Use Moodlog on two computers"), xalign=0)
+        sync_head = Gtk.Label(label=tr("Use Sottovoce on two computers"), xalign=0)
         sync_head.add_css_class("heading")
         col.append(sync_head)
         explain = Gtk.Label(xalign=0, wrap=True, label=(
             tr("Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do "
-            "the same on the other computer. Moodlog saves its files there and picks up "
+            "the same on the other computer. Sottovoce saves its files there and picks up "
             "changes from the other computer within a few seconds. If both computers change "
-            "something at the very same time, the sync app may make a conflict copy; Moodlog "
+            "something at the very same time, the sync app may make a conflict copy; Sottovoce "
             "then offers to merge it, so nothing is lost.")))
         explain.add_css_class("dim-label")
         col.append(explain)
@@ -6447,12 +6457,12 @@ class DataWindow(Gtk.Window):
         short = folder.replace(os.path.expanduser("~"), "~", 1)
         if not has_data:
             ConfirmWindow(self, tr("Move your data to %s?") % short, (
-                tr("Your moods, events and health data are copied there, and Moodlog uses that "
+                tr("Your moods, events and health data are copied there, and Sottovoce uses that "
                 "folder from now on. The old folder keeps its copy.")),
                 [(tr("Move here"), lambda: self.switch(folder, copy=True), "suggested-action")]
             ).present()
             return
-        ConfirmWindow(self, tr("%s already has Moodlog data") % short, (
+        ConfirmWindow(self, tr("%s already has Sottovoce data") % short, (
             tr("Merge puts what is on this computer together with what is already there, which is "
             "what you want when setting up a second computer. Use that data switches to the "
             "folder as it is; the data here stays in the old folder.")),
@@ -6496,7 +6506,7 @@ class DataWindow(Gtk.Window):
         receiver_restart()  # the phone receiver reads the folder when it starts
         win.reload_data()
         self.update()
-        win.notify(tr("Moodlog now uses %s") % folder)
+        win.notify(tr("Sottovoce now uses %s") % folder)
 
 
 class SyncWindow(Gtk.Window):
@@ -6553,7 +6563,7 @@ class SyncWindow(Gtk.Window):
 
         note = Gtk.Label(xalign=0, wrap=True, label=(
             tr("The token is a password, and the receiver works only on your local network. "
-               "Moodlog for iPhone (1.4 and newer) and Moodlog for Android encrypt everything "
+               "Sottovoce for iPhone (1.4 and newer) and Sottovoce for Android encrypt everything "
                "they send with it, so the token itself never crosses the network. The Shortcut "
                "can't encrypt: it sends Health values and the token unencrypted, so use it only "
                "on a network you trust. Use the same address and token in the phone app's "
@@ -6594,7 +6604,7 @@ class SyncWindow(Gtk.Window):
                 self.error = tr("Could not change the token: %s") % err
                 self.update_status()
         ConfirmWindow(self, tr("Change the token?"),
-                      tr("The old token stops working at once. Enter the new one in the Moodlog "
+                      tr("The old token stops working at once. Enter the new one in the Sottovoce "
                          "app on your phone (Settings) and in the Shortcut, if you use it. Worth doing once "
                          "after updating to encrypted sync, since older versions sent the token "
                          "unencrypted."),
@@ -6731,7 +6741,7 @@ def customize_options(win, compact=False):
                           tr("The Dreams tab and the moons on the calendar. Your dreams are kept "
                              "even when it's off.")))
     box.append(switch_row("medication", tr("Medication"),
-                          tr("Doses from Apple Health, sent by Moodlog for iPhone.")))
+                          tr("Doses from Apple Health, sent by Sottovoce for iPhone.")))
     box.append(switch_row("feelings", tr("Feeling words"),
                           tr("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off.")))
     box.append(switch_row("prompts", tr("Writing prompts"),
@@ -6771,7 +6781,7 @@ def customize_options(win, compact=False):
 
 
 class CustomizeWindow(Gtk.Window):
-    """Customize your experience: turn parts of Moodlog on or off."""
+    """Customize your experience: turn parts of Sottovoce on or off."""
 
     def __init__(self, win):
         super().__init__(title=tr("Customize your experience"), transient_for=win, modal=True)
@@ -6801,7 +6811,7 @@ class CustomizeWindow(Gtk.Window):
 
 TOUR_STEPS = [
     # (what to highlight, title, text)
-    (None, tr("Welcome to Moodlog"),
+    (None, tr("Welcome to Sottovoce"),
      tr("Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, "
         "it's quite simple, I'll take care of you.")),
     ("tabs", tr("Five tabs, one at a time"),
@@ -6817,7 +6827,7 @@ TOUR_STEPS = [
      tr("Energy, anxiety and a note are all optional. Leave them empty whenever you want: a "
         "face on its own is already useful.")),
     ("add_event", tr("Mark what matters"),
-     tr("Started a new medication, or something big happened? Add it as an event, and Moodlog "
+     tr("Started a new medication, or something big happened? Add it as an event, and Sottovoce "
         "will show how you felt in the weeks before and after.")),
     ("tab:charts", tr("Charts fill in on their own"),
      tr("Charts turns your days into graphs. Nothing to set up: the more you log, the more "
@@ -6829,8 +6839,8 @@ TOUR_STEPS = [
      tr("Export makes a tidy PDF report for your doctor. You choose the period and what goes in; "
         "your notes and dreams stay out unless you say so.")),
     ("sync", tr("Your phone can help"),
-     tr("Phone sync brings in your sleep and steps, and syncs with Moodlog on your iPhone or Android phone. Optional "
-        "too: Moodlog works fine without it.")),
+     tr("Phone sync brings in your sleep and steps, and syncs with Sottovoce on your iPhone or Android phone. Optional "
+        "too: Sottovoce works fine without it.")),
     ("customize", tr("Customize your experience"),
      tr("Turn off what you don't need. Nothing is deleted, and you can change it later from the "
         "☰ menu.")),
@@ -7165,7 +7175,7 @@ class TourOverlay(Gtk.Overlay):
 
 class Window(Adw.ApplicationWindow):
     def __init__(self, app, page=None):
-        super().__init__(application=app, title="Moodlog")
+        super().__init__(application=app, title="Sottovoce")
         self.set_default_size(940, 680)
         self.store = Store()
         self.health = HealthStore()
@@ -7275,7 +7285,7 @@ class Window(Adw.ApplicationWindow):
         export.set_tooltip_text(tr("Save everything (moods, notes, events, health data) to a file"))
         header.pack_end(export)
         sync = Gtk.Button(label=tr("Phone sync"))
-        sync.set_tooltip_text(tr("Sync with Moodlog on your phone, and receive steps, sleep and heart rate"))
+        sync.set_tooltip_text(tr("Sync with Sottovoce on your phone, and receive steps, sleep and heart rate"))
         sync.connect("clicked", lambda *_: SyncWindow(self).present())
         header.pack_start(sync)
 
@@ -8401,7 +8411,7 @@ class Window(Adw.ApplicationWindow):
         self.refresh_health()
 
     def sync_widget(self):
-        """Exchange moods with the Gridgets widget; True if Moodlog's entries changed."""
+        """Exchange moods with the Gridgets widget; True if Sottovoce's entries changed."""
         if not self.link.active():
             return False
         try:
@@ -8434,9 +8444,9 @@ class Window(Adw.ApplicationWindow):
         found = conflict_files()
         if found:
             self.banner_label.set_text(
-                trn("Your sync app made %d conflict copy of your Moodlog data (both computers "
+                trn("Your sync app made %d conflict copy of your Sottovoce data (both computers "
                     "changed it at the same time). Merge it to keep everything.",
-                    "Your sync app made %d conflict copies of your Moodlog data (both computers "
+                    "Your sync app made %d conflict copies of your Sottovoce data (both computers "
                     "changed it at the same time). Merge them to keep everything.", len(found))
                 % len(found))
         self.banner.set_visible(bool(found))
@@ -8465,9 +8475,9 @@ class Window(Adw.ApplicationWindow):
         pairs = [(mood, values[day]) for day, mood in self.period_moods() if day in values]
         if len(pairs) < 8:
             return (trn("%d day in this period has both a mood and %s data. With 8 or more, "
-                        "Moodlog compares your mood on higher and lower days.",
+                        "Sottovoce compares your mood on higher and lower days.",
                         "%d days in this period have both a mood and %s data. With 8 or more, "
-                        "Moodlog compares your mood on higher and lower days.", len(pairs)) % (
+                        "Sottovoce compares your mood on higher and lower days.", len(pairs)) % (
                         len(pairs), title))
         ordered = sorted(v for _m, v in pairs)
         median = ordered[len(ordered) // 2]
@@ -8510,7 +8520,7 @@ class Window(Adw.ApplicationWindow):
         self.stack.set_visible_child_name("log")
 
     def export_name(self, kind="csv"):
-        return "moodlog-export-%s.%s" % (dt.date.today().isoformat(), kind)
+        return "sottovoce-export-%s.%s" % (dt.date.today().isoformat(), kind)
 
     def on_export(self, kind="csv"):
         self.flush()
@@ -8587,8 +8597,8 @@ class Window(Adw.ApplicationWindow):
             new = "en"
         if new == LANG_CODE:
             return
-        ConfirmWindow(self, tr("Restart Moodlog?"),
-                      tr("Moodlog needs to restart to change language. Everything you logged "
+        ConfirmWindow(self, tr("Restart Sottovoce?"),
+                      tr("Sottovoce needs to restart to change language. Everything you logged "
                          "is saved."),
                       [(tr("Restart now"), self.restart, "suggested-action")]).present()
 
@@ -8656,8 +8666,8 @@ class Window(Adw.ApplicationWindow):
                     len(names), os.path.basename(path)))
             except OSError as err:
                 self.notify(tr("Could not back up: %s") % (err.strerror or err))
-        self._pick(tr("Back up Moodlog"), "save", write,
-                   "moodlog-backup-%s.zip" % dt.date.today().isoformat())
+        self._pick(tr("Back up Sottovoce"), "save", write,
+                   "sottovoce-backup-%s.zip" % dt.date.today().isoformat())
 
     def on_restore(self):
         self.flush()
@@ -8987,7 +8997,7 @@ def diag(path):
     step("has edit-copy-symbolic: %s" % theme.has_icon("edit-copy-symbolic"))
     step("window")
     win = Gtk.Window(title="diag")
-    win.set_child(Gtk.Label(label="Moodlog"))
+    win.set_child(Gtk.Label(label="Sottovoce"))
     step("present")
     win.present()
     loop = GLib.MainLoop()
@@ -8998,7 +9008,7 @@ def diag(path):
     app = Adw.Application(application_id=APP_ID + ".Diag")
     app.connect("activate", lambda a: (step("activated"), a.quit()))
     app.run([])
-    step("done with the basics; now Moodlog itself, logging each call")
+    step("done with the basics; now Sottovoce itself, logging each call")
     me = os.path.basename(__file__) if "__file__" in globals() else "moodlog"
 
     def prof(frame, event, _arg):
@@ -9013,7 +9023,7 @@ def diag(path):
     GLib.timeout_add(4000, lambda: real.quit())
     real.run([sys.argv[0]])
     sys.setprofile(None)
-    step("Moodlog ran and quit")
+    step("Sottovoce ran and quit")
     return 0
 
 
@@ -9046,7 +9056,7 @@ def main(argv):
     if "--diag" in argv:
         return diag(argv[argv.index("--diag") + 1])
     if "--version" in argv:
-        print("Moodlog", VERSION)
+        print("Sottovoce", VERSION)
         return 0
     if "--remind" in argv:
         return remind()

@@ -23,7 +23,7 @@ struct CalendarView: View {
                         }
                     }
                     if server.isEmpty {
-                        Label("Connect to Moodlog on your PC in Settings to sync.", systemImage: "desktopcomputer")
+                        Label("Connect to Sottovoce on your PC in Settings to sync.", systemImage: "desktopcomputer")
                             .font(.subheadline)
                             .padding(12)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -56,7 +56,7 @@ struct CalendarView: View {
             .refreshable {
                 await sync.run(store)
             }
-            .navigationTitle("Moodlog")
+            .navigationTitle("Sottovoce")
             .navigationDestination(for: String.self) { day in
                 if day.hasPrefix("add:") {
                     DayView(day: String(day.dropFirst(4)), startAdding: true)

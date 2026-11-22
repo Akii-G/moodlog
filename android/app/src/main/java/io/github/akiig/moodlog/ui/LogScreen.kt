@@ -82,7 +82,7 @@ fun LogScreen(onDay: (String) -> Unit) {
     PullToRefreshBox(isRefreshing = app.sync.busy, onRefresh = { scope.launch { app.sync.run(store) } },
         modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            LargeTitle("Moodlog") { CircleButton(Icons.Filled.Add, tr("Today")) { onDay(Day.today) } }
+            LargeTitle("Sottovoce") { CircleButton(Icons.Filled.Add, tr("Today")) { onDay(Day.today) } }
             Column(Modifier.padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 var hidden by remember { mutableStateOf(false) }
                 if (!hidden && Care.shouldShow(store, app.prefs)) KindWord {
@@ -94,7 +94,7 @@ fun LogScreen(onDay: (String) -> Unit) {
                         verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Outlined.Computer, null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.size(12.dp))
-                        Text(tr("Connect to Moodlog on your PC in Settings to sync."), style = MaterialTheme.typography.bodyMedium)
+                        Text(tr("Connect to Sottovoce on your PC in Settings to sync."), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 MonthHeader(month, canGoForward = month < thisMonth,

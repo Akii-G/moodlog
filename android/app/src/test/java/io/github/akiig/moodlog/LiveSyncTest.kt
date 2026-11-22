@@ -16,7 +16,7 @@ class LiveSyncTest {
     @Test fun syncWithThePc() = runBlocking {
         assumeTrue(server.isNotEmpty())
         val client = SyncClient({ server }, { token }, "Test Android", Dispatchers.Unconfined)
-        assertTrue(client.ping(), client.ping().startsWith("Connected to Moodlog"))
+        assertTrue(client.ping(), client.ping().startsWith("Connected to Sottovoce"))
 
         val store = AppStore(null)
         store.addEntry("2026-11-18", "08:15", 4, 3, 2, "from android è")

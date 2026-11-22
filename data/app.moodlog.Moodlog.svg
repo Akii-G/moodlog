@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <rect x="8" y="8" width="112" height="112" rx="28" fill="#2a78d6"/>
-  <rect x="24" y="24" width="20" height="20" rx="6" fill="#ffffff" opacity="0.35"/>
-  <rect x="54" y="24" width="20" height="20" rx="6" fill="#ffffff" opacity="0.6"/>
-  <rect x="84" y="24" width="20" height="20" rx="6" fill="#ffffff" opacity="0.9"/>
-  <circle cx="48" cy="70" r="6" fill="#ffffff"/>
-  <circle cx="80" cy="70" r="6" fill="#ffffff"/>
-  <path d="M40 86 C50 102 78 102 88 86" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8e86d8"/><stop offset="1" stop-color="#5c56b4"/></linearGradient></defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#g)"/>
+  <rect x="24" y="24" width="20" height="20" rx="6" fill="#ffffff" opacity="0.3"/>
+  <rect x="54" y="24" width="20" height="20" rx="6" fill="#ffffff" opacity="0.55"/>
+  <rect x="84" y="24" width="20" height="20" rx="6" fill="#ffffff" opacity="0.85"/>
+  <path d="M40 68 q8 6 16 0 M72 68 q8 6 16 0" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
+  <path d="M46 88 C54 98 74 98 82 88" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round"/>
 </svg>

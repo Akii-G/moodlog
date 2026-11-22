@@ -28,7 +28,7 @@ struct SettingsView: View {
         }
         medicationMessage = await Medications.status()
         if !Medications.lastChooseShowedSheet {
-            medicationMessage = tr("Health has nothing new to ask: every medication already has an answer. To change which ones Moodlog can read, go to Settings → Health → Data Access & Devices → Moodlog.")
+            medicationMessage = tr("Health has nothing new to ask: every medication already has an answer. To change which ones Sottovoce can read, go to Settings → Health → Data Access & Devices → Sottovoce.")
                 + "\n\n" + medicationMessage
         }
         UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // send the whole history again
@@ -49,7 +49,7 @@ struct SettingsView: View {
             backupPlace = Backup.placeName
             lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? ""
             if let error = Backup.writeError(store) {
-                backupMessage = tr("The backup was saved, but Moodlog can't update it there (%@). Try another place, for example iCloud Drive.", error)
+                backupMessage = tr("The backup was saved, but Sottovoce can't update it there (%@). Try another place, for example iCloud Drive.", error)
             } else {
                 backupMessage = tr("Backup saved in %@.", Backup.placeName ?? url.lastPathComponent)
             }
@@ -64,7 +64,7 @@ struct SettingsView: View {
             let n = store.absorb(try Backup.read(url))
             backupMessage = trn("Restored: %@ change.", "Restored: %@ changes.", n)
         } catch {
-            backupMessage = tr("That file isn't a Moodlog backup.")
+            backupMessage = tr("That file isn't a Sottovoce backup.")
         }
     }
 
@@ -119,7 +119,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Your PC")
                 } footer: {
-                    Text("In Moodlog on your PC, open Phone sync and switch the receiver on. Use the address and token shown there (the same ones as the shortcut). Your iPhone and PC need to be on the same Wi-Fi.")
+                    Text("In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there (the same ones as the shortcut). Your iPhone and PC need to be on the same Wi-Fi.")
                 }
 
                 Section {
@@ -137,7 +137,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Sync")
                 } footer: {
-                    Text("When automatic, Moodlog syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back.")
+                    Text("When automatic, Sottovoce syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back.")
                 }
 
                 Section {
@@ -152,7 +152,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Apple Health")
                 } footer: {
-                    Text("Sends sleep, steps and resting heart rate to Moodlog on your PC, like the shortcut does. You can stop using the shortcut once this works.")
+                    Text("Sends sleep, steps and resting heart rate to Sottovoce on your PC, like the shortcut does. You can stop using the shortcut once this works.")
                 }
 
                 Section {
@@ -178,7 +178,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Medication")
                 } footer: {
-                    Text("Moodlog reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Moodlog.")
+                    Text("Sottovoce reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Sottovoce.")
                 }
 
                 #if DEVTOOLS
@@ -223,7 +223,7 @@ struct SettingsView: View {
                 Section {
                     if let place = backupPlace {
                         if Backup.lostFile {
-                            Label(tr("Moodlog can't reach the backup file any more. Tap Choose another file… and save it again."),
+                            Label(tr("Sottovoce can't reach the backup file any more. Tap Choose another file… and save it again."),
                                   systemImage: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
                         }
@@ -245,7 +245,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Backup")
                 } footer: {
-                    Text("Save the backup file once where you like, for example in iCloud Drive, and Moodlog keeps it up to date after each change. iCloud Drive uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, Android included.")
+                    Text("Save the backup file once where you like, for example in iCloud Drive, and Sottovoce keeps it up to date after each change. iCloud Drive uploads it; Sottovoce itself never goes on the internet. You can restore it on any phone, Android included.")
                 }
 
                 Section {
@@ -259,12 +259,16 @@ struct SettingsView: View {
                     NavigationLink("Privacy") { PrivacyView() }
                     NavigationLink("What's new") { WhatsNewView(since: nil) }
                 }
-                Section("About") {
+                Section {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
                     LabeledContent("Entries on this iPhone", value: "\(store.entries.count)")
                     LabeledContent("Events", value: "\(store.events.count)")
                     LabeledContent("Dreams", value: "\(store.dreams.count)")
                     LabeledContent("Questionnaires", value: "\(store.surveys.count)")
+                } header: {
+                    Text("About")
+                } footer: {
+                    Text("Sottovoce — a quiet mood diary. Formerly called Moodlog.")
                 }
             }
             .navigationTitle("Settings")

@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.0",
+  "date": "2026-11-22",
+  "items": {
+   "en": [
+    "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were."
+   ],
+   "it": [
+    "Moodlog ora si chiama Sottovoce — un diario dell'umore, sottovoce: un nome nuovo e un'icona più morbida. I tuoi dati e la sincronizzazione restano esattamente come prima."
+   ]
+  }
+ },
+ {
   "version": "1.5.0",
   "date": "2026-11-21",
   "items": {
@@ -18,10 +30,10 @@
   "date": "2026-11-21",
   "items": {
    "en": [
-    "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
+    "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
    ],
    "it": [
-    "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Moodlog mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
+    "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Sottovoce mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
    ]
   }
  },
@@ -85,12 +97,12 @@
   "items": {
    "en": [
     "The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian.",
-    "Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi.",
+    "Encrypted sync with Sottovoce on your PC (2.5 or newer), over your own Wi-Fi.",
     "Sleep, steps and resting heart rate from Health Connect, sent to your PC if you turn it on."
    ],
    "it": [
     "La prima versione: registra umore, energia, ansia e una nota, un calendario mensile, grafici, eventi, un diario dei sogni, la guida di benvenuto, inglese e italiano.",
-    "Sincronizzazione cifrata con Moodlog sul PC (2.5 o successivo), sulla tua rete Wi-Fi.",
+    "Sincronizzazione cifrata con Sottovoce sul PC (2.5 o successivo), sulla tua rete Wi-Fi.",
     "Sonno, passi e frequenza cardiaca a riposo da Connessione Salute, inviati al PC se lo attivi."
    ]
   }

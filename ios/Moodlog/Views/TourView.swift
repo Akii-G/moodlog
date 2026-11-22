@@ -33,7 +33,7 @@ enum Tour {
     private static var all: [TourStep] {
         return [
             TourStep(tab: 0, target: nil, pointsAtTabs: false,
-                     title: tr("Welcome to Moodlog"),
+                     title: tr("Welcome to Sottovoce"),
                      text: tr("Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you.")),
             TourStep(tab: 0, target: nil, pointsAtTabs: true,
                      title: tr("Five tabs, down here"),
@@ -49,10 +49,10 @@ enum Tour {
                      text: tr("A small dream journal, for the mornings you remember something. Totally optional.")),
             TourStep(tab: 3, target: nil, pointsAtTabs: true,
                      title: tr("Mark what matters"),
-                     text: tr("Started a new medication, or something big happened? Add it here, and Moodlog shows how you felt in the two weeks before and after.")),
+                     text: tr("Started a new medication, or something big happened? Add it here, and Sottovoce shows how you felt in the two weeks before and after.")),
             TourStep(tab: 4, target: nil, pointsAtTabs: true,
                      title: tr("Your PC and Apple Health"),
-                     text: tr("Here you can connect to Moodlog on your PC and send sleep and steps from Apple Health. All optional: the app works on its own too. You can watch this tour again from here.")),
+                     text: tr("Here you can connect to Sottovoce on your PC and send sleep and steps from Apple Health. All optional: the app works on its own too. You can watch this tour again from here.")),
             TourStep(tab: 0, target: nil, pointsAtTabs: false,
                      title: tr("Customize your experience"),
                      text: tr("Turn off what you don't need. Nothing is deleted, and you can change this any time in Settings."),

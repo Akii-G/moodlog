@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.9.0"
-    CURRENT_PROJECT_VERSION: "22"
+    MARKETING_VERSION: "2.0.0"
+    CURRENT_PROJECT_VERSION: "23"
 targets:
   Moodlog:
     type: application
@@ -27,7 +27,7 @@ targets:
     info:
       path: Moodlog/Info.plist
       properties:
-        CFBundleDisplayName: Moodlog
+        CFBundleDisplayName: Sottovoce
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, it]
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -36,8 +36,8 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSHealthShareUsageDescription: Moodlog shows your sleep and the medications you log in Health next to your mood, and can send them, with your steps and resting heart rate, to Moodlog on your PC.
-        NSLocalNetworkUsageDescription: Moodlog syncs your moods with Moodlog on your PC over your home Wi-Fi.
+        NSHealthShareUsageDescription: Sottovoce shows your sleep and the medications you log in Health next to your mood, and can send them, with your steps and resting heart rate, to Sottovoce on your PC.
+        NSLocalNetworkUsageDescription: Sottovoce syncs your moods with Sottovoce on your PC over your home Wi-Fi.
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     entitlements:

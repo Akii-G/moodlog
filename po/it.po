@@ -323,8 +323,8 @@ msgid "Summary"
 msgstr "Riepilogo"
 
 #: src/moodlog:946
-msgid "Moodlog export"
-msgstr "Esportazione di Moodlog"
+msgid "Sottovoce export"
+msgstr "Esportazione di Sottovoce"
 
 #: src/moodlog:952
 msgid " · data from %s to %s"
@@ -387,16 +387,16 @@ msgid "Mood report"
 msgstr "Resoconto dell'umore"
 
 #: src/moodlog:1137
-msgid "Made with Moodlog · self-reported data, not a medical record"
-msgstr "Fatto con Moodlog · dati riferiti dalla persona, non è una cartella clinica"
+msgid "Made with Sottovoce · self-reported data, not a medical record"
+msgstr "Fatto con Sottovoce · dati riferiti dalla persona, non è una cartella clinica"
 
 #: src/moodlog:1139
 msgid "Page %d"
 msgstr "Pagina %d"
 
 #: src/moodlog:1183
-msgid "%s – %s · %d days · made with Moodlog on %s"
-msgstr "%s – %s · %d giorni · fatto con Moodlog il %s"
+msgid "%s – %s · %d days · made with Sottovoce on %s"
+msgstr "%s – %s · %d giorni · fatto con Sottovoce il %s"
 
 #: src/moodlog:1191
 msgid "%d of %d"
@@ -491,12 +491,12 @@ msgid "Event"
 msgstr "Evento"
 
 #: src/moodlog:1584
-msgid "This file is not a Moodlog backup (%s)."
-msgstr "Questo file non è un backup di Moodlog (%s)."
+msgid "This file is not a Sottovoce backup (%s)."
+msgstr "Questo file non è un backup di Sottovoce (%s)."
 
 #: src/moodlog:1586
-msgid "This file is not a Moodlog backup: it has no moods, events or health data in it."
-msgstr "Questo file non è un backup di Moodlog: non contiene umori, eventi o dati sulla salute."
+msgid "This file is not a Sottovoce backup: it has no moods, events or health data in it."
+msgstr "Questo file non è un backup di Sottovoce: non contiene umori, eventi o dati sulla salute."
 
 #: src/moodlog:1589
 msgid "The moods file in this backup is damaged."
@@ -551,12 +551,12 @@ msgid "Wrong or missing token."
 msgstr "Token sbagliato o mancante."
 
 #: src/moodlog:2153
-msgid "Moodlog sync is running. Send health data with POST /health."
-msgstr "La sincronizzazione di Moodlog è attiva. Invia i dati sulla salute con POST /health."
+msgid "Sottovoce sync is running. Send health data with POST /health."
+msgstr "La sincronizzazione di Sottovoce è attiva. Invia i dati sulla salute con POST /health."
 
 #: src/moodlog:2167 src/moodlog:2170
-msgid "Wrong or missing token. Copy it again from Moodlog > Phone sync."
-msgstr "Token sbagliato o mancante. Copialo di nuovo da Moodlog > Sincronizza telefono."
+msgid "Wrong or missing token. Copy it again from Sottovoce > Phone sync."
+msgstr "Token sbagliato o mancante. Copialo di nuovo da Sottovoce > Sincronizza telefono."
 
 #: src/moodlog:2179
 msgid "Empty request, or too large."
@@ -567,10 +567,10 @@ msgid "Empty request (or larger than 5 MB)."
 msgstr "Richiesta vuota (o più grande di 5 MB)."
 
 #: src/moodlog:2193
-msgid "%s\nMoodlog for iPhone synced (%d change).\n"
-msgid_plural "%s\nMoodlog for iPhone synced (%d changes).\n"
-msgstr[0] "%s\nMoodlog per iPhone sincronizzato (%d modifica).\n"
-msgstr[1] "%s\nMoodlog per iPhone sincronizzato (%d modifiche).\n"
+msgid "%s\nSottovoce for iPhone synced (%d change).\n"
+msgid_plural "%s\nSottovoce for iPhone synced (%d changes).\n"
+msgstr[0] "%s\nSottovoce per iPhone sincronizzato (%d modifica).\n"
+msgstr[1] "%s\nSottovoce per iPhone sincronizzato (%d modifiche).\n"
 
 #: src/moodlog:2205
 msgid "%s for %d day"
@@ -663,8 +663,8 @@ msgstr[0] "dalle %s:00 alle %s:00 — media %.1f (%s) su %d voce"
 msgstr[1] "dalle %s:00 alle %s:00 — media %.1f (%s) su %d voci"
 
 #: src/moodlog:3412
-msgid "Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.\n\nA. Build the shortcut\n1. Shortcuts → + → name it \"Moodlog Sync\".\n2. Add the action \"Find Health Samples\". Set Type to Steps. Add a filter: Start Date → is in the last → 7 days. Set Group By to Day.\n3. Add \"Repeat with Each\" (it repeats over the health samples). Inside it add a \"Text\" action with exactly:\n      steps;START;VALUE\n   Replace START and VALUE with the Repeat Item variable: insert it, tap it, and pick Start Date (set Date Format to ISO 8601) for the first and Value for the second.\n4. Below End Repeat add \"Add to Variable\" and name the variable Lines.\n5. Do steps 2–4 again with Type \"Resting Heart Rate\" and the text:\n      resting_hr;START;VALUE\n6. Do steps 2–4 again with Type \"Sleep\", Group By left off, and the text:\n      sleep;START;END;VALUE\n   (START = Start Date, END = End Date, both ISO 8601.)\n7. Add \"Combine Text\": combine Lines with New Lines.\n8. Add \"Get Contents of URL\". URL: the address above. Method: POST. Headers: add Authorization with the value \"Bearer \" followed by the token above. Request Body: JSON, with one Text field named data whose value is Combined Text.\n9. Add \"Show Result\", run the shortcut and allow Health access. It should answer \"OK. Stored …\". If lines were skipped, the answer says why.\n\nB. Run it every day\nAutomation tab → + → Time of Day → pick a time when you are normally using the phone (Health data cannot be read while the iPhone is locked) → Run Immediately → choose Moodlog Sync. Once it works, remove Show Result.\n\nEvery run sends the last 7 days, so days that were missed fill in on the next run.\nOther names you can send the same way: heart_rate, hrv, active_energy.\nIf the iPhone cannot connect and this PC has a firewall on, allow the port: sudo ufw allow 8765/tcp"
-msgstr "Si configura una volta sola nell'app Comandi dell'iPhone. L'iPhone e questo PC devono essere sulla stessa rete Wi-Fi, e questo PC deve essere acceso quando il comando viene eseguito.\n\nA. Crea il comando\n1. Comandi → + → chiamalo \"Moodlog Sync\".\n2. Aggiungi l'azione \"Trova campioni di Salute\". Imposta Tipo su Passi. Aggiungi un filtro: Data di inizio → è negli ultimi → 7 giorni. Imposta Raggruppa per su Giorno.\n3. Aggiungi \"Ripeti con ciascuno\" (ripete per ogni campione). Dentro aggiungi un'azione \"Testo\" con esattamente:\n      steps;START;VALUE\n   Sostituisci START e VALUE con la variabile Elemento ripetuto: inseriscila, toccala e scegli Data di inizio (con Formato data su ISO 8601) per la prima e Valore per la seconda.\n4. Sotto Fine ripetizione aggiungi \"Aggiungi a variabile\" e chiama la variabile Lines.\n5. Ripeti i passaggi 2–4 con Tipo \"Frequenza cardiaca a riposo\" e il testo:\n      resting_hr;START;VALUE\n6. Ripeti i passaggi 2–4 con Tipo \"Sonno\", senza Raggruppa per, e il testo:\n      sleep;START;END;VALUE\n   (START = Data di inizio, END = Data di fine, entrambe ISO 8601.)\n7. Aggiungi \"Combina testo\": combina Lines con A capo.\n8. Aggiungi \"Ottieni contenuti dell'URL\". URL: l'indirizzo qui sopra. Metodo: POST. Intestazioni: aggiungi Authorization con il valore \"Bearer \" seguito dal token qui sopra. Corpo della richiesta: JSON, con un campo Testo chiamato data il cui valore è Testo combinato.\n9. Aggiungi \"Mostra risultato\", esegui il comando e consenti l'accesso a Salute. Dovrebbe rispondere \"OK. Salvato: …\". Se qualche riga è stata saltata, la risposta dice perché.\n\nB. Eseguilo ogni giorno\nScheda Automazione → + → Ora del giorno → scegli un orario in cui di solito usi il telefono (i dati di Salute non si possono leggere con l'iPhone bloccato) → Esegui immediatamente → scegli Moodlog Sync. Quando funziona, togli Mostra risultato.\n\nOgni esecuzione invia gli ultimi 7 giorni, quindi i giorni saltati si recuperano alla successiva.\nAltri nomi che puoi inviare allo stesso modo: heart_rate, hrv, active_energy.\nSe l'iPhone non riesce a collegarsi e questo PC ha un firewall attivo, apri la porta: sudo ufw allow 8765/tcp"
+msgid "Set this up once in the Shortcuts app on your iPhone. The iPhone and this PC must be on the same Wi-Fi, and this PC must be on when the shortcut runs.\n\nA. Build the shortcut\n1. Shortcuts → + → name it \"Sottovoce Sync\".\n2. Add the action \"Find Health Samples\". Set Type to Steps. Add a filter: Start Date → is in the last → 7 days. Set Group By to Day.\n3. Add \"Repeat with Each\" (it repeats over the health samples). Inside it add a \"Text\" action with exactly:\n      steps;START;VALUE\n   Replace START and VALUE with the Repeat Item variable: insert it, tap it, and pick Start Date (set Date Format to ISO 8601) for the first and Value for the second.\n4. Below End Repeat add \"Add to Variable\" and name the variable Lines.\n5. Do steps 2–4 again with Type \"Resting Heart Rate\" and the text:\n      resting_hr;START;VALUE\n6. Do steps 2–4 again with Type \"Sleep\", Group By left off, and the text:\n      sleep;START;END;VALUE\n   (START = Start Date, END = End Date, both ISO 8601.)\n7. Add \"Combine Text\": combine Lines with New Lines.\n8. Add \"Get Contents of URL\". URL: the address above. Method: POST. Headers: add Authorization with the value \"Bearer \" followed by the token above. Request Body: JSON, with one Text field named data whose value is Combined Text.\n9. Add \"Show Result\", run the shortcut and allow Health access. It should answer \"OK. Stored …\". If lines were skipped, the answer says why.\n\nB. Run it every day\nAutomation tab → + → Time of Day → pick a time when you are normally using the phone (Health data cannot be read while the iPhone is locked) → Run Immediately → choose Sottovoce Sync. Once it works, remove Show Result.\n\nEvery run sends the last 7 days, so days that were missed fill in on the next run.\nOther names you can send the same way: heart_rate, hrv, active_energy.\nIf the iPhone cannot connect and this PC has a firewall on, allow the port: sudo ufw allow 8765/tcp"
+msgstr "Si configura una volta sola nell'app Comandi dell'iPhone. L'iPhone e questo PC devono essere sulla stessa rete Wi-Fi, e questo PC deve essere acceso quando il comando viene eseguito.\n\nA. Crea il comando\n1. Comandi → + → chiamalo \"Sottovoce Sync\".\n2. Aggiungi l'azione \"Trova campioni di Salute\". Imposta Tipo su Passi. Aggiungi un filtro: Data di inizio → è negli ultimi → 7 giorni. Imposta Raggruppa per su Giorno.\n3. Aggiungi \"Ripeti con ciascuno\" (ripete per ogni campione). Dentro aggiungi un'azione \"Testo\" con esattamente:\n      steps;START;VALUE\n   Sostituisci START e VALUE con la variabile Elemento ripetuto: inseriscila, toccala e scegli Data di inizio (con Formato data su ISO 8601) per la prima e Valore per la seconda.\n4. Sotto Fine ripetizione aggiungi \"Aggiungi a variabile\" e chiama la variabile Lines.\n5. Ripeti i passaggi 2–4 con Tipo \"Frequenza cardiaca a riposo\" e il testo:\n      resting_hr;START;VALUE\n6. Ripeti i passaggi 2–4 con Tipo \"Sonno\", senza Raggruppa per, e il testo:\n      sleep;START;END;VALUE\n   (START = Data di inizio, END = Data di fine, entrambe ISO 8601.)\n7. Aggiungi \"Combina testo\": combina Lines con A capo.\n8. Aggiungi \"Ottieni contenuti dell'URL\". URL: l'indirizzo qui sopra. Metodo: POST. Intestazioni: aggiungi Authorization con il valore \"Bearer \" seguito dal token qui sopra. Corpo della richiesta: JSON, con un campo Testo chiamato data il cui valore è Testo combinato.\n9. Aggiungi \"Mostra risultato\", esegui il comando e consenti l'accesso a Salute. Dovrebbe rispondere \"OK. Salvato: …\". Se qualche riga è stata saltata, la risposta dice perché.\n\nB. Eseguilo ogni giorno\nScheda Automazione → + → Ora del giorno → scegli un orario in cui di solito usi il telefono (i dati di Salute non si possono leggere con l'iPhone bloccato) → Esegui immediatamente → scegli Sottovoce Sync. Quando funziona, togli Mostra risultato.\n\nOgni esecuzione invia gli ultimi 7 giorni, quindi i giorni saltati si recuperano alla successiva.\nAltri nomi che puoi inviare allo stesso modo: heart_rate, hrv, active_energy.\nSe l'iPhone non riesce a collegarsi e questo PC ha un firewall attivo, apri la porta: sudo ufw allow 8765/tcp"
 
 #: src/moodlog:3465 src/moodlog:4339 src/moodlog:4574
 msgid "Add event"
@@ -801,8 +801,8 @@ msgid "Screenshots of the app are now in the README."
 msgstr "Nel README ci sono ora le schermate dell'app."
 
 #: src/moodlog:3700
-msgid "Moodlog for iPhone: a new app that syncs moods, energy, anxiety, notes and events with Moodlog on your PC over your home Wi-Fi."
-msgstr "Moodlog per iPhone: una nuova app che sincronizza umori, energia, ansia, note ed eventi con Moodlog sul PC tramite il Wi-Fi di casa."
+msgid "Sottovoce for iPhone: a new app that syncs moods, energy, anxiety, notes and events with Sottovoce on your PC over your home Wi-Fi."
+msgstr "Sottovoce per iPhone: una nuova app che sincronizza umori, energia, ansia, note ed eventi con Sottovoce sul PC tramite il Wi-Fi di casa."
 
 #: src/moodlog:3702
 msgid "Every entry and event now has an ID and a change time: the newest change wins, deletions sync too, and nothing is overwritten when two devices save at once."
@@ -837,8 +837,8 @@ msgid "Backup and restore as one .zip file; restoring saves your current data fi
 msgstr "Backup e ripristino in un unico file .zip; il ripristino salva prima i dati attuali."
 
 #: src/moodlog:3720
-msgid "Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Moodlog on two computers, with merging of conflict copies."
-msgstr "Cartella dei dati e sincronizzazione: tieni i dati in una cartella di Syncthing o Nextcloud per usare Moodlog su due computer, con l'unione delle copie in conflitto."
+msgid "Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Sottovoce on two computers, with merging of conflict copies."
+msgstr "Cartella dei dati e sincronizzazione: tieni i dati in una cartella di Syncthing o Nextcloud per usare Sottovoce su due computer, con l'unione delle copie in conflitto."
 
 #: src/moodlog:3724
 msgid "Fixed sleep showing 24 hours every night when the shortcut sent dates without a time."
@@ -873,8 +873,8 @@ msgid "Link with the mood widget of the Gridgets GNOME extension."
 msgstr "Collegamento con il widget dell'umore dell'estensione GNOME Gridgets."
 
 #: src/moodlog:3747
-msgid "Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Moodlog."
-msgstr "Sincronizzazione col telefono: un Comando rapido dell'iPhone invia sonno, passi e frequenza cardiaca a Moodlog."
+msgid "Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Sottovoce."
+msgstr "Sincronizzazione col telefono: un Comando rapido dell'iPhone invia sonno, passi e frequenza cardiaca a Sottovoce."
 
 #: src/moodlog:3748
 msgid "New chart comparing your mood with your health data."
@@ -885,20 +885,20 @@ msgid "First version: a mood and a note each day, a month calendar, charts and a
 msgstr "Prima versione: un umore e una nota al giorno, un calendario mensile, grafici e un elenco delle note, tutto salvato in un semplice file CSV."
 
 #: src/moodlog:3797
-msgid "What's new in Moodlog"
-msgstr "Novità di Moodlog"
+msgid "What's new in Sottovoce"
+msgstr "Novità di Sottovoce"
 
 #: src/moodlog:3802
-msgid "What's new in Moodlog %s"
-msgstr "Novità di Moodlog %s"
+msgid "What's new in Sottovoce %s"
+msgstr "Novità di Sottovoce %s"
 
 #: src/moodlog:3806
 msgid "You updated from version %s. The changes since then are marked as new."
 msgstr "Hai aggiornato dalla versione %s. Le modifiche da allora sono segnate come nuove."
 
 #: src/moodlog:3808
-msgid "The full history of Moodlog, newest first."
-msgstr "La storia completa di Moodlog, dalla più recente."
+msgid "The full history of Sottovoce, newest first."
+msgstr "La storia completa di Sottovoce, dalla più recente."
 
 #: src/moodlog:3818
 msgid "Version %s"
@@ -925,12 +925,12 @@ msgid "Open"
 msgstr "Apri"
 
 #: src/moodlog:3914
-msgid "Use Moodlog on two computers"
-msgstr "Usa Moodlog su due computer"
+msgid "Use Sottovoce on two computers"
+msgstr "Usa Sottovoce su due computer"
 
 #: src/moodlog:3918
-msgid "Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do the same on the other computer. Moodlog saves its files there and picks up changes from the other computer within a few seconds. If both computers change something at the very same time, the sync app may make a conflict copy; Moodlog then offers to merge it, so nothing is lost."
-msgstr "Scegli una cartella che Syncthing, Nextcloud o un'app simile tiene sincronizzata, e fai lo stesso sull'altro computer. Moodlog salva lì i suoi file e riceve le modifiche dell'altro computer in pochi secondi. Se entrambi i computer cambiano qualcosa nello stesso momento, l'app di sincronizzazione può creare una copia in conflitto; Moodlog allora propone di unirla, così non si perde niente."
+msgid "Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do the same on the other computer. Sottovoce saves its files there and picks up changes from the other computer within a few seconds. If both computers change something at the very same time, the sync app may make a conflict copy; Sottovoce then offers to merge it, so nothing is lost."
+msgstr "Scegli una cartella che Syncthing, Nextcloud o un'app simile tiene sincronizzata, e fai lo stesso sull'altro computer. Sottovoce salva lì i suoi file e riceve le modifiche dell'altro computer in pochi secondi. Se entrambi i computer cambiano qualcosa nello stesso momento, l'app di sincronizzazione può creare una copia in conflitto; Sottovoce allora propone di unirla, così non si perde niente."
 
 #: src/moodlog:3926
 msgid "Choose another folder…"
@@ -963,16 +963,16 @@ msgid "Move your data to %s?"
 msgstr "Spostare i tuoi dati in %s?"
 
 #: src/moodlog:3975
-msgid "Your moods, events and health data are copied there, and Moodlog uses that folder from now on. The old folder keeps its copy."
-msgstr "Umori, eventi e dati sulla salute vengono copiati lì e da ora Moodlog usa quella cartella. La vecchia cartella tiene la sua copia."
+msgid "Your moods, events and health data are copied there, and Sottovoce uses that folder from now on. The old folder keeps its copy."
+msgstr "Umori, eventi e dati sulla salute vengono copiati lì e da ora Sottovoce usa quella cartella. La vecchia cartella tiene la sua copia."
 
 #: src/moodlog:3977
 msgid "Move here"
 msgstr "Sposta qui"
 
 #: src/moodlog:3980
-msgid "%s already has Moodlog data"
-msgstr "%s contiene già dati di Moodlog"
+msgid "%s already has Sottovoce data"
+msgstr "%s contiene già dati di Sottovoce"
 
 #: src/moodlog:3981
 msgid "Merge puts what is on this computer together with what is already there, which is what you want when setting up a second computer. Use that data switches to the folder as it is; the data here stays in the old folder."
@@ -991,8 +991,8 @@ msgid "Could not use that folder: %s"
 msgstr "Impossibile usare quella cartella: %s"
 
 #: src/moodlog:4022
-msgid "Moodlog now uses %s"
-msgstr "Ora Moodlog usa %s"
+msgid "Sottovoce now uses %s"
+msgstr "Ora Sottovoce usa %s"
 
 #: src/moodlog:4027 src/moodlog:4238
 msgid "Phone sync"
@@ -1019,8 +1019,8 @@ msgid "Copy"
 msgstr "Copia"
 
 #: src/moodlog:4072
-msgid "The token is a password: only requests that carry it are accepted. The receiver works only on your local network. It takes in Health values from the shortcut, and it syncs moods and events with the Moodlog app for iPhone (use the same address and token in the app's Settings)."
-msgstr "Il token è una password: vengono accettate solo le richieste che lo contengono. Il ricevitore funziona solo nella tua rete locale. Riceve i valori di Salute dal comando rapido e sincronizza umori ed eventi con l'app Moodlog per iPhone (usa lo stesso indirizzo e token nelle Impostazioni dell'app)."
+msgid "The token is a password: only requests that carry it are accepted. The receiver works only on your local network. It takes in Health values from the shortcut, and it syncs moods and events with the Sottovoce app for iPhone (use the same address and token in the app's Settings)."
+msgstr "Il token è una password: vengono accettate solo le richieste che lo contengono. Il ricevitore funziona solo nella tua rete locale. Riceve i valori di Salute dal comando rapido e sincronizza umori ed eventi con l'app Sottovoce per iPhone (usa lo stesso indirizzo e token nelle Impostazioni dell'app)."
 
 #: src/moodlog:4081
 msgid "iPhone setup"
@@ -1267,16 +1267,16 @@ msgid "Could not save: %s"
 msgstr "Impossibile salvare: %s"
 
 #: src/moodlog:4999
-msgid "Your sync app made %d conflict copy of your Moodlog data (both computers changed it at the same time). Merge it to keep everything."
-msgid_plural "Your sync app made %d conflict copies of your Moodlog data (both computers changed it at the same time). Merge them to keep everything."
-msgstr[0] "L'app di sincronizzazione ha creato %d copia in conflitto dei tuoi dati di Moodlog (entrambi i computer li hanno cambiati nello stesso momento). Uniscila per non perdere niente."
-msgstr[1] "L'app di sincronizzazione ha creato %d copie in conflitto dei tuoi dati di Moodlog (entrambi i computer li hanno cambiati nello stesso momento). Uniscile per non perdere niente."
+msgid "Your sync app made %d conflict copy of your Sottovoce data (both computers changed it at the same time). Merge it to keep everything."
+msgid_plural "Your sync app made %d conflict copies of your Sottovoce data (both computers changed it at the same time). Merge them to keep everything."
+msgstr[0] "L'app di sincronizzazione ha creato %d copia in conflitto dei tuoi dati di Sottovoce (entrambi i computer li hanno cambiati nello stesso momento). Uniscila per non perdere niente."
+msgstr[1] "L'app di sincronizzazione ha creato %d copie in conflitto dei tuoi dati di Sottovoce (entrambi i computer li hanno cambiati nello stesso momento). Uniscile per non perdere niente."
 
 #: src/moodlog:5023
-msgid "%d day in this period has both a mood and %s data. With 8 or more, Moodlog compares your mood on higher and lower days."
-msgid_plural "%d days in this period have both a mood and %s data. With 8 or more, Moodlog compares your mood on higher and lower days."
-msgstr[0] "%d giorno in questo periodo ha sia un umore sia dati di %s. Con 8 o più, Moodlog confronta il tuo umore nei giorni con valori più alti e più bassi."
-msgstr[1] "%d giorni in questo periodo hanno sia un umore sia dati di %s. Con 8 o più, Moodlog confronta il tuo umore nei giorni con valori più alti e più bassi."
+msgid "%d day in this period has both a mood and %s data. With 8 or more, Sottovoce compares your mood on higher and lower days."
+msgid_plural "%d days in this period have both a mood and %s data. With 8 or more, Sottovoce compares your mood on higher and lower days."
+msgstr[0] "%d giorno in questo periodo ha sia un umore sia dati di %s. Con 8 o più, Sottovoce confronta il tuo umore nei giorni con valori più alti e più bassi."
+msgstr[1] "%d giorni in questo periodo hanno sia un umore sia dati di %s. Con 8 o più, Sottovoce confronta il tuo umore nei giorni con valori più alti e più bassi."
 
 #: src/moodlog:5033
 msgid "Your %s barely changed in this period, so there is nothing to compare yet."
@@ -1313,12 +1313,12 @@ msgid "Could not export: %s"
 msgstr "Impossibile esportare: %s"
 
 #: src/moodlog:5146
-msgid "Restart Moodlog?"
-msgstr "Riavviare Moodlog?"
+msgid "Restart Sottovoce?"
+msgstr "Riavviare Sottovoce?"
 
 #: src/moodlog:5147
-msgid "Moodlog needs to restart to change language. Everything you logged is saved."
-msgstr "Moodlog deve riavviarsi per cambiare lingua. Tutto quello che hai registrato è salvato."
+msgid "Sottovoce needs to restart to change language. Everything you logged is saved."
+msgstr "Sottovoce deve riavviarsi per cambiare lingua. Tutto quello che hai registrato è salvato."
 
 #: src/moodlog:5149
 msgid "Restart now"
@@ -1335,8 +1335,8 @@ msgid "Could not back up: %s"
 msgstr "Impossibile fare il backup: %s"
 
 #: src/moodlog:5215
-msgid "Back up Moodlog"
-msgstr "Backup di Moodlog"
+msgid "Back up Sottovoce"
+msgstr "Backup di Sottovoce"
 
 #: src/moodlog:5227
 msgid "an unknown date"
@@ -1434,8 +1434,8 @@ msgid "No notes yet.\nAdd a few words when you log a mood and they will show up 
 msgstr "Ancora nessuna nota.\nAggiungi qualche parola quando registri un umore e appariranno qui."
 
 #: src/moodlog
-msgid "Moodlog speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too."
-msgstr "Moodlog parla italiano. Segue la lingua del sistema, oppure scegline una dal menu ☰ → Lingua. Anche date, grafici, resoconto per il medico ed esportazioni sono tradotti."
+msgid "Sottovoce speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too."
+msgstr "Sottovoce parla italiano. Segue la lingua del sistema, oppure scegline una dal menu ☰ → Lingua. Anche date, grafici, resoconto per il medico ed esportazioni sono tradotti."
 
 msgid "Pleasant"
 msgstr "Piacevole"
@@ -1575,8 +1575,8 @@ msgstr "Dopo un aggiornamento, il ricevitore della sincronizzazione col telefono
 msgid "Doctor report: “Also what the dreams were about” can always be ticked, and ticking it includes dreams too. Before, it stayed greyed out until “Include dreams” was ticked, so it was easy to miss."
 msgstr "Resoconto per il medico: “Anche di cosa parlavano i sogni” si può spuntare sempre, e spuntarlo include anche i sogni. Prima restava grigio finché non si spuntava “Includi i sogni”, quindi era facile non accorgersene."
 
-msgid "Welcome to Moodlog"
-msgstr "Ti do il benvenuto in Moodlog"
+msgid "Welcome to Sottovoce"
+msgstr "Ti do il benvenuto in Sottovoce"
 
 msgid "Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you."
 msgstr "Ciao! Nessuna fretta, ti aiuto a capire come funziona l'interfaccia. Non farti spaventare, è piuttosto semplice: ci penso io a te."
@@ -1608,8 +1608,8 @@ msgstr "Energia, ansia e una nota sono tutte facoltative. Lasciale vuote quando 
 msgid "Mark what matters"
 msgstr "Segna ciò che conta"
 
-msgid "Started a new medication, or something big happened? Add it as an event, and Moodlog will show how you felt in the weeks before and after."
-msgstr "Hai iniziato una nuova terapia, o è successo qualcosa di importante? Aggiungilo come evento, e Moodlog ti mostrerà come ti sentivi nelle settimane prima e dopo."
+msgid "Started a new medication, or something big happened? Add it as an event, and Sottovoce will show how you felt in the weeks before and after."
+msgstr "Hai iniziato una nuova terapia, o è successo qualcosa di importante? Aggiungilo come evento, e Sottovoce ti mostrerà come ti sentivi nelle settimane prima e dopo."
 
 msgid "Charts fill in on their own"
 msgstr "I grafici si riempiono da soli"
@@ -1632,8 +1632,8 @@ msgstr "Esporta crea un resoconto in PDF ordinato per il medico. Scegli tu il pe
 msgid "Your iPhone can help"
 msgstr "Il tuo iPhone può aiutarti"
 
-msgid "Phone sync brings in your sleep and steps, and syncs with Moodlog for iPhone. Optional too: Moodlog works fine without it."
-msgstr "Sincronizza telefono porta qui sonno e passi, e si sincronizza con Moodlog per iPhone. Anche questo è facoltativo: Moodlog funziona benissimo senza."
+msgid "Phone sync brings in your sleep and steps, and syncs with Sottovoce for iPhone. Optional too: Sottovoce works fine without it."
+msgstr "Sincronizza telefono porta qui sonno e passi, e si sincronizza con Sottovoce per iPhone. Anche questo è facoltativo: Sottovoce funziona benissimo senza."
 
 msgid "If you ever need me again"
 msgstr "Se mai avessi di nuovo bisogno di me"
@@ -1674,8 +1674,8 @@ msgstr "Non cifrato (il comando rapido o una versione vecchia dell'app per iPhon
 msgid "Encrypted sync needs the python3-cryptography package on the PC."
 msgstr "La sincronizzazione cifrata richiede il pacchetto python3-cryptography sul PC."
 
-msgid "Could not read the request: the token doesn't match. Copy it again from Moodlog > Phone sync."
-msgstr "Impossibile leggere la richiesta: il token non corrisponde. Copialo di nuovo da Moodlog > Sincronizza telefono."
+msgid "Could not read the request: the token doesn't match. Copy it again from Sottovoce > Phone sync."
+msgstr "Impossibile leggere la richiesta: il token non corrisponde. Copialo di nuovo da Sottovoce > Sincronizza telefono."
 
 msgid "Change token…"
 msgstr "Cambia token…"
@@ -1683,8 +1683,8 @@ msgstr "Cambia token…"
 msgid "Make a new token: the old one stops working at once"
 msgstr "Crea un nuovo token: quello vecchio smette subito di funzionare"
 
-msgid "The token is a password, and the receiver works only on your local network. Moodlog for iPhone (1.4 and newer) encrypts everything it sends with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the iPhone app's Settings."
-msgstr "Il token è una password, e il ricevitore funziona solo nella tua rete locale. Moodlog per iPhone (1.4 e successive) cifra tutto ciò che invia con il token, così il token stesso non passa mai in rete. Il comando rapido non può cifrare: invia i valori di Salute e il token in chiaro, quindi usalo solo su una rete di cui ti fidi. Usa lo stesso indirizzo e token nelle Impostazioni dell'app per iPhone."
+msgid "The token is a password, and the receiver works only on your local network. Sottovoce for iPhone (1.4 and newer) encrypts everything it sends with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the iPhone app's Settings."
+msgstr "Il token è una password, e il ricevitore funziona solo nella tua rete locale. Sottovoce per iPhone (1.4 e successive) cifra tutto ciò che invia con il token, così il token stesso non passa mai in rete. Il comando rapido non può cifrare: invia i valori di Salute e il token in chiaro, quindi usalo solo su una rete di cui ti fidi. Usa lo stesso indirizzo e token nelle Impostazioni dell'app per iPhone."
 
 msgid "Could not change the token: %s"
 msgstr "Impossibile cambiare il token: %s"
@@ -1692,22 +1692,22 @@ msgstr "Impossibile cambiare il token: %s"
 msgid "Change the token?"
 msgstr "Cambiare il token?"
 
-msgid "The old token stops working at once. Enter the new one in Moodlog for iPhone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
-msgstr "Il vecchio token smette subito di funzionare. Inserisci quello nuovo in Moodlog per iPhone (Impostazioni) e nel comando rapido, se lo usi. Vale la pena farlo una volta dopo l'aggiornamento alla sincronizzazione cifrata, perché le versioni precedenti inviavano il token in chiaro."
+msgid "The old token stops working at once. Enter the new one in Sottovoce for iPhone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
+msgstr "Il vecchio token smette subito di funzionare. Inserisci quello nuovo in Sottovoce per iPhone (Impostazioni) e nel comando rapido, se lo usi. Vale la pena farlo una volta dopo l'aggiornamento alla sincronizzazione cifrata, perché le versioni precedenti inviavano il token in chiaro."
 
 msgid "Change token"
 msgstr "Cambia token"
 
-msgid "Moodlog for iPhone synced (%d change)."
-msgid_plural "Moodlog for iPhone synced (%d changes)."
-msgstr[0] "Moodlog per iPhone sincronizzato (%d modifica)."
-msgstr[1] "Moodlog per iPhone sincronizzato (%d modifiche)."
+msgid "Sottovoce for iPhone synced (%d change)."
+msgid_plural "Sottovoce for iPhone synced (%d changes)."
+msgstr[0] "Sottovoce per iPhone sincronizzato (%d modifica)."
+msgstr[1] "Sottovoce per iPhone sincronizzato (%d modifiche)."
 
-msgid "Encrypted phone sync: Moodlog for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button."
-msgstr "Sincronizzazione col telefono cifrata: Moodlog per iPhone 1.4 cifra tutto ciò che invia con il tuo token, e il token stesso non passa mai in rete. Sincronizza telefono mostra se l'ultima connessione era cifrata, e ha un nuovo pulsante Cambia token."
+msgid "Encrypted phone sync: Sottovoce for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button."
+msgstr "Sincronizzazione col telefono cifrata: Sottovoce per iPhone 1.4 cifra tutto ciò che invia con il tuo token, e il token stesso non passa mai in rete. Sincronizza telefono mostra se l'ultima connessione era cifrata, e ha un nuovo pulsante Cambia token."
 
-msgid "A privacy policy: ☰ menu → Privacy shows in short what Moodlog does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy."
-msgstr "Un'informativa sulla privacy: menu ☰ → Privacy mostra in breve cosa fa Moodlog con i tuoi dati (niente esce dai tuoi dispositivi, tranne la sincronizzazione cifrata del telefono), con un link all'informativa completa."
+msgid "A privacy policy: ☰ menu → Privacy shows in short what Sottovoce does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy."
+msgstr "Un'informativa sulla privacy: menu ☰ → Privacy mostra in breve cosa fa Sottovoce con i tuoi dati (niente esce dai tuoi dispositivi, tranne la sincronizzazione cifrata del telefono), con un link all'informativa completa."
 
 msgid "The phone sync receiver no longer writes the address of a request to the system log in full, so a token sent in the address can't end up there."
 msgstr "Il ricevitore della sincronizzazione non scrive più per intero l'indirizzo di una richiesta nel registro di sistema, così un token inviato nell'indirizzo non può finirci dentro."
@@ -1721,8 +1721,8 @@ msgstr "I tuoi dati sono tuoi"
 msgid "Nobody collects your data"
 msgstr "Nessuno raccoglie i tuoi dati"
 
-msgid "Moodlog has no account, no server, no analytics and no ads. The developer never sees anything you write."
-msgstr "Moodlog non ha account, server, statistiche d'uso né pubblicità. Lo sviluppatore non vede mai niente di quello che scrivi."
+msgid "Sottovoce has no account, no server, no analytics and no ads. The developer never sees anything you write."
+msgstr "Sottovoce non ha account, server, statistiche d'uso né pubblicità. Lo sviluppatore non vede mai niente di quello che scrivi."
 
 msgid "It stays on your devices"
 msgstr "Resta sui tuoi dispositivi"
@@ -1745,8 +1745,8 @@ msgstr "Passi, frequenza cardiaca a riposo e sonno vengono letti solo se lo atti
 msgid "No internet"
 msgstr "Niente internet"
 
-msgid "Moodlog never connects to the internet. Only a link you click, like the one below, opens a page in your browser."
-msgstr "Moodlog non si collega mai a internet. Solo un link che clicchi, come quello qui sotto, apre una pagina nel browser."
+msgid "Sottovoce never connects to the internet. Only a link you click, like the one below, opens a page in your browser."
+msgstr "Sottovoce non si collega mai a internet. Solo un link che clicchi, come quello qui sotto, apre una pagina nel browser."
 
 msgid "Read the full policy"
 msgstr "Leggi l'informativa completa"
@@ -1754,14 +1754,14 @@ msgstr "Leggi l'informativa completa"
 msgid "Close"
 msgstr "Chiudi"
 
-msgid "Install Moodlog for Android: download Moodlog-Android-….apk from the latest release on GitHub (github.com/Akii-G/moodlog/releases) on your phone and open it. Android asks once to allow installing apps from your browser.\n\nIn the app, open Settings and enter the address and token above (pop-os.local works; if it doesn't, use the \"If that fails\" address). Tap Test connection. Your phone and this PC must be on the same Wi-Fi.\n\nFor sleep, steps and resting heart rate: in Settings → Health Connect, allow access, then turn on Send with each sync. Your watch or fitness app needs to share its data with Health Connect."
-msgstr "Installa Moodlog per Android: dal telefono scarica Moodlog-Android-….apk dall'ultima versione su GitHub (github.com/Akii-G/moodlog/releases) e aprilo. Android chiede una volta di consentire l'installazione di app dal browser.\n\nNell'app apri Impostazioni e inserisci l'indirizzo e il token qui sopra (pop-os.local funziona; se non va, usa l'indirizzo di \"Se non funziona\"). Tocca Prova il collegamento. Il telefono e questo PC devono essere sulla stessa rete Wi-Fi.\n\nPer sonno, passi e frequenza cardiaca a riposo: in Impostazioni → Connessione Salute consenti l'accesso, poi attiva Invia a ogni sincronizzazione. Il tuo orologio o la tua app di fitness deve condividere i dati con Connessione Salute."
+msgid "Install Sottovoce for Android: download Sottovoce-Android-….apk from the latest release on GitHub (github.com/Akii-G/sottovoce/releases) on your phone and open it. Android asks once to allow installing apps from your browser.\n\nIn the app, open Settings and enter the address and token above (pop-os.local works; if it doesn't, use the \"If that fails\" address). Tap Test connection. Your phone and this PC must be on the same Wi-Fi.\n\nFor sleep, steps and resting heart rate: in Settings → Health Connect, allow access, then turn on Send with each sync. Your watch or fitness app needs to share its data with Health Connect."
+msgstr "Installa Sottovoce per Android: dal telefono scarica Sottovoce-Android-….apk dall'ultima versione su GitHub (github.com/Akii-G/sottovoce/releases) e aprilo. Android chiede una volta di consentire l'installazione di app dal browser.\n\nNell'app apri Impostazioni e inserisci l'indirizzo e il token qui sopra (pop-os.local funziona; se non va, usa l'indirizzo di \"Se non funziona\"). Tocca Prova il collegamento. Il telefono e questo PC devono essere sulla stessa rete Wi-Fi.\n\nPer sonno, passi e frequenza cardiaca a riposo: in Impostazioni → Connessione Salute consenti l'accesso, poi attiva Invia a ogni sincronizzazione. Il tuo orologio o la tua app di fitness deve condividere i dati con Connessione Salute."
 
-msgid "Moodlog for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up."
-msgstr "Moodlog per Android: una nuova app per telefoni Android che sincronizza con questo PC umori, energia, ansia, note, eventi e sogni, in modo cifrato, e invia sonno, passi e frequenza cardiaca a riposo da Connessione Salute. In Sincronizza telefono trovi i passaggi per configurarla."
+msgid "Sottovoce for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up."
+msgstr "Sottovoce per Android: una nuova app per telefoni Android che sincronizza con questo PC umori, energia, ansia, note, eventi e sogni, in modo cifrato, e invia sonno, passi e frequenza cardiaca a riposo da Connessione Salute. In Sincronizza telefono trovi i passaggi per configurarla."
 
-msgid "Everything is saved in your data folder on this PC and, if you use it, inside the Moodlog app on your phone."
-msgstr "Tutto viene salvato nella tua cartella dei dati su questo PC e, se la usi, dentro l'app Moodlog sul telefono."
+msgid "Everything is saved in your data folder on this PC and, if you use it, inside the Sottovoce app on your phone."
+msgstr "Tutto viene salvato nella tua cartella dei dati su questo PC e, se la usi, dentro l'app Sottovoce sul telefono."
 
 msgid "Your phone sends your entries straight to this PC over your own network, encrypted with your token. The token itself is never sent."
 msgstr "Il tuo telefono invia le tue voci direttamente a questo PC sulla tua rete, cifrate con il tuo token. Il token stesso non viene mai inviato."
@@ -1772,8 +1772,8 @@ msgstr "Passi, frequenza cardiaca a riposo e sonno vengono letti solo se lo atti
 msgid "Sync with my phone (iPhone or Android)"
 msgstr "Sincronizza con il mio telefono (iPhone o Android)"
 
-msgid "The token is a password, and the receiver works only on your local network. Moodlog for iPhone (1.4 and newer) and Moodlog for Android encrypt everything they send with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the phone app's Settings."
-msgstr "Il token è una password, e il ricevitore funziona solo sulla tua rete locale. Moodlog per iPhone (1.4 e successive) e Moodlog per Android cifrano tutto ciò che inviano con il token, così il token stesso non passa mai in rete. Il Comando rapido non può cifrare: invia i valori di Salute e il token in chiaro, quindi usalo solo su una rete di cui ti fidi. Usa lo stesso indirizzo e token nelle Impostazioni dell'app sul telefono."
+msgid "The token is a password, and the receiver works only on your local network. Sottovoce for iPhone (1.4 and newer) and Sottovoce for Android encrypt everything they send with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the phone app's Settings."
+msgstr "Il token è una password, e il ricevitore funziona solo sulla tua rete locale. Sottovoce per iPhone (1.4 e successive) e Sottovoce per Android cifrano tutto ciò che inviano con il token, così il token stesso non passa mai in rete. Il Comando rapido non può cifrare: invia i valori di Salute e il token in chiaro, quindi usalo solo su una rete di cui ti fidi. Usa lo stesso indirizzo e token nelle Impostazioni dell'app sul telefono."
 
 msgid "Android setup"
 msgstr "Configurazione su Android"
@@ -1781,34 +1781,34 @@ msgstr "Configurazione su Android"
 msgid "iPhone Shortcut (only if you don't use the app)"
 msgstr "Comando rapido per iPhone (solo se non usi l'app)"
 
-msgid "The old token stops working at once. Enter the new one in the Moodlog app on your phone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
-msgstr "Il vecchio token smette subito di funzionare. Inserisci quello nuovo nell'app Moodlog sul telefono (Impostazioni) e nel Comando rapido, se lo usi. Conviene farlo una volta dopo l'aggiornamento alla sincronizzazione cifrata, perché le versioni precedenti inviavano il token in chiaro."
+msgid "The old token stops working at once. Enter the new one in the Sottovoce app on your phone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
+msgstr "Il vecchio token smette subito di funzionare. Inserisci quello nuovo nell'app Sottovoce sul telefono (Impostazioni) e nel Comando rapido, se lo usi. Conviene farlo una volta dopo l'aggiornamento alla sincronizzazione cifrata, perché le versioni precedenti inviavano il token in chiaro."
 
 msgid "Your phone can help"
 msgstr "Il tuo telefono può aiutarti"
 
-msgid "Phone sync brings in your sleep and steps, and syncs with Moodlog on your iPhone or Android phone. Optional too: Moodlog works fine without it."
-msgstr "Sincronizza telefono porta qui il tuo sonno e i tuoi passi, e si sincronizza con Moodlog sul tuo iPhone o telefono Android. Anche questo è facoltativo: Moodlog funziona benissimo senza."
+msgid "Phone sync brings in your sleep and steps, and syncs with Sottovoce on your iPhone or Android phone. Optional too: Sottovoce works fine without it."
+msgstr "Sincronizza telefono porta qui il tuo sonno e i tuoi passi, e si sincronizza con Sottovoce sul tuo iPhone o telefono Android. Anche questo è facoltativo: Sottovoce funziona benissimo senza."
 
-msgid "Sync with Moodlog on your phone, and receive steps, sleep and heart rate"
-msgstr "Sincronizza con Moodlog sul telefono e ricevi passi, sonno e battito"
+msgid "Sync with Sottovoce on your phone, and receive steps, sleep and heart rate"
+msgstr "Sincronizza con Sottovoce sul telefono e ricevi passi, sonno e battito"
 
 msgid "No health data yet. Use Phone sync in the title bar to bring in sleep, steps and heart rate from your phone, and compare them with your mood here."
 msgstr "Ancora nessun dato di salute. Usa Sincronizza telefono nella barra del titolo per portare qui sonno, passi e battito dal telefono, e confrontarli con il tuo umore."
 
-msgid "Moodlog for Android synced (%d change)."
-msgid_plural "Moodlog for Android synced (%d changes)."
-msgstr[0] "Moodlog per Android sincronizzato (%d modifica)."
-msgstr[1] "Moodlog per Android sincronizzato (%d modifiche)."
+msgid "Sottovoce for Android synced (%d change)."
+msgid_plural "Sottovoce for Android synced (%d changes)."
+msgstr[0] "Sottovoce per Android sincronizzato (%d modifica)."
+msgstr[1] "Sottovoce per Android sincronizzato (%d modifiche)."
 
-msgid "Moodlog for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC."
-msgstr "È uscito Moodlog per Android 1.1.0: un nuovo aspetto come l'app per iPhone, un calendario più alto, e trova questo PC in modo più affidabile quando pop-os.local non funziona sul telefono. Sul PC non cambia niente."
+msgid "Sottovoce for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC."
+msgstr "È uscito Sottovoce per Android 1.1.0: un nuovo aspetto come l'app per iPhone, un calendario più alto, e trova questo PC in modo più affidabile quando pop-os.local non funziona sul telefono. Sul PC non cambia niente."
 
 msgid "One click on a face is enough."
 msgstr "Basta un clic su una faccina."
 
-msgid "Open Moodlog"
-msgstr "Apri Moodlog"
+msgid "Open Sottovoce"
+msgstr "Apri Sottovoce"
 
 msgid "Reminder and kind word"
 msgstr "Promemoria e parola gentile"
@@ -1867,7 +1867,7 @@ msgstr "Un promemoria giornaliero (☰ → Promemoria e parola gentile): una not
 msgid "A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off."
 msgstr "Una parola gentile nei giorni difficili: dopo alcuni giorni molto difficili ravvicinati, il Diario mostra una breve nota gentile con una linea di ascolto. Non avvisa nessuno, e puoi nasconderla o disattivarla."
 
-# Moodlog for iPhone and Android: their "What's new" (tools/phone_changelog.py)
+# Sottovoce for iPhone and Android: their "What's new" (tools/phone_changelog.py)
 
 msgid "A daily reminder, only on days you haven't logged a mood yet; tapping it opens a new entry."
 msgstr "Un promemoria giornaliero, solo nei giorni in cui non hai ancora registrato un umore; toccandolo si apre una nuova voce."
@@ -1884,26 +1884,26 @@ msgstr "Backup su iCloud Drive o in qualsiasi cartella di File, aggiornato dopo 
 msgid "A kind word on hard days, with a helpline."
 msgstr "Una parola gentile nei giorni difficili, con una linea di ascolto."
 
-msgid "A privacy policy: Settings → Privacy shows in short what Moodlog does with your data, with a link to the full policy."
-msgstr "Un'informativa sulla privacy: Impostazioni → Privacy mostra in breve cosa fa Moodlog con i tuoi dati, con un link all'informativa completa."
+msgid "A privacy policy: Settings → Privacy shows in short what Sottovoce does with your data, with a link to the full policy."
+msgstr "Un'informativa sulla privacy: Impostazioni → Privacy mostra in breve cosa fa Sottovoce con i tuoi dati, con un link all'informativa completa."
 
-msgid "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Moodlog 2.5 or newer on the PC."
-msgstr "Sincronizzazione cifrata: tutto ciò che viene inviato al PC è cifrato con il tuo token (AES-256-GCM), e il token stesso non lascia mai il telefono. Serve Moodlog 2.5 o successivo sul PC."
+msgid "Encrypted sync: everything sent to your PC is encrypted with your token (AES-256-GCM), and the token itself never leaves the phone. Needs Sottovoce 2.5 or newer on the PC."
+msgstr "Sincronizzazione cifrata: tutto ciò che viene inviato al PC è cifrato con il tuo token (AES-256-GCM), e il token stesso non lascia mai il telefono. Serve Sottovoce 2.5 o successivo sul PC."
 
 msgid "A welcome tour for new users: it switches to each tab by itself and explains it, with a spotlight on the calendar and a line pointing at the tab. Watch it again from Settings → Show the tour."
 msgstr "Una guida di benvenuto per chi inizia: passa da sola a ogni scheda e la spiega, con un riflettore sul calendario e una linea che indica la scheda. Rivedila da Impostazioni → Mostra la guida."
 
-msgid "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Moodlog 2.3 on the PC."
-msgstr "Diario dei sogni: una nuova scheda Sogni, una luna nel calendario nelle notti con un sogno, e i sogni della notte in ogni giorno. I sogni si sincronizzano con Moodlog 2.3 sul PC."
+msgid "Dream journal: a new Dreams tab, a moon in the calendar on nights with a dream, and the night's dreams in each day. Dreams sync with Sottovoce 2.3 on the PC."
+msgstr "Diario dei sogni: una nuova scheda Sogni, una luna nel calendario nelle notti con un sogno, e i sogni della notte in ogni giorno. I sogni si sincronizzano con Sottovoce 2.3 sul PC."
 
-msgid "Moodlog for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Moodlog → Language."
-msgstr "Moodlog per iPhone parla italiano. Segue la lingua dell'iPhone, oppure scegline una in Impostazioni → Moodlog → Lingua."
+msgid "Sottovoce for iPhone speaks Italian. It follows the iPhone's language, or choose one in Settings → Sottovoce → Language."
+msgstr "Sottovoce per iPhone parla italiano. Segue la lingua dell'iPhone, oppure scegline una in Impostazioni → Sottovoce → Lingua."
 
 msgid "Days with several moods show a face on each tile of the calendar, like on the PC."
 msgstr "I giorni con più umori mostrano una faccina su ogni riquadro del calendario, come sul PC."
 
-msgid "First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Moodlog on your PC over your home Wi-Fi."
-msgstr "Prima versione: registra gli umori con energia, ansia e una nota, aggiungi eventi, sfoglia il calendario e sincronizza tutto con Moodlog sul PC tramite il Wi-Fi di casa."
+msgid "First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Sottovoce on your PC over your home Wi-Fi."
+msgstr "Prima versione: registra gli umori con energia, ansia e una nota, aggiungi eventi, sfoglia il calendario e sincronizza tutto con Sottovoce sul PC tramite il Wi-Fi di casa."
 
 msgid "Sleep and mood: a new chart with your sleep from Health Connect and the mood after shorter and longer nights."
 msgstr "Sonno e umore: un nuovo grafico con il tuo sonno da Connessione Salute e l'umore dopo notti più corte e più lunghe."
@@ -1926,8 +1926,8 @@ msgstr "Con il testo grande, i pulsanti della guida non vengono più schiacciati
 msgid "The first version: log your mood, energy, anxiety and a note, a month calendar, charts, events, a dream journal, the welcome tour, English and Italian."
 msgstr "La prima versione: registra umore, energia, ansia e una nota, un calendario mensile, grafici, eventi, un diario dei sogni, la guida di benvenuto, inglese e italiano."
 
-msgid "Encrypted sync with Moodlog on your PC (2.5 or newer), over your own Wi-Fi."
-msgstr "Sincronizzazione cifrata con Moodlog sul PC (2.5 o successivo), sulla tua rete Wi-Fi."
+msgid "Encrypted sync with Sottovoce on your PC (2.5 or newer), over your own Wi-Fi."
+msgstr "Sincronizzazione cifrata con Sottovoce sul PC (2.5 o successivo), sulla tua rete Wi-Fi."
 
 msgid "Sleep, steps and resting heart rate from Health Connect, sent to your PC if you turn it on."
 msgstr "Sonno, passi e frequenza cardiaca a riposo da Connessione Salute, inviati al PC se lo attivi."
@@ -1974,34 +1974,34 @@ msgstr "saltata"
 msgid "Medication: %s"
 msgstr "Farmaci: %s"
 
-msgid "From Apple Health, sent by Moodlog for iPhone"
-msgstr "Da Salute di Apple, inviati da Moodlog per iPhone"
+msgid "From Apple Health, sent by Sottovoce for iPhone"
+msgstr "Da Salute di Apple, inviati da Sottovoce per iPhone"
 
 msgid "medication for %d day"
 msgid_plural "medication for %d days"
 msgstr[0] "farmaci per %d giorno"
 msgstr[1] "farmaci per %d giorni"
 
-msgid "Medication from Apple Health: with Moodlog for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section."
-msgstr "Farmaci da Salute di Apple: con Moodlog per iPhone 1.6, i farmaci che registri nell'app Salute e le dosi prese o saltate arrivano insieme ai dati di salute. Compaiono in ogni giorno, e il resoconto per il medico ha una sezione Farmaci."
+msgid "Medication from Apple Health: with Sottovoce for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section."
+msgstr "Farmaci da Salute di Apple: con Sottovoce per iPhone 1.6, i farmaci che registri nell'app Salute e le dosi prese o saltate arrivano insieme ai dati di salute. Compaiono in ogni giorno, e il resoconto per il medico ha una sezione Farmaci."
 
-msgid "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Moodlog only reads them: it never changes anything in Health."
-msgstr "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazioni, e ogni giorno mostra le dosi prese o saltate. Il resoconto per il medico ha una sezione Farmaci, e il tuo PC le riceve insieme ai dati di Salute. Moodlog si limita a leggerli: non cambia mai niente in Salute."
+msgid "Medication from Apple Health (iOS 26 or newer): turn it on in Settings, and each day shows the doses you took or skipped. The report for your doctor gets a Medication section, and your PC receives them with the Health data. Sottovoce only reads them: it never changes anything in Health."
+msgstr "Farmaci da Salute di Apple (iOS 26 o successivo): attivali in Impostazioni, e ogni giorno mostra le dosi prese o saltate. Il resoconto per il medico ha una sezione Farmaci, e il tuo PC le riceve insieme ai dati di Salute. Sottovoce si limita a leggerli: non cambia mai niente in Salute."
 
 msgid "Steps, resting heart rate, sleep and, from the iPhone, medication are read only if you turn it on in the phone app, and only to show them next to your mood."
 msgstr "Passi, frequenza cardiaca a riposo, sonno e, dall'iPhone, i farmaci vengono letti solo se lo attivi nell'app per il telefono, e solo per mostrarli accanto al tuo umore."
 
-msgid "Medication: Settings now says what Moodlog can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
-msgstr "Farmaci: le Impostazioni ora dicono cosa vede Moodlog (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."
+msgid "Medication: Settings now says what Sottovoce can see (medications, doses in the last 30 days) or the exact error from Health, and where to change your choice when Health doesn't ask again."
+msgstr "Farmaci: le Impostazioni ora dicono cosa vede Sottovoce (farmaci e dosi negli ultimi 30 giorni) oppure l'errore preciso di Salute, e dove cambiare la tua scelta quando Salute non lo chiede più."
 
-msgid "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Moodlog asks Health for the names in a second way."
-msgstr "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Moodlog chiede i nomi a Salute in un secondo modo."
+msgid "Medication: the doses show even when Health doesn't list the medications they belong to (they're numbered then), and Sottovoce asks Health for the names in a second way."
+msgstr "Farmaci: le dosi compaiono anche quando Salute non elenca i farmaci a cui appartengono (allora sono numerati), e Sottovoce chiede i nomi a Salute in un secondo modo."
 
-msgid "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Moodlog now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone."
-msgstr "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco una volta sola (Impostazioni → Farmaci → Dai un nome ai farmaci). Backup: ora Moodlog sovrascrive il file di backup al suo posto, così può tenerlo aggiornato in iCloud Drive e sull'iPhone."
+msgid "Medication: when Health doesn't give the names, you can name each medication once (Settings → Medication → Name your medications). Backup: Sottovoce now overwrites the backup file in place, so it can keep it up to date in iCloud Drive and on the iPhone."
+msgstr "Farmaci: quando Salute non dà i nomi, puoi dare un nome a ogni farmaco una volta sola (Impostazioni → Farmaci → Dai un nome ai farmaci). Backup: ora Sottovoce sovrascrive il file di backup al suo posto, così può tenerlo aggiornato in iCloud Drive e sull'iPhone."
 
-msgid "Medication: Moodlog asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed."
-msgstr "Farmaci: Moodlog chiede i nomi a Salute in più modi, e se Salute non li dà comunque, la schermata dei nomi è organizzata come il registro farmaci di Salute: per orario, poi quelli al bisogno."
+msgid "Medication: Sottovoce asks Health for the names in more ways, and when Health still doesn't give them, the naming screen is laid out like Health's medication log: grouped by time, then as needed."
+msgstr "Farmaci: Sottovoce chiede i nomi a Salute in più modi, e se Salute non li dà comunque, la schermata dei nomi è organizzata come il registro farmaci di Salute: per orario, poi quelli al bisogno."
 
 msgid "Doses taken"
 msgstr "Prese"
@@ -2047,8 +2047,8 @@ msgstr "Farmaci: un pulsante Farmaci in ogni giorno apre l'elenco delle dosi di 
 msgid "Medication: each day lists the doses with a pill in the colour of their status, the time and the amount."
 msgstr "Farmaci: ogni giorno elenca le dosi con una pillola del colore del loro stato, l'orario e la quantità."
 
-msgid "Backup: Settings warns when Moodlog can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
-msgstr "Backup: le Impostazioni avvisano quando Moodlog non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."
+msgid "Backup: Settings warns when Sottovoce can't reach the backup file any more (for example after installing a new version) and says why. Doses not taken yet are no longer sent: Health doesn't list them in advance."
+msgstr "Backup: le Impostazioni avvisano quando Sottovoce non riesce più a raggiungere il file di backup (per esempio dopo aver installato una nuova versione) e dicono perché. Le dosi non ancora prese non vengono più inviate: Salute non le elenca in anticipo."
 
 msgid "Backup: the screen for saving or restoring the backup file now always has its Save button."
 msgstr "Backup: la schermata per salvare o ripristinare il file di backup ora ha sempre il pulsante Salva."
@@ -2056,8 +2056,8 @@ msgstr "Backup: la schermata per salvare o ripristinare il file di backup ora ha
 msgid "The Dreams tab and the moons on the calendar. Your dreams are kept even when it's off."
 msgstr "La scheda Sogni e le lune sul calendario. I tuoi sogni restano salvati anche quando è spento."
 
-msgid "Doses from Apple Health, sent by Moodlog for iPhone."
-msgstr "Le dosi da Salute di Apple, inviate da Moodlog per iPhone."
+msgid "Doses from Apple Health, sent by Sottovoce for iPhone."
+msgstr "Le dosi da Salute di Apple, inviate da Sottovoce per iPhone."
 
 msgid "Days with several moods"
 msgstr "Giorni con più umori"
@@ -2136,8 +2136,8 @@ msgstr "Grafici: \"Più frequente\" ora conta ogni voce, come il grafico di quan
 msgid "Questionnaires"
 msgstr "Questionari"
 
-msgid "Answered in Moodlog. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Moodlog gives no interpretation."
-msgstr "Compilati in Moodlog. Ogni risposta vale da 0 (mai) a 3 (quasi ogni giorno); il punteggio è la loro somma, su 27 per il PHQ-9 e su 21 per il GAD-7. Le risposte sono elencate nell'ordine delle domande. Moodlog non dà alcuna interpretazione."
+msgid "Answered in Sottovoce. Each answer counts 0 (not at all) to 3 (nearly every day); the score is their sum, out of 27 for PHQ-9 and 21 for GAD-7. The answers are listed in question order. Sottovoce gives no interpretation."
+msgstr "Compilati in Sottovoce. Ogni risposta vale da 0 (mai) a 3 (quasi ogni giorno); il punteggio è la loro somma, su 27 per il PHQ-9 e su 21 per il GAD-7. Le risposte sono elencate nell'ordine delle domande. Sottovoce non dà alcuna interpretazione."
 
 msgid "Questionnaire"
 msgstr "Questionario"
@@ -2171,11 +2171,11 @@ msgstr "Grazie per aver risposto con sincerità"
 msgid "You said you've had thoughts of being better off dead or of hurting yourself. That's a lot to carry, and you don't have to carry it alone. Please tell your doctor, or someone you trust, soon. If it feels heavy right now, you can talk to someone today:"
 msgstr "Hai detto di aver pensato che sarebbe meglio morire o di farti del male. È tanto da portare, e non devi portarlo da solo. Parlane presto con il tuo medico o con qualcuno di cui ti fidi. Se adesso ti pesa, puoi parlare con qualcuno già oggi:"
 
-msgid "Moodlog doesn't tell anyone: this stays on your devices."
-msgstr "Moodlog non lo dice a nessuno: resta sui tuoi dispositivi."
+msgid "Sottovoce doesn't tell anyone: this stays on your devices."
+msgstr "Sottovoce non lo dice a nessuno: resta sui tuoi dispositivi."
 
-msgid "Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Moodlog shows only your score, and the report can include them for your doctor."
-msgstr "Due brevi questionari che usano i medici: il PHQ-9 sull'umore basso e il GAD-7 sull'ansia. Ognuno chiede delle ultime due settimane. Moodlog mostra solo il punteggio, e il report può includerli per il tuo medico."
+msgid "Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Sottovoce shows only your score, and the report can include them for your doctor."
+msgstr "Due brevi questionari che usano i medici: il PHQ-9 sull'umore basso e il GAD-7 sull'ansia. Ognuno chiede delle ultime due settimane. Sottovoce mostra solo il punteggio, e il report può includerli per il tuo medico."
 
 msgid "Answer %s"
 msgstr "Compila il %s"
@@ -2219,11 +2219,11 @@ msgstr "Compila ora"
 msgid "Not now"
 msgstr "Non ora"
 
-msgid "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Moodlog shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again."
-msgstr "Questionari per il medico (menu ☰): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale in italiano e in inglese. Moodlog mostra solo il punteggio, un grafico dei punteggi nel tempo, e il report può includerli. Due settimane dopo l'ultimo, un piccolo riquadro nella pagina Diario ti chiede se vuoi compilarli di nuovo."
+msgid "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Sottovoce shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again."
+msgstr "Questionari per il medico (menu ☰): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale in italiano e in inglese. Sottovoce mostra solo il punteggio, un grafico dei punteggi nel tempo, e il report può includerli. Due settimane dopo l'ultimo, un piccolo riquadro nella pagina Diario ti chiede se vuoi compilarli di nuovo."
 
-msgid "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Moodlog shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
-msgstr "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Moodlog mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
+msgid "Questionnaires for your doctor (Settings): PHQ-9 about low mood and GAD-7 about anxiety, with the official words. Sottovoce shows only your score and a chart of scores over time; the report can include them, and they sync with the PC. A notification two weeks after the last one reminds you, if you want."
+msgstr "Questionari per il medico (Impostazioni): PHQ-9 sull'umore basso e GAD-7 sull'ansia, con il testo ufficiale. Sottovoce mostra solo il punteggio e un grafico dei punteggi nel tempo; il report può includerli, e si sincronizzano con il PC. Se vuoi, una notifica te lo ricorda due settimane dopo l'ultimo."
 
 msgid "Sync: questionnaires answered on the iPhone now go to the PC. In 1.8.0 they stayed on the phone."
 msgstr "Sincronizzazione: i questionari compilati sull'iPhone ora arrivano al PC. Nella 1.8.0 restavano sul telefono."
@@ -2378,8 +2378,8 @@ msgstr "Su Windows il telefono può collegarsi solo se la tua rete Wi-Fi è una 
 msgid "Windows"
 msgstr "Windows"
 
-msgid "Moodlog for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Moodlog."
-msgstr "Moodlog per Windows 11 e 10: la stessa app, con la sincronizzazione del telefono, il promemoria giornaliero come notifica di Windows e un programma di installazione. I tuoi dati sono in %LOCALAPPDATA%\\Moodlog."
+msgid "Sottovoce for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Sottovoce."
+msgstr "Sottovoce per Windows 11 e 10: la stessa app, con la sincronizzazione del telefono, il promemoria giornaliero come notifica di Windows e un programma di installazione. I tuoi dati sono in %LOCALAPPDATA%\\Sottovoce."
 
 msgid "Feeling words: the ones you pick now light up in the Tahoe style too."
 msgstr "Parole sulle emozioni: quelle che scegli ora si illuminano anche nello stile Tahoe."
@@ -2398,3 +2398,12 @@ msgstr "Promemoria, parola gentile e collegamento a Gridgets ora sono in ☰ →
 
 msgid "Windows: the round window buttons of the Tahoe style no longer stretch into tall bars."
 msgstr "Windows: i pulsanti tondi della finestra nello stile Tahoe non si allungano più in barre alte."
+
+msgid "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data, settings and phone sync stay exactly as they were."
+msgstr "Moodlog ora si chiama Sottovoce — un diario dell'umore, sottovoce: un nome nuovo e un'icona più morbida. I tuoi dati, le impostazioni e la sincronizzazione con il telefono restano esattamente come prima."
+
+msgid "Default names for backups, exports and reports now start with sottovoce-. On Linux the package is now called sottovoce and replaces moodlog; the moodlog command still works."
+msgstr "I nomi proposti per backup, esportazioni e report ora iniziano con sottovoce-. Su Linux il pacchetto ora si chiama sottovoce e sostituisce moodlog; il comando moodlog funziona ancora."
+
+msgid "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were."
+msgstr "Moodlog ora si chiama Sottovoce — un diario dell'umore, sottovoce: un nome nuovo e un'icona più morbida. I tuoi dati e la sincronizzazione restano esattamente come prima."

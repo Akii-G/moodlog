@@ -99,7 +99,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
                 val n = app.store.absorb(state)
                 trn("Restored: %@ change.", "Restored: %@ changes.", n)
             } catch (e: Exception) {
-                tr("That file isn't a Moodlog backup.")
+                tr("That file isn't a Sottovoce backup.")
             }
         }
     }
@@ -108,7 +108,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         LargeTitle(tr("Settings"))
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            Section(tr("Your PC"), tr("In Moodlog on your PC, open Phone sync and switch the receiver on. Use the address and token shown there. Your phone and PC need to be on the same Wi-Fi.")) {
+            Section(tr("Your PC"), tr("In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there. Your phone and PC need to be on the same Wi-Fi.")) {
                 FieldRow(tr("Address"), server, { server = it; prefs.server = it.trim() }, "http://pop-os.local:8765",
                     keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
                 Line()
@@ -140,7 +140,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
                 }
             }
 
-            Section(tr("Sync"), tr("When automatic, Moodlog syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back.")) {
+            Section(tr("Sync"), tr("When automatic, Sottovoce syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back.")) {
                 SwitchRow(tr("Sync automatically"), autoSync) { autoSync = it; prefs.autoSync = it }
                 Line()
                 ActionRow(tr("Sync now"), enabled = ready, busy = app.sync.busy) { scope.launch { app.sync.run(app.store) } }
@@ -148,7 +148,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
             }
 
-            Section(tr("Health Connect"), tr("Sends sleep, steps and resting heart rate from Health Connect to Moodlog on your PC, so you can compare them with your mood. Your watch or fitness app needs to share them with Health Connect.")) {
+            Section(tr("Health Connect"), tr("Sends sleep, steps and resting heart rate from Health Connect to Sottovoce on your PC, so you can compare them with your mood. Your watch or fitness app needs to share them with Health Connect.")) {
                 if (!healthAvailable) {
                     Text(tr("Health Connect isn't on this phone yet."), style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(vertical = 10.dp))
@@ -166,7 +166,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
                     if (!allowed) {
                         ActionRow(tr("Allow access to steps, heart rate and sleep")) { permissionLauncher.launch(app.health.permissions) }
                     } else {
-                        Text(tr("Moodlog can read your steps, resting heart rate and sleep."),
+                        Text(tr("Sottovoce can read your steps, resting heart rate and sleep."),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 10.dp))
                     }
@@ -201,7 +201,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
             }
 
             Section(tr("Backup"), if (backupName.isEmpty())
-                tr("Pick a file once, for example in Google Drive, and Moodlog keeps a copy of everything there after each change. The Drive app uploads it; Moodlog itself never goes on the internet. You can restore it on any phone, iPhone included.")
+                tr("Pick a file once, for example in Google Drive, and Sottovoce keeps a copy of everything there after each change. The Drive app uploads it; Sottovoce itself never goes on the internet. You can restore it on any phone, iPhone included.")
                 else (app.backupStatus.ifEmpty { restoreMessage }.ifEmpty { null })) {
                 if (backupName.isEmpty()) {
                     ActionRow(tr("Choose a backup file…")) { pickBackup.launch(Backup.fileName()) }
@@ -250,7 +250,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
                 Line()
                 LinkRow(tr("What's new"), onClick = onWhatsNew)
             }
-            Section(tr("About")) {
+            Section(tr("About"), tr("Sottovoce — a quiet mood diary. Formerly called Moodlog.")) {
                 ValueRow(tr("Version"), BuildConfigVersion.name(context))
                 Line()
                 ValueRow(tr("Entries on this phone"), "${app.store.entries.size}")

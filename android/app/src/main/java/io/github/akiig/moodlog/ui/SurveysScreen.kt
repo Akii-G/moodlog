@@ -54,7 +54,7 @@ fun SurveysScreen(back: String, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         BackTitle(back, tr("Questionnaires"), onBack)
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            Section(footer = tr("Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Moodlog shows only your score, and the report can include them for your doctor.")) {
+            Section(footer = tr("Two short questionnaires doctors use: PHQ-9 about low mood and GAD-7 about anxiety. Each one asks about the last two weeks. Sottovoce shows only your score, and the report can include them for your doctor.")) {
                 SurveyKind.entries.forEachIndexed { i, kind ->
                     if (i > 0) Line()
                     Row(Modifier.fillMaxWidth().clickable { answering = kind }.padding(vertical = 10.dp),
@@ -244,7 +244,7 @@ fun SurveyCareDialog(onClose: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(tr("You said you've had thoughts of being better off dead or of hurting yourself. That's a lot to carry, and you don't have to carry it alone. Please tell your doctor, or someone you trust, soon. If it feels heavy right now, you can talk to someone today:"))
                 HelplineRows()
-                Text(tr("Moodlog doesn't tell anyone: this stays on your devices."), style = MaterialTheme.typography.bodySmall,
+                Text(tr("Sottovoce doesn't tell anyone: this stays on your devices."), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
