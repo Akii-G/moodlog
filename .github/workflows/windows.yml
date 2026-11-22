@@ -91,7 +91,7 @@ jobs:
             New-Item -ItemType Directory -Force screenshots | Out-Null
             $bmp.Save("screenshots\windows-$lang.png")
             if ($app.HasExited) { "exit code: $($app.ExitCode)"; Get-Content "$env:RUNNER_TEMP\err-$lang.txt", "$env:RUNNER_TEMP\out-$lang.txt", "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; Write-Warning "Moodlog closed by itself ($lang)"; $failed = $true; continue }
-            if ($lang -eq "tahoe") { "---- title bar"; Get-Content "$env:RUNNER_TEMP\err-$lang.txt" | Select-String -Pattern "windowcontrols|button|image|headerbar" | Select-Object -First 60 }
+            if ($lang -eq "tahoe") { "---- title bar"; Get-Content "$env:RUNNER_TEMP\err-$lang.txt", "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue | Select-String -Pattern "windowcontrols|button|image" | Select-Object -First 60 }
             Stop-Process -Id $app.Id -Force
             Start-Sleep -Seconds 2
           }
