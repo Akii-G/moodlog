@@ -7,6 +7,7 @@ import android.provider.Settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -267,18 +268,24 @@ class SyncCoordinator(
     var healthStatus by mutableStateOf("")
 
     private var pending: Job? = null
+    private var again = false
 
     fun syncSoon(store: AppStore, delayMs: Long) {
         if (!prefs.autoSync || !prefs.isConfigured) return
         pending?.cancel()
         pending = scope.launch {
             if (delayMs > 0) delay(delayMs)
-            run(store)
+            // The sync gets a job of its own: a newer syncSoon only cancels the wait,
+            // never a sync that is already talking to the PC.
+            scope.launch { run(store) }
         }
     }
 
     suspend fun run(store: AppStore) {
-        if (busy) return
+        if (busy) {         // one at a time; sync once more when this one ends
+            again = true
+            return
+        }
         busy = true
         try {
             val changes = client.sync(store)
@@ -290,10 +297,16 @@ class SyncCoordinator(
             }
         } catch (e: SyncException) {
             status = e.message ?: ""
+        } catch (e: CancellationException) {
+            throw e         // stopped on purpose: not an error to show
         } catch (e: Exception) {
             status = e.localizedMessage ?: e.javaClass.simpleName
         } finally {
             busy = false
+        }
+        if (again) {
+            again = false
+            run(store)
         }
     }
 

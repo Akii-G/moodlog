@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.1",
+  "date": "2026-11-22",
+  "items": {
+   "en": [
+    "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it."
+   ],
+   "it": [
+    "Sincronizzazione: all'apertura dell'app potevano partire due sincronizzazioni insieme e la prima veniva interrotta, mostrando «Impossibile raggiungere il PC… (annullato)» anche con il PC acceso. Ora non si interrompono più, e una modifica fatta durante una sincronizzazione viene inviata subito dopo."
+   ]
+  }
+ },
+ {
   "version": "2.0.0",
   "date": "2026-11-22",
   "items": {

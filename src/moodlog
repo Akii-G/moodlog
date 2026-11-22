@@ -5956,6 +5956,9 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.0.1", "2026-11-22", [
+        "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it.",
+    ]),
     ("2.0.0", "2026-11-22", [
         "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.",
     ]),
@@ -5997,6 +6000,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.1", "2026-11-22", [
+        "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it.",
+    ]),
     ("2.0.0", "2026-11-22", [
         "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.",
     ]),

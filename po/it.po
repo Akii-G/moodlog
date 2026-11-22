@@ -2407,3 +2407,6 @@ msgstr "I nomi proposti per backup, esportazioni e report ora iniziano con sotto
 
 msgid "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were."
 msgstr "Moodlog ora si chiama Sottovoce — un diario dell'umore, sottovoce: un nome nuovo e un'icona più morbida. I tuoi dati e la sincronizzazione restano esattamente come prima."
+
+msgid "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it."
+msgstr "Sincronizzazione: all'apertura dell'app potevano partire due sincronizzazioni insieme e la prima veniva interrotta, mostrando «Impossibile raggiungere il PC… (annullato)» anche con il PC acceso. Ora non si interrompono più, e una modifica fatta durante una sincronizzazione viene inviata subito dopo."

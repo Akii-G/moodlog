@@ -61,6 +61,8 @@ enum SyncClient {
         let result: (Data, URLResponse)
         do {
             result = try await URLSession.shared.data(for: req)
+        } catch let e as URLError where e.code == .cancelled {
+            throw CancellationError()
         } catch {
             throw SyncError.unreachable(error.localizedDescription)
         }
@@ -138,6 +140,7 @@ final class SyncCoordinator {
     var healthStatus = ""
 
     @ObservationIgnored private var pending: Task<Void, Never>?
+    @ObservationIgnored private var again = false
 
     func syncSoon(_ store: AppStore, delay: Double) {
         guard UserDefaults.standard.bool(forKey: "autoSync"), SyncClient.isConfigured else { return }
@@ -147,14 +150,18 @@ final class SyncCoordinator {
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
             if Task.isCancelled { return }
-            await self?.run(store)
+            // The sync runs in a task of its own: a newer syncSoon only cancels the wait,
+            // never a sync that is already talking to the PC.
+            Task { await self?.run(store) }
         }
     }
 
     func run(_ store: AppStore) async {
-        if busy { return }
+        if busy {           // one at a time; sync once more when this one ends
+            again = true
+            return
+        }
         busy = true
-        defer { busy = false }
         do {
             let changes = try await SyncClient.sync(store)
             let when = Day.timeString(Date())
@@ -167,8 +174,15 @@ final class SyncCoordinator {
                     await sendHealth()
                 }
             }
+        } catch is CancellationError {
+            // stopped on purpose: keep the last status instead of showing an error
         } catch {
             status = error.localizedDescription
+        }
+        busy = false
+        if again {
+            again = false
+            await run(store)
         }
     }
 
