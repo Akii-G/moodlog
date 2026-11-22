@@ -3648,6 +3648,10 @@ windowcontrols > button.close:not(.flat):not(.suggested-action):not(.destructive
 windowcontrols > button.minimize:not(.flat):not(.suggested-action):not(.destructive-action), windowcontrols > button.minimize { background-color: #febc2e; }
 windowcontrols > button.maximize:not(.flat):not(.suggested-action):not(.destructive-action), windowcontrols > button.maximize { background-color: #28c840; }
 windowcontrols > button image { color: transparent; -gtk-icon-size: 8px; }
+/* newer libadwaita (1.6+, as on Windows) draws the circle on the image with padding: undo it,
+   or the dots become tall pills */
+windowcontrols > button > image { padding: 0; margin: 0; min-width: 8px; min-height: 8px;
+  border-radius: 999px; background-color: transparent; background-image: none; box-shadow: none; }
 windowcontrols:hover > button image { color: rgba(0,0,0,0.55); }
 windowcontrols > button:backdrop { background-color: rgba(128,128,128,0.35); }
 """

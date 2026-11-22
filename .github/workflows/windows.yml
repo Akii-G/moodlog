@@ -76,8 +76,9 @@ jobs:
           "diag exit: $($d.ExitCode)"; Get-Content "$env:RUNNER_TEMP\diag.txt" -Tail 80
           $p = Start-Process dist\Moodlog\Moodlog.exe -ArgumentList "--report", "$env:RUNNER_TEMP\report.pdf" -PassThru -Wait
           if (!(Test-Path "$env:RUNNER_TEMP\report.pdf")) { Get-Content "$env:MOODLOG_CONFIG_DIR\moodlog.log" -ErrorAction SilentlyContinue; throw "no report" }
-          foreach ($lang in "it", "en", "cairo") {
-            $env:MOODLOG_LANG = $(if ($lang -eq "cairo") { "it" } else { $lang })
+          foreach ($lang in "it", "en", "cairo", "tahoe") {
+            if ($lang -eq "tahoe") { '{"style": "tahoe", "tour_done": true, "customize_seen": true}' | Set-Content -Encoding utf8 "$env:MOODLOG_CONFIG_DIR\config.json" }
+            $env:MOODLOG_LANG = $(if ($lang -in "cairo", "tahoe") { "it" } else { $lang })
             $env:GSK_RENDERER = $(if ($lang -eq "cairo") { "cairo" } else { "" })
             $env:G_MESSAGES_DEBUG = $(if ($lang -eq "it") { "all" } else { "" })
             $app = Start-Process dist\Moodlog\Moodlog.exe -PassThru -RedirectStandardError "$env:RUNNER_TEMP\err-$lang.txt" -RedirectStandardOutput "$env:RUNNER_TEMP\out-$lang.txt"
