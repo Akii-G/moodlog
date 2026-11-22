@@ -8882,6 +8882,50 @@ class Window(Adw.ApplicationWindow):
                 tr("No notes yet.\nAdd a few words when you log a mood and they will show up here."))
 
 
+def center_window_dots(widget):
+    """The close, minimize and maximize buttons keep their own height in the middle of the title
+    bar. Some GTK versions (Windows) stretch them to the bar's full height, and the round Tahoe
+    dots become tall pills."""
+    if isinstance(widget, Gtk.WindowControls):
+        child = widget.get_first_child()
+        while child is not None:
+            child.set_valign(Gtk.Align.CENTER)
+            child = child.get_next_sibling()
+        widget.set_valign(Gtk.Align.CENTER)
+        return
+    child = widget.get_first_child()
+    while child is not None:
+        center_window_dots(child)
+        child = child.get_next_sibling()
+
+
+def watch_window_dots():
+    """Runs center_window_dots on every window when it appears, and again when the layout of the
+    title-bar buttons changes."""
+    seen = set()
+
+    def fix(win):
+        titlebar = win.get_titlebar()
+        if titlebar is not None:
+            center_window_dots(titlebar)
+        return False
+
+    def hook(model, _pos=0, _removed=0, _added=0):
+        for i in range(model.get_n_items()):
+            win = model.get_item(i)
+            if id(win) not in seen:
+                seen.add(id(win))
+                win.connect("map", lambda w: GLib.idle_add(fix, w))
+            GLib.idle_add(fix, win)
+    windows = Gtk.Window.get_toplevels()
+    windows.connect("items-changed", hook)
+    hook(windows)
+    settings = Gtk.Settings.get_default()
+    if settings is not None:
+        settings.connect("notify::gtk-decoration-layout",
+                         lambda *_: [GLib.idle_add(fix, windows.get_item(i)) for i in range(windows.get_n_items())])
+
+
 class App(Adw.Application):
     def __init__(self, page=None):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
@@ -8891,6 +8935,7 @@ class App(Adw.Application):
     def do_activate(self):
         if not self.get_active_window():
             apply_style(load_config().get("style", "default"))
+            watch_window_dots()
         win = self.get_active_window() or Window(self, self.page)
         win.present()
 
