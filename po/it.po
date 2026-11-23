@@ -2410,3 +2410,15 @@ msgstr "Moodlog ora si chiama Sottovoce — un diario dell'umore, sottovoce: un 
 
 msgid "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it."
 msgstr "Sincronizzazione: all'apertura dell'app potevano partire due sincronizzazioni insieme e la prima veniva interrotta, mostrando «Impossibile raggiungere il PC… (annullato)» anche con il PC acceso. Ora non si interrompono più, e una modifica fatta durante una sincronizzazione viene inviata subito dopo."
+
+msgid "Search notes, feelings and events"
+msgstr "Cerca tra note, emozioni ed eventi"
+
+msgid "Nothing matches “%s”."
+msgstr "Nessun risultato per «%s»."
+
+msgid "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it."
+msgstr "La ricerca nelle Note ora trova anche le emozioni e gli eventi, non bada a maiuscole e accenti («perche» trova «Perché») e mette in grassetto ciò che ha trovato. Facendo clic su un evento lo apri."
+
+msgid "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day."
+msgstr "Cerca: la lente accanto al + nel diario. Rileggi tutte le note, dalla più recente, o trova parole nelle note, nelle emozioni e negli eventi, senza badare a maiuscole e accenti. Tocca un risultato per aprire quel giorno."

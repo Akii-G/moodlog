@@ -107,6 +107,25 @@ class FeaturesTest {
         assertEquals(Prompts.all[0], Prompts.forDay("2026-11-21", 1))
     }
 
+    @Test fun search() {
+        assertEquals("perche ansia", Search.fold("Perché ÀNSIA"))
+        assertEquals(listOf(0 until 6, 11 until 17), Search.find("Perché no? perche sì", "PERCHE"))
+        assertTrue(Search.find("anything", "  ").isEmpty())
+        val walk = Entry("a", "2026-11-01", "09:00", 4, 0, 0, "Long walk by the sea", "2026-11-01T08:00:00.000Z")
+        val tired = Entry("b", "2026-11-02", "08:00", 2, 0, 0, "", "2026-11-02T08:00:00.000Z", feelings = listOf("tiredness"))
+        val late = Entry("c", "2026-11-02", "22:00", 3, 0, 0, "Walked home, tired", "2026-11-02T08:00:00.000Z")
+        val blank = Entry("d", "2026-11-03", "10:00", 3, 0, 0, "", "2026-11-03T08:00:00.000Z")
+        val exam = MoodEvent("e", "2026-11-03", "life", "Exam", "Maths, went better than expected", "2026-11-03T08:00:00.000Z")
+        val entries = listOf(walk, tired, late, blank)
+        fun ids(q: String) = Search.results(entries, listOf(exam), q).map { it.key }
+        // the same answers as the PC's test/test_search.py
+        assertEquals(listOf("entry:c", "entry:a"), ids(""))
+        assertEquals(listOf("entry:c", "entry:a"), ids("WALK"))
+        assertEquals(listOf("entry:c", "entry:b"), ids("tired"))
+        assertEquals(listOf("event:e"), ids("maths"))
+        assertTrue(ids("nothing like this").isEmpty())
+    }
+
     @Test fun surveys() {
         assertEquals(9, SurveyText.italian.forms.getValue(SurveyKind.PHQ9).items.size)
         assertEquals(7, SurveyText.english.forms.getValue(SurveyKind.GAD7).items.size)

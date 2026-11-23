@@ -158,6 +158,18 @@ abstract class Screens(private val lang: String) {
         rule.onAllNodes(hasText(tr("Cancel")))[0].performClick()
     }
 
+    /** The search from the diary, with an event found by a word in it. */
+    @Test fun search() {
+        rule.waitForIdle()
+        tab("Log")
+        rule.onAllNodes(androidx.compose.ui.test.hasContentDescription(tr("Search")))[0].performClick()
+        rule.waitForIdle()
+        shot("search-notes")
+        rule.onAllNodes(androidx.compose.ui.test.hasSetTextAction())[0].performTextInput("dose")
+        rule.waitForIdle()
+        shot("search")
+    }
+
     /** A note ticked private, in the editor and then on the day (for the "more private" video). */
     @Test fun privateNote() {
         tab("Log")

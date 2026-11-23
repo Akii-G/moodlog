@@ -1,5 +1,29 @@
 [
  {
+  "version": "2.0.2",
+  "date": "2026-11-23",
+  "items": {
+   "en": [
+    "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day."
+   ],
+   "it": [
+    "Cerca: la lente accanto al + nel diario. Rileggi tutte le note, dalla più recente, o trova parole nelle note, nelle emozioni e negli eventi, senza badare a maiuscole e accenti. Tocca un risultato per aprire quel giorno."
+   ]
+  }
+ },
+ {
+  "version": "3.0.1",
+  "date": "2026-11-23",
+  "items": {
+   "en": [
+    "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it."
+   ],
+   "it": [
+    "La ricerca nelle Note ora trova anche le emozioni e gli eventi, non bada a maiuscole e accenti («perche» trova «Perché») e mette in grassetto ciò che ha trovato. Facendo clic su un evento lo apri."
+   ]
+  }
+ },
+ {
   "version": "2.0.1",
   "date": "2026-11-22",
   "items": {

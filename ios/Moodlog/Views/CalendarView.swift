@@ -71,8 +71,14 @@ struct CalendarView: View {
                     path.append("add:" + Day.today)
                 }
             }
+            .navigationDestination(for: SearchRoute.self) { _ in
+                SearchView()
+            }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    NavigationLink(value: SearchRoute()) {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
                     NavigationLink(value: Day.today) {
                         Label("Today", systemImage: "plus")
                     }

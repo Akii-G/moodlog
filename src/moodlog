@@ -24,6 +24,7 @@ import socket
 import uuid
 import subprocess
 import sys
+import unicodedata
 
 import gi
 
@@ -33,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -560,6 +561,65 @@ def feeling_counts(store, start=None, end=None):
 
 def feelings_text(keys):
     return ", ".join(FEELING_LABELS[k] for k in keys if k in FEELING_LABELS)
+
+
+# ----------------------------------------------------------------- search
+
+def fold(text_):
+    """Text for searching: no capitals and no accents, so "perche" finds "Perché"."""
+    return "".join(c for c in unicodedata.normalize("NFKD", text_.casefold())
+                   if not unicodedata.combining(c))
+
+
+def find_matches(text_, query):
+    """[(start, end)] of every place query appears in text, ignoring capitals and accents."""
+    q = fold(query.strip())
+    if not q:
+        return []
+    folded, where = [], []          # where[i]: the original character folded[i] came from
+    for i, c in enumerate(text_):
+        f = fold(c)
+        folded.append(f)
+        where.extend([i] * len(f))
+    folded = "".join(folded)
+    spans, start = [], folded.find(q)
+    while start >= 0:
+        end = start + len(q)
+        spans.append((where[start], where[end - 1] + 1))
+        start = folded.find(q, end)
+    return spans
+
+
+def search_results(store, events, query):
+    """What the search shows, newest first: ("entry", day, entry) for moods whose note or feeling
+    words match, ("event", day, event) for matching events. With no query: every note."""
+    q = query.strip()
+    found = []
+    for day in store.days:
+        for entry in store.entries(day):
+            note = entry[2]
+            if not q:
+                if note.strip():
+                    found.append(("entry", day, entry))
+            elif find_matches(note, q) or find_matches(feelings_text(entry_feelings(entry)), q):
+                found.append(("entry", day, entry))
+    if q:
+        for event in events.items:
+            if find_matches(event[2], q) or find_matches(event[3], q):
+                found.append(("event", event[0], event))
+    found.sort(key=lambda r: (r[1], r[2][0] if r[0] == "entry" else "99:99"), reverse=True)
+    return found
+
+
+def marked(text_, query):
+    """Pango markup of text with every match in bold."""
+    out, last = [], 0
+    for a, b in find_matches(text_, query):
+        out.append(GLib.markup_escape_text(text_[last:a]))
+        out.append("<b>%s</b>" % GLib.markup_escape_text(text_[a:b]))
+        last = b
+    out.append(GLib.markup_escape_text(text_[last:]))
+    return "".join(out)
 
 
 # Writing prompts: a gentle question when the note is empty. Never required; one a day, or
@@ -5803,6 +5863,9 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.0.1", "2026-11-23", [
+        "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.",
+    ]),
     ("3.0.0", "2026-11-22", [
         "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data, settings and phone sync stay exactly as they were.",
         "Default names for backups, exports and reports now start with sottovoce-. On Linux the package is now called sottovoce and replaces moodlog; the moodlog command still works.",
@@ -5956,6 +6019,12 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.0.2", "2026-11-23", [
+        "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day.",
+    ]),
+    ("3.0.1", "2026-11-23", [
+        "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.",
+    ]),
     ("2.0.1", "2026-11-22", [
         "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it.",
     ]),
@@ -6000,6 +6069,12 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.2", "2026-11-23", [
+        "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day.",
+    ]),
+    ("3.0.1", "2026-11-23", [
+        "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.",
+    ]),
     ("2.0.1", "2026-11-22", [
         "Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it.",
     ]),
@@ -7924,12 +7999,12 @@ class Window(Adw.ApplicationWindow):
         summary = dream_summary_text(self.store, self.dreams, today - dt.timedelta(days=29), today)
         self.dream_summary.set_text(summary or "")
         self.dream_summary_card.set_visible(bool(summary))
-        query = self.dream_search.get_text().strip().lower()
+        query = self.dream_search.get_text().strip()
         shown = 0
         for dream in sorted(self.dreams.items, key=lambda d: (d[0], d[5]), reverse=True):
             day, _feeling, _tags, text_ = dream[:4]
             details = dream_details(dream)
-            if query and query not in text_.lower() and query not in details.lower():
+            if query and not find_matches(text_, query) and not find_matches(details, query):
                 continue
             shown += 1
             row = Gtk.ListBoxRow()
@@ -7947,7 +8022,8 @@ class Window(Adw.ApplicationWindow):
             head.add_css_class("heading")
             textbox.append(head)
             if text_.strip():
-                body = Gtk.Label(label=text_.strip(), xalign=0, wrap=True)
+                body = Gtk.Label(xalign=0, wrap=True)
+                body.set_markup(marked(text_.strip(), query))
                 body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 textbox.append(body)
             box.append(textbox)
@@ -8035,7 +8111,7 @@ class Window(Adw.ApplicationWindow):
 
 
     def build_notes_page(self):
-        self.search = Gtk.SearchEntry(placeholder_text=tr("Search your notes"))
+        self.search = Gtk.SearchEntry(placeholder_text=tr("Search notes, feelings and events"))
         self.search.connect("search-changed", lambda *_: self.refresh_notes())
         self.notes_list = Gtk.ListBox()
         self.notes_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -8522,7 +8598,10 @@ class Window(Adw.ApplicationWindow):
         self.health_chart.queue_draw()
 
     def on_note_row(self, _list, row):
-        self.select_day(row.day, row.entry)
+        if row.kind == "event":
+            self.open_event(row.item)
+            return
+        self.select_day(row.day, row.item)
         self.stack.set_visible_child_name("log")
 
     def export_name(self, kind="csv"):
@@ -8853,19 +8932,18 @@ class Window(Adw.ApplicationWindow):
         while child:
             self.notes_list.remove(child)
             child = self.notes_list.get_first_child()
-        query = self.search.get_text().strip().lower()
-        shown = 0
-        for day in sorted(self.store.days, reverse=True):
-            for entry in reversed(self.store.entries(day)):
-                time, mood, note = entry[:3]
-                if not note.strip() or (query and query not in note.lower()):
-                    continue
-                row = Gtk.ListBoxRow()
-                row.day = day
-                row.entry = entry
-                box = Gtk.Box(spacing=12)
-                for side in ("top", "bottom", "start", "end"):
-                    getattr(box, "set_margin_" + side)(12)
+        query = self.search.get_text().strip()
+        results = search_results(self.store, self.events, query)
+        for kind, day, item in results[:300]:          # enough to read; a narrower search finds the rest
+            row = Gtk.ListBoxRow()
+            row.day, row.kind, row.item = day, kind, item
+            box = Gtk.Box(spacing=12)
+            for side in ("top", "bottom", "start", "end"):
+                getattr(box, "set_margin_" + side)(12)
+            textbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
+            when = fmt_date(day, tr("%A, %-d %B %Y"))
+            if kind == "entry":
+                time, mood, note = item[:3]
                 if mood:
                     icon = FaceIcon(mood, 34, badge=True)
                     icon.set_valign(Gtk.Align.START)
@@ -8875,31 +8953,41 @@ class Window(Adw.ApplicationWindow):
                     spacer = Gtk.Box()
                     spacer.set_size_request(34, 34)
                     box.append(spacer)
-                when = fmt_date(day, tr("%A, %-d %B %Y"))
                 if time:
                     when += " · " + time
                 if mood:
                     when += " · " + MOOD_NAMES[mood]
-                head = Gtk.Label(label=when, xalign=0)
-                head.add_css_class("heading")
-                body = Gtk.Label(label=note.strip(), xalign=0, wrap=True)
+                lines = [note.strip()] if note.strip() else []
+                feelings = feelings_text(entry_feelings(item))
+                if feelings and (not lines or find_matches(feelings, query)):
+                    lines.append(feelings)
+            else:
+                icon = EventIcon(34)
+                icon.set_valign(Gtk.Align.START)
+                box.append(icon)
+                when += " · " + EVENT_LABELS[item[1]]
+                lines = [item[2]] + ([item[3].strip()] if item[3].strip() else [])
+            head = Gtk.Label(label=when, xalign=0)
+            head.add_css_class("heading")
+            textbox.append(head)
+            for k, line in enumerate(lines):
+                body = Gtk.Label(xalign=0, wrap=True)
+                body.set_markup(marked(line, query))
                 body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-                body.set_selectable(False)
-                textbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
-                textbox.append(head)
+                if kind == "entry" and k > 0:
+                    body.add_css_class("dim-label")
                 textbox.append(body)
-                box.append(textbox)
-                row.set_child(box)
-                self.notes_list.append(row)
-                shown += 1
+            box.append(textbox)
+            row.set_child(box)
+            self.notes_list.append(row)
+        shown = len(results)
         self.notes_list.set_visible(shown > 0)
         self.notes_empty.set_visible(shown == 0)
         if query:
-            self.notes_empty.set_text(tr("No notes match “%s”.") % self.search.get_text().strip())
+            self.notes_empty.set_text(tr("Nothing matches “%s”.") % query)
         else:
             self.notes_empty.set_text(
                 tr("No notes yet.\nAdd a few words when you log a mood and they will show up here."))
-
 
 def center_window_dots(widget):
     """The close, minimize and maximize buttons keep their own height in the middle of the title

@@ -98,11 +98,12 @@ fun MoodlogApp() {
 
     // the reminder notification was tapped: today's page, with a new entry open
     var addNow by remember { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
     LaunchedEffect(app.openToday) {
         if (app.openToday) {
             app.openToday = false
             tour.step = null
-            tab = 0; showPrivacy = false
+            tab = 0; showPrivacy = false; showSearch = false
             openDay = io.github.akiig.moodlog.Day.today
             addNow = true
         }
@@ -117,11 +118,12 @@ fun MoodlogApp() {
         }
     }
 
-    BackHandler(enabled = openDay != null || showPrivacy || showSurveys || tab != 0) {
+    BackHandler(enabled = openDay != null || showSearch || showPrivacy || showSurveys || tab != 0) {
         when {
             showPrivacy -> showPrivacy = false
             showSurveys -> showSurveys = false
             openDay != null -> { openDay = null; addNow = false }
+            showSearch -> showSearch = false
             else -> tab = 0
         }
     }
@@ -132,7 +134,8 @@ fun MoodlogApp() {
                 0 -> if (openDay != null) androidx.compose.runtime.key(openDay, addNow) {
                         DayScreen(openDay!!, startAdding = addNow) { openDay = null; addNow = false }
                      }
-                     else LogScreen { addNow = false; openDay = it }
+                     else if (showSearch) SearchScreen(onDay = { addNow = false; openDay = it }) { showSearch = false }
+                     else LogScreen(onSearch = { showSearch = true }) { addNow = false; openDay = it }
                 1 -> ChartsScreen()
                 2 -> DreamsScreen()
                 3 -> EventsScreen()
@@ -142,7 +145,7 @@ fun MoodlogApp() {
                                             onWhatsNew = { whatsNewSince = null; showWhatsNew = true })
             }
             TabBar(tabs, tab, Modifier.align(Alignment.BottomCenter).onGloballyPositioned { tour.tabBar = it.boundsInRoot() }) {
-                if (tab == it) { openDay = null; showPrivacy = false; showSurveys = false }
+                if (tab == it) { openDay = null; showSearch = false; showPrivacy = false; showSurveys = false }
                 tab = it
             }
             if (showWhatsNew) WhatsNewDialog(whatsNewSince) {

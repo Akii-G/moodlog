@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Call
@@ -71,7 +72,7 @@ import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogScreen(onDay: (String) -> Unit) {
+fun LogScreen(onSearch: () -> Unit = {}, onDay: (String) -> Unit) {
     val app = LocalApp.current
     val store = app.store
     val scope = rememberCoroutineScope()
@@ -82,7 +83,10 @@ fun LogScreen(onDay: (String) -> Unit) {
     PullToRefreshBox(isRefreshing = app.sync.busy, onRefresh = { scope.launch { app.sync.run(store) } },
         modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            LargeTitle("Sottovoce") { CircleButton(Icons.Filled.Add, tr("Today")) { onDay(Day.today) } }
+            LargeTitle("Sottovoce") {
+                CircleButton(Icons.Filled.Search, tr("Search")) { onSearch() }
+                CircleButton(Icons.Filled.Add, tr("Today")) { onDay(Day.today) }
+            }
             Column(Modifier.padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 var hidden by remember { mutableStateOf(false) }
                 if (!hidden && Care.shouldShow(store, app.prefs)) KindWord {

@@ -51,7 +51,9 @@ If five faces aren't enough, add **feeling words** like Joy, Tiredness or Worry.
 when you don't know what to write, an empty note shows a gentle **question**, a
 different one each day. Both are optional and can be turned off in Customize.
 
-The **Notes** tab lists every note, newest first, with search.
+The **Notes** tab lists every note, newest first. Its search also finds feeling words and
+events, and doesn't mind capitals or accents. On the phones, it's the magnifying glass
+next to + in the diary.
 
 ### See how things go
 
@@ -212,7 +214,7 @@ each tab as it goes.
 Download `sottovoce_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/sottovoce/releases/latest), then:
 
-    sudo apt install ./sottovoce_3.0.0_all.deb
+    sudo apt install ./sottovoce_3.0.1_all.deb
 
 Remove it with `sudo apt remove sottovoce`; your data is kept.
 
