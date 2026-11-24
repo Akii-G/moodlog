@@ -15,8 +15,8 @@ android {
         applicationId = "io.github.akiig.moodlog"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.0.3"
+        versionCode = 11
+        versionName = "2.0.4"
     }
 
     signingConfigs {

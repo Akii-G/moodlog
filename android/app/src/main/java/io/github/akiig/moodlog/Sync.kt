@@ -74,6 +74,10 @@ class Prefs(context: Context) {
         get() = p.getString("kindDismissed", "") ?: ""
         set(v) = p.edit().putString("kindDismissed", v).apply()
 
+    // notifications before the appointment: 1 day before is on unless changed
+    fun appointmentRemind(lead: Int): Boolean = p.getBoolean("apptRemind$lead", lead == 1)
+    fun setAppointmentRemind(lead: Int, on: Boolean) = p.edit().putBoolean("apptRemind$lead", on).apply()
+
     // "Your week, gently"
     var weekCard: Boolean
         get() = p.getBoolean("weekCard", true)

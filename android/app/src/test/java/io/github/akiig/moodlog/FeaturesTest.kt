@@ -155,6 +155,21 @@ class FeaturesTest {
         assertTrue(a.openPoints.isEmpty())
     }
 
+    @Test fun appointmentReminder() {
+        val a = Appointment("2026-11-27", "16:30", "Dr Rossi", "", "2026-11-24T08:00:00.000Z")
+        assertEquals(java.time.LocalDateTime.of(2026, 11, 20, 18, 0), AppointmentReminder.fireAt(a, 7))
+        assertEquals(java.time.LocalDateTime.of(2026, 11, 26, 18, 0), AppointmentReminder.fireAt(a, 1))
+        assertEquals(java.time.LocalDateTime.of(2026, 11, 27, 8, 0), AppointmentReminder.fireAt(a, 0))
+        // an early appointment: an hour before instead of 8:00
+        assertEquals(java.time.LocalDateTime.of(2026, 11, 27, 7, 30), AppointmentReminder.fireAt(a.copy(time = "08:30"), 0))
+        assertEquals("Your appointment is tomorrow at 16:30. 2 things to talk about.", AppointmentReminder.text(a, 1, 2))
+        assertEquals("Your appointment is today.", AppointmentReminder.text(a.copy(time = ""), 0, 0))
+        assertTrue(AppointmentReminder.text(a, 3, 1).startsWith("Your appointment is in 3 days, on "))
+        assertFalse(AppointmentReminder.text(a, 1, 0).contains("Rossi"))   // never says with whom
+        assertEquals(listOf("1 week before", "3 days before", "2 days before", "1 day before", "On the day"),
+            AppointmentReminder.LEADS.map { AppointmentReminder.label(it) })
+    }
+
     @Test fun search() {
         assertEquals("perche ansia", Search.fold("Perché ÀNSIA"))
         assertEquals(listOf(0 until 6, 11 until 17), Search.find("Perché no? perche sì", "PERCHE"))

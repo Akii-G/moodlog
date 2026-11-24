@@ -39,6 +39,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import io.github.akiig.moodlog.Appointment
+import io.github.akiig.moodlog.AppointmentReminder
+import io.github.akiig.moodlog.Reminder
 import io.github.akiig.moodlog.Day
 import io.github.akiig.moodlog.Gently
 import io.github.akiig.moodlog.LocalApp
@@ -62,6 +64,19 @@ fun AppointmentScreen(back: String, onBack: () -> Unit) {
     var pickTime by remember { mutableStateOf(false) }
     val today = Day.today
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    val app = LocalApp.current
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var remind by remember { mutableStateOf(AppointmentReminder.LEADS.associateWith { app.prefs.appointmentRemind(it) }) }
+    var asking by remember { mutableStateOf<Int?>(null) }
+    fun setRemind(lead: Int, on: Boolean) {
+        app.prefs.setAppointmentRemind(lead, on)
+        remind = remind + (lead to on)
+        AppointmentReminder.schedule(context)
+    }
+    val notifyPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { ok ->
+        asking?.let { setRemind(it, ok) }; asking = null
+    }
 
     fun add() {
         store.addPoint(newPoint); newPoint = ""
@@ -92,6 +107,21 @@ fun AppointmentScreen(back: String, onBack: () -> Unit) {
                         Line()
                         ActionRow(tr("Remove the appointment"), destructive = true) {
                             store.setAppointment(null); saved = false
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                Section(tr("Remind me"),
+                    footer = tr("A notification on this phone: the days before at 18:00, on the day in the morning. It says only that you have an appointment, not with whom.")) {
+                    AppointmentReminder.LEADS.forEachIndexed { i, lead ->
+                        if (i > 0) Line()
+                        SwitchRow(AppointmentReminder.label(lead), remind[lead] == true && Reminder.canNotify(context)) { on ->
+                            if (on && !Reminder.canNotify(context) && android.os.Build.VERSION.SDK_INT >= 33) {
+                                asking = lead; notifyPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                            } else setRemind(lead, on)
                         }
                     }
                 }

@@ -6449,6 +6449,9 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.0.4", "2026-11-24", [
+        "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about.",
+    ]),
     ("2.0.3", "2026-11-24", [
         "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.",
         "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings.",
@@ -6503,6 +6506,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.4", "2026-11-24", [
+        "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about.",
+    ]),
     ("2.0.3", "2026-11-24", [
         "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.",
         "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings.",

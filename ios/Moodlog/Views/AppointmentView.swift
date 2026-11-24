@@ -11,6 +11,7 @@ struct AppointmentView: View {
     @State private var newPoint = ""
     @State private var loaded = false
     @State private var saved = false
+    @State private var remind: [Int: Bool] = Dictionary(uniqueKeysWithValues: AppointmentReminder.leads.map { ($0, AppointmentReminder.isOn($0)) })
 
     var body: some View {
         let appt = store.appointment
@@ -29,6 +30,9 @@ struct AppointmentView: View {
                 Button {
                     store.setAppointment(date: Day.string(date), time: hasTime ? Day.timeString(time) : "", with: with)
                     saved = true
+                    if AppointmentReminder.leads.contains(where: AppointmentReminder.isOn) {
+                        Task { _ = await Reminder.requestPermission(); AppointmentReminder.plan(store) }
+                    }
                 } label: {
                     Text(saved ? tr("Saved") : tr("Save the date"))
                 }
@@ -43,6 +47,22 @@ struct AppointmentView: View {
                     if let a = appt, hasDate { Text(Gently.when(a)) }
                     Text(Gently.recap(store, from: Gently.recapStart(appt, today: today), to: today))
                 }
+            }
+            Section {
+                ForEach(AppointmentReminder.leads, id: \.self) { lead in
+                    Toggle(AppointmentReminder.label(lead), isOn: Binding(
+                        get: { remind[lead] ?? false },
+                        set: { on in
+                            remind[lead] = on
+                            UserDefaults.standard.set(on, forKey: AppointmentReminder.key(lead))
+                            if on { Task { _ = await Reminder.requestPermission(); AppointmentReminder.plan(store) } }
+                            else { AppointmentReminder.plan(store) }
+                        }))
+                }
+            } header: {
+                Text("Remind me")
+            } footer: {
+                Text("A notification on this iPhone: the days before at 18:00, on the day in the morning. It says only that you have an appointment, not with whom.")
             }
             Section {
                 HStack {

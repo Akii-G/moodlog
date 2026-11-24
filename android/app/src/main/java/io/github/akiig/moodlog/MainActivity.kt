@@ -31,6 +31,8 @@ class AppState private constructor(app: Application) {
     var openToday by androidx.compose.runtime.mutableStateOf(false)
     /** Set when the questionnaire reminder was tapped: open the questionnaires. */
     var openSurveys by androidx.compose.runtime.mutableStateOf(false)
+    /** Set when an appointment reminder was tapped: open "Before the appointment". */
+    var openAppointment by androidx.compose.runtime.mutableStateOf(false)
     var backupStatus by androidx.compose.runtime.mutableStateOf("")
 
     // Customize your experience (state, so the screens follow at once)
@@ -87,6 +89,7 @@ class AppState private constructor(app: Application) {
             backupSoon()
             Reminder.schedule(context)     // logging today means no reminder today
             SurveyReminder.schedule(context)   // a new questionnaire moves the next reminder
+            AppointmentReminder.schedule(context)   // a new or moved appointment moves its reminders
         }
         client.remember = { host, ip -> prefs.p.edit().putString("ip:$host", ip).apply() }
         client.recall = { host -> prefs.p.getString("ip:$host", null) }
@@ -116,9 +119,11 @@ class MainActivity : ComponentActivity() {
         state = AppState.get(application)
         if (intent?.getBooleanExtra(Reminder.OPEN_TODAY, false) == true) state.openToday = true
         if (intent?.getBooleanExtra(SurveyReminder.OPEN_SURVEYS, false) == true) state.openSurveys = true
+        if (intent?.getBooleanExtra(AppointmentReminder.OPEN_APPOINTMENT, false) == true) state.openAppointment = true
         Reminder.createChannel(this)
         Reminder.schedule(this)
         SurveyReminder.schedule(this)
+        AppointmentReminder.schedule(this)
         setContent {
             MoodlogTheme {
                 androidx.compose.runtime.CompositionLocalProvider(LocalApp provides state) {
@@ -132,6 +137,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         if (intent.getBooleanExtra(Reminder.OPEN_TODAY, false)) state.openToday = true
         if (intent.getBooleanExtra(SurveyReminder.OPEN_SURVEYS, false)) state.openSurveys = true
+        if (intent.getBooleanExtra(AppointmentReminder.OPEN_APPOINTMENT, false)) state.openAppointment = true
     }
 
     override fun onPause() {

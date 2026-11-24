@@ -86,11 +86,11 @@ fun MoodlogApp() {
         val since = io.github.akiig.moodlog.WhatsNew.since(app.prefs.lastSeenVersion, current, app.prefs.tourDone || !fresh)
         app.prefs.lastSeenVersion = current
         if (!app.prefs.tourDone && fresh) tour.start()
-        else if (since != null && !app.openToday && !app.openSurveys) {
+        else if (since != null && !app.openToday && !app.openSurveys && !app.openAppointment) {
             // coming from a version that didn't record this: mark only this version as new
             whatsNewSince = if (since == "0") io.github.akiig.moodlog.WhatsNew.load(context).getOrNull(1)?.version ?: "0" else since
             showWhatsNew = true
-        } else if (!app.prefs.customizeSeen && !app.openToday && !app.openSurveys) {
+        } else if (!app.prefs.customizeSeen && !app.openToday && !app.openSurveys && !app.openAppointment) {
             app.prefs.customizeSeen = true
             showCustomize = true
         }
@@ -107,6 +107,15 @@ fun MoodlogApp() {
             tab = 0; showPrivacy = false; showSearch = false; showAppointment = false
             openDay = io.github.akiig.moodlog.Day.today
             addNow = true
+        }
+    }
+
+    // an appointment reminder was tapped: Log → Before the appointment
+    LaunchedEffect(app.openAppointment) {
+        if (app.openAppointment) {
+            app.openAppointment = false
+            tour.step = null
+            tab = 0; openDay = null; showSearch = false; showPrivacy = false; showAppointment = true
         }
     }
 

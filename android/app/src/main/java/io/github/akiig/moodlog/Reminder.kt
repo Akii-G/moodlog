@@ -102,9 +102,11 @@ class ReminderReceiver : BroadcastReceiver() {
         when (intent.action) {
             Reminder.ACTION -> Reminder.onAlarm(context)
             SurveyReminder.ACTION -> SurveyReminder.onAlarm(context)
+            AppointmentReminder.ACTION -> AppointmentReminder.onAlarm(context, intent.getIntExtra("lead", -1))
             else -> {   // boot, update, time or time-zone change
                 Reminder.schedule(context)
                 SurveyReminder.schedule(context)
+                AppointmentReminder.schedule(context)
             }
         }
     }

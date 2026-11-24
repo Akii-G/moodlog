@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 
 /// "Before the appointment": the next doctor or therapist appointment and the things to talk
 /// about there. Synced with the PC like the rest: the appointment as a whole and each point on
@@ -113,5 +114,75 @@ enum Gently {
             }
         }
         return (monday, lines.joined(separator: " "))
+    }
+}
+
+/// Notifications before the appointment, on this iPhone only: any of 1 week, 3, 2 and 1 day
+/// before (at 18:00) and on the day (at 8:00, or an hour before an early appointment). They say
+/// only that there is an appointment, never with whom.
+enum AppointmentReminder {
+    static let leads = [7, 3, 2, 1, 0]
+
+    static func key(_ lead: Int) -> String { "apptRemind\(lead)" }
+    static func id(_ lead: Int) -> String { "moodlog-appointment-\(lead)" }
+
+    /// 1 day before is on unless changed.
+    static func isOn(_ lead: Int) -> Bool { UserDefaults.standard.object(forKey: key(lead)) as? Bool ?? (lead == 1) }
+
+    static func label(_ lead: Int) -> String {
+        switch lead {
+        case 0: return tr("On the day")
+        case 1: return tr("1 day before")
+        case 7: return tr("1 week before")
+        default: return tr("%@ days before", "\(lead)")
+        }
+    }
+
+    static func fireDate(_ a: Appointment, lead: Int) -> Date? {
+        guard let day = Day.date(a.date) else { return nil }
+        if lead == 0 {
+            guard let morning = Day.calendar.date(bySettingHour: 8, minute: 0, second: 0, of: day) else { return nil }
+            if let at = Day.time(a.time, on: a.date), !a.time.isEmpty,
+               let early = Day.calendar.date(byAdding: .hour, value: -1, to: at), early < morning {
+                return early
+            }
+            return morning
+        }
+        guard let before = Day.calendar.date(byAdding: .day, value: -lead, to: day) else { return nil }
+        return Day.calendar.date(bySettingHour: 18, minute: 0, second: 0, of: before)
+    }
+
+    static func text(_ a: Appointment, lead: Int, open: Int) -> String {
+        var s: String
+        switch lead {
+        case 0: s = a.time.isEmpty ? tr("Your appointment is today.") : tr("Your appointment is today at %@.", a.time)
+        case 1: s = a.time.isEmpty ? tr("Your appointment is tomorrow.") : tr("Your appointment is tomorrow at %@.", a.time)
+        default: s = tr("Your appointment is in %@ days, on %@.", "\(lead)", Day.pretty(a.date, style: "EEEE d MMMM"))
+        }
+        if open > 0 { s += " " + trn("%@ thing to talk about.", "%@ things to talk about.", open) }
+        return s
+    }
+
+    static func content(_ a: Appointment, lead: Int, open: Int) -> UNMutableNotificationContent {
+        let c = UNMutableNotificationContent()
+        c.title = tr("Before the appointment")
+        c.body = text(a, lead: lead, open: open)
+        c.userInfo = ["open": "appointment"]
+        return c
+    }
+
+    /// (Re)plans every notification still ahead for the appointment, and cancels the rest.
+    @MainActor
+    static func plan(_ store: AppStore, now: Date = Date()) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: leads.map(id))
+        guard let a = store.appointment, !a.date.isEmpty else { return }
+        let open = store.openPoints.count
+        for lead in leads where isOn(lead) {
+            guard let at = fireDate(a, lead: lead), at > now else { continue }
+            let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: at)
+            center.add(UNNotificationRequest(identifier: id(lead), content: content(a, lead: lead, open: open),
+                                             trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)))
+        }
     }
 }

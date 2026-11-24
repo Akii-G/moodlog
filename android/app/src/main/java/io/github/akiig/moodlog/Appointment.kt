@@ -120,3 +120,110 @@ object Gently {
         return monday to lines.joinToString(" ")
     }
 }
+
+/**
+ * Notifications before the appointment, on this phone only: any of 1 week, 3, 2 and 1 day
+ * before (at 18:00) and on the day (at 8:00, or an hour before an early appointment). They say
+ * only that there is an appointment, never with whom.
+ */
+object AppointmentReminder {
+    const val CHANNEL = "appointment"
+    const val ACTION = "io.github.akiig.moodlog.REMIND_APPOINTMENT"
+    const val OPEN_APPOINTMENT = "open_appointment"
+    val LEADS = listOf(7, 3, 2, 1, 0)
+
+    fun label(lead: Int) = when (lead) {
+        0 -> tr("On the day")
+        1 -> tr("1 day before")
+        7 -> tr("1 week before")
+        else -> tr("%@ days before", lead)
+    }
+
+    fun fireAt(a: Appointment, lead: Int): java.time.LocalDateTime? {
+        val day = Day.date(a.date) ?: return null
+        if (lead == 0) {
+            val morning = day.atTime(8, 0)
+            val time = runCatching { java.time.LocalTime.parse(a.time) }.getOrNull() ?: return morning
+            val early = day.atTime(time).minusHours(1)
+            return if (early.isBefore(morning)) early else morning
+        }
+        return day.minusDays(lead.toLong()).atTime(18, 0)
+    }
+
+    fun text(a: Appointment, lead: Int, open: Int): String {
+        var s = when (lead) {
+            0 -> if (a.time.isEmpty()) tr("Your appointment is today.") else tr("Your appointment is today at %@.", a.time)
+            1 -> if (a.time.isEmpty()) tr("Your appointment is tomorrow.") else tr("Your appointment is tomorrow at %@.", a.time)
+            else -> tr("Your appointment is in %@ days, on %@.", lead, Day.pretty(a.date, "EEEE d MMMM"))
+        }
+        if (open > 0) s += " " + trn("%@ thing to talk about.", "%@ things to talk about.", open)
+        return s
+    }
+
+    private fun pending(context: android.content.Context, lead: Int): android.app.PendingIntent =
+        android.app.PendingIntent.getBroadcast(context, 20 + lead,
+            android.content.Intent(context, ReminderReceiver::class.java).setAction(ACTION).putExtra("lead", lead),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+
+    private fun store(context: android.content.Context) = AppStore(java.io.File(context.filesDir, "moodlog.json"))
+
+    /** (Re)plans every notification still ahead for the appointment, and cancels the rest. */
+    fun schedule(context: android.content.Context) {
+        val prefs = Prefs(context)
+        val alarms = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+        val a = store(context).appointment
+        val now = java.time.LocalDateTime.now()
+        for (lead in LEADS) {
+            alarms.cancel(pending(context, lead))
+            if (a == null || a.date.isEmpty() || !prefs.appointmentRemind(lead)) continue
+            val at = fireAt(a, lead) ?: continue
+            if (!at.isAfter(now)) continue
+            val millis = at.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            alarms.setWindow(android.app.AlarmManager.RTC_WAKEUP, millis, 15 * 60_000L, pending(context, lead))
+        }
+    }
+
+    fun createChannel(context: android.content.Context) {
+        if (android.os.Build.VERSION.SDK_INT < 26) return
+        val channel = android.app.NotificationChannel(CHANNEL, tr("Before the appointment"),
+            android.app.NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = tr("Reminders before your next appointment, when you chose them.")
+            setShowBadge(false)
+        }
+        (context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+            .createNotificationChannel(channel)
+    }
+
+    fun show(context: android.content.Context, a: Appointment, lead: Int, open: Int) {
+        if (!Reminder.canNotify(context)) return
+        createChannel(context)
+        val tap = android.app.PendingIntent.getActivity(context, 30,
+            android.content.Intent(context, MainActivity::class.java).putExtra(OPEN_APPOINTMENT, true)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        val body = text(a, lead, open)
+        val n = androidx.core.app.NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(tr("Before the appointment"))
+            .setContentText(body)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(tap)
+            .setAutoCancel(true)
+            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
+            .build()
+        try {
+            androidx.core.app.NotificationManagerCompat.from(context).notify(10 + lead, n)
+        } catch (e: SecurityException) {
+            // notifications were turned off in the meantime
+        }
+    }
+
+    fun onAlarm(context: android.content.Context, lead: Int) {
+        val s = store(context)
+        val a = s.appointment
+        // only if the appointment hasn't moved since the alarm was planned
+        if (a != null && a.date.isNotEmpty() && Prefs(context).appointmentRemind(lead) && Day.between(Day.today, a.date).toInt() == lead)
+            show(context, a, lead, s.openPoints.size)
+        schedule(context)
+    }
+}

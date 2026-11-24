@@ -9,12 +9,17 @@ final class Launch: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Launch()
     var openToday = false
     var openSurveys = false
+    var openAppointment = false
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
-        let surveys = (response.notification.request.content.userInfo["open"] as? String) == "surveys"
+        let open = response.notification.request.content.userInfo["open"] as? String
         Task { @MainActor in
-            if surveys { self.openSurveys = true } else { self.openToday = true }
+            switch open {
+            case "surveys": self.openSurveys = true
+            case "appointment": self.openAppointment = true
+            default: self.openToday = true
+            }
         }
         completionHandler()
     }
@@ -54,17 +59,20 @@ struct MoodlogApp: App {
                         coordinator.syncSoon(store, delay: 2)
                         Reminder.plan(store)          // logging today means no reminder today
                         SurveyReminder.plan(store)    // a new questionnaire moves the next reminder
+                        AppointmentReminder.plan(store)   // a new or moved appointment moves its reminders
                         backupSoon(store)
                     }
                     coordinator.syncSoon(store, delay: 0)
                     Reminder.plan(store)
                     SurveyReminder.plan(store)
+                    AppointmentReminder.plan(store)
                 }
                 .onChange(of: phase) { _, newPhase in
                     if newPhase == .active {
                         sync.syncSoon(store, delay: 0)
                         Reminder.plan(store)
                         SurveyReminder.plan(store)
+                        AppointmentReminder.plan(store)
                     } else if newPhase == .background {
                         Backup.write(store)
                     }
@@ -134,6 +142,9 @@ struct ContentView: View {
         .onChange(of: launch.openToday) { _, open in
             if open { tour.step = nil; tab = 0 }
         }
+        .onChange(of: launch.openAppointment) { _, open in
+            if open { tour.step = nil; tab = 0 }
+        }
         .onChange(of: launch.openSurveys) { _, open in
             if open { tour.step = nil; tab = 4; showingSurveys = true; launch.openSurveys = false }
         }
@@ -145,12 +156,13 @@ struct ContentView: View {
             lastSeenVersion = WhatsNew.current
             if !tourDone && fresh {
                 tour.start()
-            } else if let since, !launch.openToday && !launch.openSurveys {
+            } else if let since, !launch.openToday && !launch.openSurveys && !launch.openAppointment {
                 whatsNew = WhatsNewItem(since: since)
-            } else if !customizeSeen && !launch.openToday && !launch.openSurveys {
+            } else if !customizeSeen && !launch.openToday && !launch.openSurveys && !launch.openAppointment {
                 customizeSeen = true
                 customizing = true
             }
+            if launch.openAppointment { tab = 0 }   // CalendarView opens it
             if launch.openSurveys {   // opened by tapping the questionnaire reminder
                 tab = 4; showingSurveys = true; launch.openSurveys = false
             }

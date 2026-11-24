@@ -198,6 +198,12 @@ enum DevNotifications {
         return await add("moodlog-dev-survey", SurveyReminder.content(), seconds)
     }
 
+    static func appointment(in seconds: TimeInterval = 5) async -> String {
+        guard await Reminder.requestPermission() else { return "Notifications are not allowed for Sottovoce." }
+        let sample = Appointment(date: Day.adding(1, to: Day.today), time: "16:30", with: "", previous: "", updated: "")
+        return await add("moodlog-dev-appointment", AppointmentReminder.content(sample, lead: 1, open: 2), seconds)
+    }
+
     static func pending() async -> String {
         let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()
         let lines = requests.sorted { $0.identifier < $1.identifier }.map { r -> String in

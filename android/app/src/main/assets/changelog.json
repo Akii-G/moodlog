@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.4",
+  "date": "2026-11-24",
+  "items": {
+   "en": [
+    "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about."
+   ],
+   "it": [
+    "Prima dell'appuntamento: scegli le notifiche 1 settimana, 3, 2 o 1 giorno prima dell'appuntamento, o il giorno stesso, quante ne vuoi. Dicono solo che hai un appuntamento, mai con chi. Toccane una per aprire la lista delle cose di cui parlare."
+   ]
+  }
+ },
+ {
   "version": "2.0.3",
   "date": "2026-11-24",
   "items": {

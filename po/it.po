@@ -2568,3 +2568,6 @@ msgstr "Prima dell'appuntamento: in Eventi, imposta la data del prossimo appunta
 
 msgid "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings."
 msgstr "La tua settimana, con calma: la domenica sera e il lunedì, poche parole tranquille sulla tua settimana nel diario: giorni registrati, l'umore più frequente, il giorno migliore. Nessun punteggio; puoi disattivarla nelle Impostazioni."
+
+msgid "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about."
+msgstr "Prima dell'appuntamento: scegli le notifiche 1 settimana, 3, 2 o 1 giorno prima dell'appuntamento, o il giorno stesso, quante ne vuoi. Dicono solo che hai un appuntamento, mai con chi. Toccane una per aprire la lista delle cose di cui parlare."

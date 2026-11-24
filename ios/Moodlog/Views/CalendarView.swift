@@ -14,6 +14,12 @@ struct CalendarView: View {
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
 
+    private func openAppointment() {
+        launch.openAppointment = false
+        path = NavigationPath()
+        path.append(AppointmentRoute())
+    }
+
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
@@ -80,6 +86,12 @@ struct CalendarView: View {
                     path = NavigationPath()
                     path.append("add:" + Day.today)
                 }
+            }
+            .onChange(of: launch.openAppointment) { _, open in
+                if open { openAppointment() }
+            }
+            .onAppear {
+                if launch.openAppointment { openAppointment() }   // the app was started by the notification
             }
             .navigationDestination(for: SearchRoute.self) { _ in
                 SearchView()

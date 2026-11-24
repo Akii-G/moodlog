@@ -253,6 +253,7 @@ struct DevNotificationsSection: View {
         Section {
             Button { Task { message = await DevNotifications.daily() } } label: { Text(verbatim: "Daily reminder in 5 seconds") }
             Button { Task { message = await DevNotifications.survey() } } label: { Text(verbatim: "Questionnaire reminder in 5 seconds") }
+            Button { Task { message = await DevNotifications.appointment() } } label: { Text(verbatim: "Appointment reminder in 5 seconds") }
             Button { Task { message = await DevNotifications.pending() } } label: { Text(verbatim: "Show planned notifications") }
             if !message.isEmpty { Text(message).font(.footnote).foregroundStyle(.secondary) }
         } header: {

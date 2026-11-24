@@ -455,3 +455,16 @@
 "Your week, gently" = "La tua settimana, con calma";
 "On Sunday evening and on Monday, a few calm words about your week: days logged, the usual mood, your best day. No scores." = "La domenica sera e il lunedì, poche parole tranquille sulla tua settimana: giorni registrati, l'umore più frequente, il giorno migliore. Nessun punteggio.";
 "Include the things I want to talk about" = "Includi le cose di cui voglio parlare";
+"Remind me" = "Ricordamelo";
+"On the day" = "Il giorno stesso";
+"1 day before" = "1 giorno prima";
+"1 week before" = "1 settimana prima";
+"%@ days before" = "%@ giorni prima";
+"Your appointment is today." = "Il tuo appuntamento è oggi.";
+"Your appointment is today at %@." = "Il tuo appuntamento è oggi alle %@.";
+"Your appointment is tomorrow." = "Il tuo appuntamento è domani.";
+"Your appointment is tomorrow at %@." = "Il tuo appuntamento è domani alle %@.";
+"Your appointment is in %@ days, on %@." = "Il tuo appuntamento è tra %@ giorni, %@.";
+"%@ thing to talk about." = "%@ cosa di cui parlare.";
+"%@ things to talk about." = "%@ cose di cui parlare.";
+"A notification on this iPhone: the days before at 18:00, on the day in the morning. It says only that you have an appointment, not with whom." = "Una notifica su questo iPhone: i giorni prima alle 18:00, il giorno stesso al mattino. Dice solo che hai un appuntamento, non con chi.";
