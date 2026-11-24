@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import io.github.akiig.moodlog.AppStore
 import io.github.akiig.moodlog.Day
+import io.github.akiig.moodlog.Gently
 import io.github.akiig.moodlog.EventKind
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.MoodEvent
@@ -35,7 +36,7 @@ import io.github.akiig.moodlog.tr
 import io.github.akiig.moodlog.trn
 
 @Composable
-fun EventsScreen() {
+fun EventsScreen(onAppointment: () -> Unit = {}) {
     val store = LocalApp.current.store
     var editing by remember { mutableStateOf<MoodEvent?>(null) }
     var adding by remember { mutableStateOf(false) }
@@ -44,6 +45,16 @@ fun EventsScreen() {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = TabBarSpace),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { LargeTitle(tr("Events")) { CircleButton(Icons.Filled.Add, tr("Add event")) { adding = true } } }
+        item {
+            Box(Modifier.padding(horizontal = 16.dp)) {
+                Section {
+                    val appt = store.appointment
+                    LinkRow(tr("Next appointment"),
+                        if (appt != null && appt.date.isNotEmpty()) Gently.whenText(appt) else tr("No appointment set"),
+                        onClick = onAppointment)
+                }
+            }
+        }
         if (events.isEmpty()) item {
             Text(tr("Log things that can affect how you feel, such as a medication change. They show as a flag in the calendar, and each one compares your mood in the two weeks before and after it."),
                 color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp))

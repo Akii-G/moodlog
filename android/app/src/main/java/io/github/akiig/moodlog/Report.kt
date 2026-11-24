@@ -29,6 +29,7 @@ class Report(
     private val includeDreams: Boolean,
     private val dreamText: Boolean,
     private val includeSurveys: Boolean = false,
+    private val points: List<TalkPoint> = emptyList(),
 ) {
     companion object {
         const val W = 595f
@@ -153,6 +154,16 @@ class Report(
         y += text(tr("Mood report"), M, y, 20f, ink, bold = true) + 2f
         y += text(tr("%@ – %@ · %@ days · made with Sottovoce on %@", Day.pretty(start, "d MMM yyyy"),
             Day.pretty(end, "d MMM yyyy"), days.size, Day.pretty(Day.today, "d MMM yyyy")), M, y, 9f, muted) + 14f
+
+        if (points.isNotEmpty()) {
+            y += text(tr("Things I want to talk about"), M, y, 12f, ink, bold = true) + 6f
+            for (p in points) {
+                ensure(measure(p.text, 10f, W - 2 * M - 14f) + 6f)
+                text("\u2022", M + 2f, y, 10f, ink)
+                y += text(p.text, M + 14f, y, 10f, ink, width = W - 2 * M - 14f) + 6f
+            }
+            y += 12f
+        }
 
         // summary tiles
         val tiles = mutableListOf(

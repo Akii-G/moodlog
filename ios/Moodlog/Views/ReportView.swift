@@ -15,6 +15,7 @@ struct ReportView: View {
     @AppStorage("showQuestionnaires") private var showQuestionnaires = true
     @State private var surveys = true
     @State private var dreams = false
+    @State private var points = false
     @State private var dreamText = false
     @State private var busy = false
     @State private var file: URL?
@@ -40,6 +41,9 @@ struct ReportView: View {
                     if Medications.isOn && showMedication { Toggle("Include medication from Apple Health", isOn: $medication) }
                     if showQuestionnaires && !store.surveys.isEmpty {
                         Toggle("Include questionnaires (PHQ-9, GAD-7)", isOn: $surveys)
+                    }
+                    if !store.openPoints.isEmpty {
+                        Toggle("Include the things I want to talk about", isOn: $points)
                     }
                     if showDreams {
                         Toggle("Include dreams (how many, and nightmare nights)", isOn: $dreams)
@@ -91,7 +95,8 @@ struct ReportView: View {
         do {
             try Report(store: store, start: start, end: end, includeNotes: notes, sleep: nights,
                        includeDreams: dreams && showDreams, dreamText: dreams && dreamText && showDreams, doses: doses, meds: meds,
-                       includeSurveys: surveys && showQuestionnaires).write(to: url)
+                       includeSurveys: surveys && showQuestionnaires,
+                       points: points ? store.openPoints : []).write(to: url)
             file = url
         } catch {
             message = error.localizedDescription

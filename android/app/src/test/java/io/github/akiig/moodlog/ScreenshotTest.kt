@@ -158,6 +158,29 @@ abstract class Screens(private val lang: String) {
         rule.onAllNodes(hasText(tr("Cancel")))[0].performClick()
     }
 
+    /** The appointment card in the diary and the "Before the appointment" screen. */
+    @Test fun appointment() {
+        val state = AppState.get(ApplicationProvider.getApplicationContext())
+        rule.runOnUiThread {
+            val s = state.store
+            s.setAppointment(Day.adding(3, Day.today), "16:30", "Dr Rossi")
+            if (s.points.isEmpty()) {
+                s.addPoint(tr("e.g. I sleep badly since the new dose").removePrefix("e.g. ").removePrefix("es. ")
+                    .replaceFirstChar { it.uppercase() })
+                s.addPoint("Ask if I can stop the evening pill")
+                s.addPoint("Tell her about the exam stress")
+                s.setDone(s.points.last(), true)
+            }
+        }
+        rule.waitForIdle()
+        tab("Log")
+        shot("appointment-card")
+        rule.onAllNodes(hasText(tr("Your appointment"), substring = true))[0]
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+        rule.waitForIdle()
+        shot("appointment")
+    }
+
     /** The search from the diary, with an event found by a word in it. */
     @Test fun search() {
         rule.waitForIdle()

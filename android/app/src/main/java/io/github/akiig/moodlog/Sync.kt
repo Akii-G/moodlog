@@ -74,6 +74,14 @@ class Prefs(context: Context) {
         get() = p.getString("kindDismissed", "") ?: ""
         set(v) = p.edit().putString("kindDismissed", v).apply()
 
+    // "Your week, gently"
+    var weekCard: Boolean
+        get() = p.getBoolean("weekCard", true)
+        set(v) = p.edit().putBoolean("weekCard", v).apply()
+    var weekHidden: String
+        get() = p.getString("weekHidden", "") ?: ""
+        set(v) = p.edit().putString("weekHidden", v).apply()
+
     // Customize your experience
     var showDreams: Boolean
         get() = p.getBoolean("showDreams", true)

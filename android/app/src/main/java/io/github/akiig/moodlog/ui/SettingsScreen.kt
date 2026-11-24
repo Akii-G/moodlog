@@ -104,6 +104,7 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
         }
     }
     var kindWord by remember { mutableStateOf(prefs.kindWord) }
+    var weekCard by remember { mutableStateOf(prefs.weekCard) }
 
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         LargeTitle(tr("Settings"))
@@ -234,6 +235,10 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
 
             Section(footer = tr("After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time.")) {
                 SwitchRow(tr("A kind word on hard days"), kindWord) { kindWord = it; prefs.kindWord = it }
+            }
+
+            Section(footer = tr("On Sunday evening and on Monday, a few calm words about your week: days logged, the usual mood, your best day. No scores.")) {
+                SwitchRow(tr("Your week, gently"), weekCard) { weekCard = it; prefs.weekCard = it }
             }
 
             Section {

@@ -1,6 +1,7 @@
 package io.github.akiig.moodlog
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -105,6 +106,53 @@ class FeaturesTest {
         // the same question on the same day as the PC (Python: date(2026, 11, 21).toordinal() % 14 == 13)
         assertEquals(Prompts.all[13], Prompts.forDay("2026-11-21"))
         assertEquals(Prompts.all[0], Prompts.forDay("2026-11-21", 1))
+    }
+
+    @Test fun appointmentAndWeek() {
+        val s = AppStore(null)
+        fun e(id: String, d: String, mood: Int, f: List<String>) =
+            Entry(id, d, "09:00", mood, 0, 0, "", "2026-11-01T00:00:00.000Z", feelings = f)
+        s.absorb(SyncState(listOf(e("a", "2026-11-10", 2, listOf("tiredness", "worry")), e("b", "2026-11-11", 2, listOf("tiredness")),
+            e("c", "2026-11-12", 4, emptyList())),
+            listOf(MoodEvent("v", "2026-11-11", "medication", "New dose", "", "2026-11-01T00:00:00.000Z")), emptyList(), null))
+        // the same sentences as the PC's test/test_appointment.py
+        assertEquals("Since 5 November: 3 days logged · mostly bad · often Tiredness · 1 event.",
+            Gently.recap(s, "2026-11-05", "2026-11-24"))
+        assertTrue(Gently.recap(AppStore(null), "2026-11-05", "2026-11-24").contains("no moods"))
+
+        val w = AppStore(null)
+        w.absorb(SyncState(listOf(e("1", "2026-11-16", 3, listOf("tiredness")), e("2", "2026-11-17", 4, listOf("tiredness")),
+            e("3", "2026-11-19", 5, listOf("joy")), e("4", "2026-11-21", 3, listOf("tiredness"))), emptyList(), emptyList(), null))
+        assertNull(Gently.week(w, java.time.LocalDateTime.of(2026, 11, 22, 17, 0)))
+        assertEquals("2026-11-16" to "4 days logged, mostly okay. Tiredness came up 3 times. Thursday was your best day.",
+            Gently.week(w, java.time.LocalDateTime.of(2026, 11, 22, 19, 0)))
+        assertEquals("2026-11-16", Gently.week(w, java.time.LocalDateTime.of(2026, 11, 23, 9, 0))?.first)
+        assertNull(Gently.week(w, java.time.LocalDateTime.of(2026, 11, 24, 9, 0)))
+
+        // the card: a week before until the day after
+        val appt = Appointment("2026-11-27", "16:30", "Dr Rossi", "2026-11-05", "2026-11-24T08:00:00.000Z")
+        assertTrue(Gently.cardShown(appt, "2026-11-24") && Gently.cardShown(appt, "2026-11-28"))
+        assertFalse(Gently.cardShown(appt, "2026-11-19") || Gently.cardShown(appt, "2026-11-29"))
+        assertEquals("2026-11-05", Gently.recapStart(appt, "2026-11-24"))
+        assertTrue(Gently.whenText(appt, "2026-11-24").endsWith("at 16:30, with Dr Rossi · in 3 days"))
+
+        // sync: a newer appointment wins, points merge, a deleted point stays deleted
+        val a = AppStore(null)
+        a.addPoint("  The  new dose makes me  sleepy ")
+        a.addPoint("Ask about therapy")
+        assertEquals("The new dose makes me sleepy", a.points[0].text)
+        val phone = AppStore(null)
+        phone.absorb(SyncState.from(a.toJson()))
+        assertEquals(2, phone.points.size)
+        phone.absorb(SyncState(emptyList(), emptyList(), listOf(Tombstone(a.points[0].id, "point", "2999-01-01T00:00:00.000Z", null)),
+            null, appointment = appt.copy(updated = "2999-01-01T00:00:00.000Z")))
+        assertEquals(2, a.absorb(SyncState.from(phone.toJson())))
+        assertEquals(listOf("Ask about therapy"), a.points.map { it.text })
+        assertEquals("16:30", a.appointment?.time)
+        assertEquals(0, a.absorb(SyncState(emptyList(), emptyList(), emptyList(), null,
+            points = listOf(TalkPoint(phone.deleted.first { it.type == "point" }.id, "old", false, "2026-01-01T00:00:00.000Z")))))
+        a.setDone(a.points[0], true)
+        assertTrue(a.openPoints.isEmpty())
     }
 
     @Test fun search() {

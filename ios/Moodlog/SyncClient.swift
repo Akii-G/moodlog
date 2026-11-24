@@ -102,6 +102,8 @@ enum SyncClient {
         var deleted: [Tombstone]
         var dreams: [Dream]
         var surveys: [Survey]   // an older PC ignores them
+        var appointment: Appointment?
+        var points: [TalkPoint]
         var device: String
     }
 
@@ -111,7 +113,8 @@ enum SyncClient {
         let state = store.state()
         let body = try JSONEncoder().encode(Outgoing(entries: state.entries, events: state.events,
                                                      deleted: state.deleted, dreams: state.dreams ?? [],
-                                                     surveys: state.surveys ?? [], device: UIDevice.current.name))
+                                                     surveys: state.surveys ?? [], appointment: state.appointment,
+                                                     points: state.points ?? [], device: UIDevice.current.name))
         let data = try await request("/api/e/sync", payload: body)
         let remote: SyncState
         do {

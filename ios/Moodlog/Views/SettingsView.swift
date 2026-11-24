@@ -16,6 +16,7 @@ struct SettingsView: View {
     @AppStorage("reminderOn") private var reminderOn = false
     @AppStorage("reminderTime") private var reminderTime = "20:30"
     @AppStorage("kindWord") private var kindWord = true
+    @AppStorage("weekCard") private var weekCard = true
     @AppStorage("showQuestionnaires") private var showQuestionnaires = true
     @AppStorage("lastBackup") private var lastBackup = ""
     @State private var backupPlace = Backup.placeName
@@ -252,6 +253,12 @@ struct SettingsView: View {
                     Toggle("A kind word on hard days", isOn: $kindWord)
                 } footer: {
                     Text("After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time.")
+                }
+
+                Section {
+                    Toggle("Your week, gently", isOn: $weekCard)
+                } footer: {
+                    Text("On Sunday evening and on Monday, a few calm words about your week: days logged, the usual mood, your best day. No scores.")
                 }
 
                 Section {

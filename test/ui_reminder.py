@@ -26,7 +26,12 @@ def s2():
         c = w.get_first_child()
         while c is not None: walk(c); c = c.get_next_sibling()
     walk(wins[0])
-    kind = switches[-1] if not m.GridgetsLink(m.Store()).available() else switches[-2]
+    # the last switches: kind word, your week, then Gridgets when it's installed
+    tail = switches if not m.GridgetsLink(m.Store()).available() else switches[:-1]
+    kind, week = tail[-2], tail[-1]
+    week.set_active(False)
+    assert m.load_config()["week_card"] is False and not main().week_card.get_visible()
+    week.set_active(True)
     kind.set_active(False)
     assert not main().kind_card.get_visible() and m.load_config()["kind_word"] is False
     kind.set_active(True)

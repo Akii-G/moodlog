@@ -1,5 +1,19 @@
 [
  {
+  "version": "2.0.3",
+  "date": "2026-11-24",
+  "items": {
+   "en": [
+    "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.",
+    "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings."
+   ],
+   "it": [
+    "Prima dell'appuntamento: in Eventi, imposta la data del prossimo appuntamento con il medico o il terapeuta. Nella settimana prima, il diario mostra un riepilogo tranquillo di com'è andata dall'ultimo, e puoi tenere una lista di cose di cui vuoi parlare. Spuntale quando le hai dette; il resto può andare nel resoconto per il medico, se lo scegli. Sincronizzato con il PC.",
+    "La tua settimana, con calma: la domenica sera e il lunedì, poche parole tranquille sulla tua settimana nel diario: giorni registrati, l'umore più frequente, il giorno migliore. Nessun punteggio; puoi disattivarla nelle Impostazioni."
+   ]
+  }
+ },
+ {
   "version": "2.0.2",
   "date": "2026-11-23",
   "items": {

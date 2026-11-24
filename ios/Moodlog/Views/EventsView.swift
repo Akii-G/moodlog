@@ -9,6 +9,16 @@ struct EventsView: View {
         let events = store.events.sorted { $0.date > $1.date }
         NavigationStack {
             List {
+                Section {
+                    NavigationLink(value: AppointmentRoute()) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Next appointment").font(.headline)
+                            Text(store.appointment.map { $0.date.isEmpty ? tr("No appointment set") : Gently.when($0) }
+                                 ?? tr("No appointment set"))
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 if events.isEmpty {
                     Text("Log things that can affect how you feel, such as a medication change. They show as a flag in the calendar, and each one compares your mood in the two weeks before and after it.")
                         .foregroundStyle(.secondary)
@@ -35,6 +45,9 @@ struct EventsView: View {
                 }
             }
             .navigationTitle("Events")
+            .navigationDestination(for: AppointmentRoute.self) { _ in
+                AppointmentView()
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {

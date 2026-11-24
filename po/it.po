@@ -2422,3 +2422,149 @@ msgstr "La ricerca nelle Note ora trova anche le emozioni e gli eventi, non bada
 
 msgid "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day."
 msgstr "Cerca: la lente accanto al + nel diario. Rileggi tutte le note, dalla più recente, o trova parole nelle note, nelle emozioni e negli eventi, senza badare a maiuscole e accenti. Tocca un risultato per aprire quel giorno."
+
+msgid "%A %-d %B"
+msgstr "%A %-d %B"
+
+msgid "%s at %s"
+msgstr "%s alle %s"
+
+msgid "%s, with %s"
+msgstr "%s, con %s"
+
+msgid "%s was your best day."
+msgstr "%s è stato il tuo giorno migliore."
+
+msgid "Add"
+msgstr "Aggiungi"
+
+msgid "Anything you want to remember to say? Add it here."
+msgstr "C'è qualcosa che vuoi ricordarti di dire? Aggiungilo qui."
+
+msgid "Appointment saved"
+msgstr "Appuntamento salvato"
+
+msgid "Before the appointment"
+msgstr "Prima dell'appuntamento"
+
+msgid "HH:MM (optional)"
+msgstr "HH:MM (facoltativo)"
+
+msgid "Include the things I want to talk about"
+msgstr "Includi le cose di cui voglio parlare"
+
+msgid "Next appointment"
+msgstr "Prossimo appuntamento"
+
+msgid "No appointment set"
+msgstr "Nessun appuntamento"
+
+msgid "On Sunday evening and on Monday, a few calm words about your week: days logged, the usual mood, your best day. No scores."
+msgstr "La domenica sera e il lunedì, poche parole tranquille sulla tua settimana: giorni registrati, l'umore più frequente, il giorno migliore. Nessun punteggio."
+
+msgid "Remove the appointment"
+msgstr "Togli l'appuntamento"
+
+msgid "Said it"
+msgstr "Detto"
+
+msgid "Save the date"
+msgstr "Salva la data"
+
+msgid "Since %s: %s."
+msgstr "Dal %s: %s."
+
+msgid "Since %s: no moods logged yet."
+msgstr "Dal %s: nessun umore registrato finora."
+
+msgid "Things I want to talk about"
+msgstr "Cose di cui voglio parlare"
+
+msgid "Tick what you've said. The rest can go in the doctor report, if you choose so there."
+msgstr "Spunta ciò che hai già detto. Il resto può andare nel resoconto per il medico, se lo scegli lì."
+
+msgid "When is your next appointment with your doctor or therapist? In the week before, the Log shows how things have gone since the last one."
+msgstr "Quando è il tuo prossimo appuntamento con il medico o il terapeuta? Nella settimana prima, il Diario mostra com'è andata dall'ultimo."
+
+msgid "With"
+msgstr "Con"
+
+msgid "Write the time as hours:minutes, for example 16:30."
+msgstr "Scrivi l'ora come ore:minuti, per esempio 16:30."
+
+msgid "Your appointment"
+msgstr "Il tuo appuntamento"
+
+msgid "Your week"
+msgstr "La tua settimana"
+
+msgid "Your week, gently"
+msgstr "La tua settimana, con calma"
+
+msgid "e.g. Dr Rossi (optional)"
+msgstr "es. dott.ssa Rossi (facoltativo)"
+
+msgid "e.g. I sleep badly since the new dose"
+msgstr "es. Dormo male dalla nuova dose"
+
+msgid "mostly %s"
+msgstr "per lo più %s"
+
+msgid "often %s"
+msgstr "spesso %s"
+
+msgid "today"
+msgstr "oggi"
+
+msgid "tomorrow"
+msgstr "domani"
+
+msgid "yesterday"
+msgstr "ieri"
+
+msgid "%d day ago"
+msgid_plural "%d days ago"
+msgstr[0] "%d giorno fa"
+msgstr[1] "%d giorni fa"
+
+msgid "%d day logged"
+msgid_plural "%d days logged"
+msgstr[0] "%d giorno registrato"
+msgstr[1] "%d giorni registrati"
+
+msgid "%d day logged, mostly %s."
+msgid_plural "%d days logged, mostly %s."
+msgstr[0] "%d giorno registrato, per lo più %s."
+msgstr[1] "%d giorni registrati, per lo più %s."
+
+msgid "%d event"
+msgid_plural "%d events"
+msgstr[0] "%d evento"
+msgstr[1] "%d eventi"
+
+msgid "%d thing to talk about"
+msgid_plural "%d things to talk about"
+msgstr[0] "%d cosa di cui parlare"
+msgstr[1] "%d cose di cui parlare"
+
+msgid "%s came up %d time."
+msgid_plural "%s came up %d times."
+msgstr[0] "%s è comparsa %d volta."
+msgstr[1] "%s è comparsa %d volte."
+
+msgid "in %d day"
+msgid_plural "in %d days"
+msgstr[0] "tra %d giorno"
+msgstr[1] "tra %d giorni"
+
+msgid "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the Log shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with your phones."
+msgstr "Prima dell'appuntamento: in Eventi, imposta la data del prossimo appuntamento con il medico o il terapeuta. Nella settimana prima, il Diario mostra un riepilogo tranquillo di com'è andata dall'ultimo, e puoi tenere una lista di cose di cui vuoi parlare. Spuntale quando le hai dette; il resto può andare nel resoconto per il medico, se lo scegli. Sincronizzato con i telefoni."
+
+msgid "Your week, gently: on Sunday evening and on Monday, a few calm words about your week on the Log — days logged, the usual mood, your best day. No scores; turn it off in Customize."
+msgstr "La tua settimana, con calma: la domenica sera e il lunedì, poche parole tranquille sulla tua settimana nel Diario: giorni registrati, l'umore più frequente, il giorno migliore. Nessun punteggio; puoi disattivarla in Personalizza."
+
+msgid "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC."
+msgstr "Prima dell'appuntamento: in Eventi, imposta la data del prossimo appuntamento con il medico o il terapeuta. Nella settimana prima, il diario mostra un riepilogo tranquillo di com'è andata dall'ultimo, e puoi tenere una lista di cose di cui vuoi parlare. Spuntale quando le hai dette; il resto può andare nel resoconto per il medico, se lo scegli. Sincronizzato con il PC."
+
+msgid "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings."
+msgstr "La tua settimana, con calma: la domenica sera e il lunedì, poche parole tranquille sulla tua settimana nel diario: giorni registrati, l'umore più frequente, il giorno migliore. Nessun punteggio; puoi disattivarla nelle Impostazioni."

@@ -55,6 +55,14 @@ The **Notes** tab lists every note, newest first. Its search also finds feeling 
 events, and doesn't mind capitals or accents. On the phones, it's the magnifying glass
 next to + in the diary.
 
+**Before the appointment**: in Events, set the date of your next appointment with your
+doctor or therapist. In the week before, the Log shows a calm recap since the last one,
+and you can keep a list of things you want to talk about; tick them once said. The rest
+can go in the report, if you choose.
+
+**Your week, gently**: on Sunday evening and on Monday, a few calm words about your week:
+days logged, the usual mood, your best day. No scores.
+
 ### See how things go
 
 The **Charts** tab works per month, per year or for all time: average mood, days
@@ -214,7 +222,7 @@ each tab as it goes.
 Download `sottovoce_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/sottovoce/releases/latest), then:
 
-    sudo apt install ./sottovoce_3.0.1_all.deb
+    sudo apt install ./sottovoce_3.0.2_all.deb
 
 Remove it with `sudo apt remove sottovoce`; your data is kept.
 

@@ -18,6 +18,7 @@ final class Report {
     private let days: [String]
     private let doses: [DoseRecord], meds: [MedicationInfo]
     private let surveys: [Survey]
+    private let points: [TalkPoint]
     private var ctx: UIGraphicsPDFRendererContext!
     private var pageNo = 0
     private var y: CGFloat = 42
@@ -25,7 +26,8 @@ final class Report {
 
     init(store: AppStore, start: String, end: String, includeNotes: Bool, sleep: [String: Double],
          includeDreams: Bool, dreamText: Bool, doses: [DoseRecord] = [], meds: [MedicationInfo] = [],
-         includeSurveys: Bool = false) {
+         includeSurveys: Bool = false, points: [TalkPoint] = []) {
+        self.points = points
         self.store = store; self.start = start; self.end = end; self.includeNotes = includeNotes
         self.sleep = sleep; self.includeDreams = includeDreams; self.dreamText = dreamText
         self.doses = doses.filter { $0.day >= start && $0.day <= end }; self.meds = meds
@@ -119,6 +121,16 @@ final class Report {
         y += text(tr("%@ – %@ · %@ days · made with Sottovoce on %@", Day.pretty(start, style: "d MMM yyyy"),
                      Day.pretty(end, style: "d MMM yyyy"), "\(days.count)", Day.pretty(Day.today, style: "d MMM yyyy")),
                   M, y, 9, muted) + 14
+
+        if !points.isEmpty {
+            y += text(tr("Things I want to talk about"), M, y, 12, ink, bold: true) + 6
+            for p in points {
+                ensure(measure(p.text, 10, W - 2 * M - 14) + 6)
+                text("\u{2022}", M + 2, y, 10, ink)
+                y += text(p.text, M + 14, y, 10, ink, width: W - 2 * M - 14) + 6
+            }
+            y += 12
+        }
 
         let avgs = moodDays.compactMap { store.average(on: $0) }
         var tiles: [(String, String)] = [

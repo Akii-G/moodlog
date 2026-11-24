@@ -99,11 +99,12 @@ fun MoodlogApp() {
     // the reminder notification was tapped: today's page, with a new entry open
     var addNow by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
+    var showAppointment by remember { mutableStateOf(false) }
     LaunchedEffect(app.openToday) {
         if (app.openToday) {
             app.openToday = false
             tour.step = null
-            tab = 0; showPrivacy = false; showSearch = false
+            tab = 0; showPrivacy = false; showSearch = false; showAppointment = false
             openDay = io.github.akiig.moodlog.Day.today
             addNow = true
         }
@@ -118,11 +119,12 @@ fun MoodlogApp() {
         }
     }
 
-    BackHandler(enabled = openDay != null || showSearch || showPrivacy || showSurveys || tab != 0) {
+    BackHandler(enabled = openDay != null || showSearch || showAppointment || showPrivacy || showSurveys || tab != 0) {
         when {
             showPrivacy -> showPrivacy = false
             showSurveys -> showSurveys = false
             openDay != null -> { openDay = null; addNow = false }
+            showAppointment -> showAppointment = false
             showSearch -> showSearch = false
             else -> tab = 0
         }
@@ -134,11 +136,15 @@ fun MoodlogApp() {
                 0 -> if (openDay != null) androidx.compose.runtime.key(openDay, addNow) {
                         DayScreen(openDay!!, startAdding = addNow) { openDay = null; addNow = false }
                      }
+                     else if (showAppointment) AppointmentScreen(back = tr("Log")) { showAppointment = false }
                      else if (showSearch) SearchScreen(onDay = { addNow = false; openDay = it }) { showSearch = false }
-                     else LogScreen(onSearch = { showSearch = true }) { addNow = false; openDay = it }
+                     else LogScreen(onSearch = { showSearch = true }, onAppointment = { showAppointment = true }) {
+                         addNow = false; openDay = it
+                     }
                 1 -> ChartsScreen()
                 2 -> DreamsScreen()
-                3 -> EventsScreen()
+                3 -> if (showAppointment) AppointmentScreen(back = tr("Events")) { showAppointment = false }
+                     else EventsScreen(onAppointment = { showAppointment = true })
                 else -> if (showPrivacy) PrivacyScreen(back = tr("Settings")) { showPrivacy = false }
                         else if (showSurveys) SurveysScreen(back = tr("Settings")) { showSurveys = false }
                         else SettingsScreen(onPrivacy = { showPrivacy = true }, onSurveys = { showSurveys = true },
@@ -146,6 +152,7 @@ fun MoodlogApp() {
             }
             TabBar(tabs, tab, Modifier.align(Alignment.BottomCenter).onGloballyPositioned { tour.tabBar = it.boundsInRoot() }) {
                 if (tab == it) { openDay = null; showSearch = false; showPrivacy = false; showSurveys = false }
+                showAppointment = false
                 tab = it
             }
             if (showWhatsNew) WhatsNewDialog(whatsNewSince) {

@@ -12,6 +12,8 @@ final class AppStore {
     var events: [MoodEvent] = []
     var dreams: [Dream] = []
     var surveys: [Survey] = []
+    var appointment: Appointment?
+    var points: [TalkPoint] = []
     var deleted: [Tombstone] = []
 
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
@@ -23,6 +25,8 @@ final class AppStore {
         var deleted: [Tombstone]
         var dreams: [Dream]?  // optional: files saved by 1.1 and older have none
         var surveys: [Survey]?  // optional: files saved by 1.7 and older have none
+        var appointment: Appointment?
+        var points: [TalkPoint]?  // optional: files saved by 2.0.2 and older have none
     }
 
     init() {
@@ -39,11 +43,14 @@ final class AppStore {
         events = saved.events
         dreams = saved.dreams ?? []
         surveys = saved.surveys ?? []
+        appointment = saved.appointment
+        points = saved.points ?? []
         deleted = saved.deleted
     }
 
     func save() {
-        let saved = Saved(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys)
+        let saved = Saved(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys,
+                          appointment: appointment, points: points)
         if let data = try? JSONEncoder().encode(saved) {
             try? data.write(to: fileURL, options: .atomic)
         }
@@ -231,10 +238,47 @@ final class AppStore {
         changed()
     }
 
+    // MARK: - Before the appointment
+
+    var openPoints: [TalkPoint] { points.filter { !$0.done } }
+
+    /// Set (or with date nil, clear) the next appointment. When the old one has already
+    /// happened, it becomes "previous", where the recap starts from.
+    func setAppointment(date: String?, time: String = "", with: String = "") {
+        let today = Day.today
+        var previous = appointment?.previous ?? ""
+        if let old = appointment?.date, !old.isEmpty, old <= today, old != (date ?? "") { previous = old }
+        appointment = Appointment(date: date ?? "", time: date == nil ? "" : time,
+                                  with: date == nil ? "" : with.split(separator: " ").joined(separator: " "),
+                                  previous: previous, updated: Stamp.now())
+        changed()
+    }
+
+    func addPoint(_ text: String) {
+        let clean = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard !clean.isEmpty else { return }
+        points.append(TalkPoint(id: AppStore.newID(), text: String(clean.prefix(500)), done: false, updated: Stamp.now()))
+        changed()
+    }
+
+    func setDone(_ point: TalkPoint, _ done: Bool) {
+        guard let i = points.firstIndex(where: { $0.id == point.id }) else { return }
+        points[i].done = done
+        points[i].updated = Stamp.now()
+        changed()
+    }
+
+    func delete(_ point: TalkPoint) {
+        points.removeAll { $0.id == point.id }
+        deleted.append(Tombstone(id: point.id, type: "point", deleted: Stamp.now(), date: nil))
+        changed()
+    }
+
     // MARK: - Sync
 
     func state() -> SyncState {
-        return SyncState(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys, changed: nil)
+        return SyncState(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys, changed: nil,
+                         appointment: appointment, points: points)
     }
 
     /// Merge what the PC sent. Returns how many things changed here.
@@ -355,6 +399,35 @@ final class AppStore {
                 changes += 1
             }
         }
+
+        if let theirs = other.appointment, !theirs.updated.isEmpty, theirs.updated > (appointment?.updated ?? "") {
+            appointment = theirs
+            changes += 1
+        }
+        var pointsByID: [String: TalkPoint] = [:]
+        for p in points {
+            if let old = pointsByID[p.id], old.updated >= p.updated { continue }
+            pointsByID[p.id] = p
+        }
+        for p in other.points ?? [] where p.isValid {  // an older PC sends none: keep ours
+            if let t = tombs[p.id], t.deleted >= p.updated { continue }
+            if let mine = pointsByID[p.id] {
+                if p.updated > mine.updated {
+                    pointsByID[p.id] = p
+                    changes += 1
+                }
+            } else {
+                pointsByID[p.id] = p
+                changes += 1
+            }
+        }
+        for t in tombs.values where t.type == "point" {
+            if let mine = pointsByID[t.id], mine.updated <= t.deleted {
+                pointsByID.removeValue(forKey: t.id)
+                changes += 1
+            }
+        }
+        points = Array(pointsByID.values).sorted { $0.updated < $1.updated }
 
         entries = Array(byID.values)
         surveys = Array(surveysByID.values).sorted { ($0.date, $0.time) < ($1.date, $1.time) }

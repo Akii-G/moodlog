@@ -8,6 +8,8 @@ struct CalendarView: View {
     @State private var month = Day.monthStart(Date())
     @State private var path = NavigationPath()
     @State private var kindHidden = false
+    @AppStorage("weekCard") private var weekOn = true
+    @AppStorage("weekHidden") private var weekHidden = ""
     @Environment(Launch.self) private var launch
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 7)
@@ -20,6 +22,14 @@ struct CalendarView: View {
                         KindWord {
                             UserDefaults.standard.set(Day.today, forKey: "kindHidden")
                             withAnimation { kindHidden = true }
+                        }
+                    }
+                    if let appt = store.appointment, Gently.cardShown(appt) {
+                        AppointmentCard(appointment: appt)
+                    }
+                    if weekOn, let week = Gently.week(store), week.monday != weekHidden {
+                        WeekCard(text: week.text) {
+                            withAnimation { weekHidden = week.monday }
                         }
                     }
                     if server.isEmpty {
@@ -73,6 +83,9 @@ struct CalendarView: View {
             }
             .navigationDestination(for: SearchRoute.self) { _ in
                 SearchView()
+            }
+            .navigationDestination(for: AppointmentRoute.self) { _ in
+                AppointmentView()
             }
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {

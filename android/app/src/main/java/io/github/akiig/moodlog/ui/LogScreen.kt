@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.akiig.moodlog.AppStore
 import io.github.akiig.moodlog.Day
+import io.github.akiig.moodlog.Gently
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.Mood
 import io.github.akiig.moodlog.one
@@ -72,7 +73,7 @@ import kotlin.math.sqrt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LogScreen(onSearch: () -> Unit = {}, onDay: (String) -> Unit) {
+fun LogScreen(onSearch: () -> Unit = {}, onAppointment: () -> Unit = {}, onDay: (String) -> Unit) {
     val app = LocalApp.current
     val store = app.store
     val scope = rememberCoroutineScope()
@@ -91,6 +92,12 @@ fun LogScreen(onSearch: () -> Unit = {}, onDay: (String) -> Unit) {
                 var hidden by remember { mutableStateOf(false) }
                 if (!hidden && Care.shouldShow(store, app.prefs)) KindWord {
                     app.prefs.kindDismissed = Day.today; hidden = true
+                }
+                store.appointment?.let { appt -> if (Gently.cardShown(appt)) AppointmentCard(appt, onAppointment) }
+                var weekHidden by remember { mutableStateOf(app.prefs.weekHidden) }
+                val week = if (app.prefs.weekCard) Gently.week(store) else null
+                if (week != null && week.first != weekHidden) WeekCard(week.second) {
+                    app.prefs.weekHidden = week.first; weekHidden = week.first
                 }
                 if (app.prefs.server.isBlank()) {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))

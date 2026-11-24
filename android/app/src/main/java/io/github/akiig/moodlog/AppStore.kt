@@ -23,6 +23,10 @@ class AppStore(private val file: File?) {
         private set
     var surveys by mutableStateOf(listOf<Survey>())
         private set
+    var appointment by mutableStateOf<Appointment?>(null)
+        private set
+    var points by mutableStateOf(listOf<TalkPoint>())
+        private set
     var deleted by mutableStateOf(listOf<Tombstone>())
         private set
 
@@ -41,6 +45,8 @@ class AppStore(private val file: File?) {
             events = s.events
             dreams = s.dreams ?: emptyList()
             surveys = (s.surveys ?: emptyList()).filter { it.isValid }
+            appointment = s.appointment
+            points = (s.points ?: emptyList()).filter { it.isValid }
             deleted = s.deleted
         } catch (e: Exception) {
             // an unreadable file is kept as it is, not overwritten with nothing
@@ -54,6 +60,8 @@ class AppStore(private val file: File?) {
         .put("deleted", JSONArray(deleted.map { it.json() }))
         .put("dreams", JSONArray(dreams.map { it.json() }))
         .put("surveys", JSONArray(surveys.map { it.json() }))
+        .put("points", JSONArray(points.map { it.json() }))
+        .also { o -> appointment?.let { o.put("appointment", it.json()) } }
 
     fun save() {
         val f = file ?: return
@@ -205,6 +213,40 @@ class AppStore(private val file: File?) {
         changed()
     }
 
+    // ---------------------------------------------------------------- before the appointment
+
+    val openPoints get() = points.filter { !it.done }
+
+    /** Set (or with date null, clear) the next appointment. When the old one has already
+     *  happened, it becomes "previous", where the recap starts from. */
+    fun setAppointment(date: String?, time: String = "", with: String = "") {
+        val old = appointment
+        var previous = old?.previous ?: ""
+        if (old != null && old.date.isNotEmpty() && old.date <= Day.today && old.date != (date ?: "")) previous = old.date
+        appointment = Appointment(date ?: "", if (date == null) "" else time,
+            if (date == null) "" else with.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.joinToString(" "),
+            previous, Stamp.now())
+        changed()
+    }
+
+    fun addPoint(text: String) {
+        val clean = text.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.joinToString(" ").take(500)
+        if (clean.isEmpty()) return
+        points = points + TalkPoint(newId(), clean, false, Stamp.now())
+        changed()
+    }
+
+    fun setDone(point: TalkPoint, done: Boolean) {
+        points = points.map { if (it.id == point.id) it.copy(done = done, updated = Stamp.now()) else it }
+        changed()
+    }
+
+    fun delete(point: TalkPoint) {
+        points = points.filter { it.id != point.id }
+        deleted = deleted + Tombstone(point.id, "point", Stamp.now(), null)
+        changed()
+    }
+
     // ---------------------------------------------------------------- sync
 
     /** Merge what the PC sent. Returns how many things changed here. */
@@ -256,6 +298,12 @@ class AppStore(private val file: File?) {
             .sortedBy { it.date }
         surveys = merge(surveys, other.surveys?.filter { it.isValid }, "survey", { it.id }, { it.updated }, { _, _ -> false })
             .sortedWith(compareBy({ it.date }, { it.time }))
+        val theirs = other.appointment
+        if (theirs != null && theirs.updated > (appointment?.updated ?: "")) {
+            appointment = theirs; changes++
+        }
+        points = merge(points, other.points?.filter { it.isValid }, "point", { it.id }, { it.updated }, { _, _ -> false })
+            .sortedBy { it.updated }
         deleted = tombs.values.toList()
         save()
         return changes

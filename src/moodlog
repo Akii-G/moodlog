@@ -34,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.0.1"
+VERSION = "3.0.2"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -1517,7 +1517,8 @@ def _avg(values):
 
 
 def export_report(path, store, events, health, start, end, include_notes=False,
-                  include_health=True, dreams=None, dream_mode="off", meds=None, surveys=None):
+                  include_health=True, dreams=None, dream_mode="off", meds=None, surveys=None,
+                  points=None):
     """A printable summary for a doctor or therapist. Returns the number of pages.
 
     dream_mode: "off" (default: dreams are private), "summary" (counts, nightmare nights
@@ -1546,6 +1547,18 @@ def export_report(path, store, events, health, start, end, include_notes=False,
         fmt_date(dt.date.today(), "%-d %B %Y"))
     pdf.text(sub, M, pdf.y, 9, ink["muted"])
     pdf.y += 24
+
+    # ---- things to talk about (only when chosen in the report options)
+    if points:
+        pdf.text(tr("Things I want to talk about"), M, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 20
+        for point in points:
+            _w, h = pdf.text(point["text"], M + 14, 0, 10, measure=True, width=W - 2 * M - 14)
+            pdf.ensure(h + 6)
+            pdf.text("\u2022", M + 2, pdf.y, 10, ink["ink"])
+            pdf.text(point["text"], M + 14, pdf.y, 10, ink["ink"], width=W - 2 * M - 14)
+            pdf.y += h + 6
+        pdf.y += 14
 
     # ---- key numbers
     avg_mood = _avg(store.day_avg(d) for d in mood_days)
@@ -2032,10 +2045,10 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 # ----------------------------------------------------------------- backup, restore, merging
 
 DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json", "surveys.json",
-              "sync.json",
+              "appointment.json", "sync.json",
               "sync-last.txt"]
 CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json",
-                 "surveys.json"]
+                 "surveys.json", "appointment.json"]
 MANIFEST = "moodlog-backup.json"
 
 
@@ -2103,9 +2116,12 @@ def restore_backup(path):
     return safety
 
 
-def merge_folder_into(src, dst_store, dst_events, dst_health, dst_dreams=None, dst_surveys=None):
+def merge_folder_into(src, dst_store, dst_events, dst_health, dst_dreams=None, dst_surveys=None,
+                      dst_appointment=None):
     """Add everything from the data files in folder `src` that the destination lacks."""
     added = dst_store.absorb(Store(os.path.join(src, "moods.csv")))
+    if dst_appointment is not None:
+        added += dst_appointment.absorb(AppointmentStore(os.path.join(src, "appointment.json")))
     if dst_surveys is not None:
         added += dst_surveys.absorb(SurveyStore(os.path.join(src, "surveys.json")))
     added += dst_events.absorb(EventStore(os.path.join(src, "events.csv")))
@@ -2848,6 +2864,249 @@ class SurveyStore:
         return last is None or (today - last["date"]).days >= SURVEY_EVERY_DAYS
 
 
+class AppointmentStore:
+    """The next doctor or therapist appointment and the things to talk about there:
+    appointment.json. Synced like the rest: the appointment as a whole and each point on its
+    own, newest change wins; deleted points are kept as tombstones (type "point").
+
+    appt: {"date": date or None, "time": "HH:MM" or "", "with": "", "previous": date or None,
+    "updated": stamp}. "previous" is the appointment before, so the recap knows where to start.
+    Each point: {"id", "text", "done", "updated"}; done = already said, kept out of reports."""
+
+    def __init__(self, path=None):
+        self.path = os.path.join(data_dir(), "appointment.json") if path is None else path
+        self.appt = empty_appointment()
+        self.points = []
+        self.deleted = {}
+        self.mtime = None
+        if self.path:
+            self.load()
+
+    def load(self):
+        self.appt, self.points, self.deleted = empty_appointment(), [], {}
+        self.mtime = file_mtime(self.path)
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            return
+        self.absorb_json(doc if isinstance(doc, dict) else {})
+
+    def changed_on_disk(self):
+        return bool(self.path) and file_mtime(self.path) != self.mtime
+
+    def absorb_json(self, doc):
+        """Read {"appointment": {...}, "points": [...], "deleted": [{type: "point"}...]}."""
+        other = AppointmentStore("")
+        appt = clean_appointment(doc.get("appointment"))
+        if appt:
+            other.appt = appt
+        for item in (doc.get("points") or [])[:5000]:
+            point = clean_point(item)
+            if point:
+                other.points.append(point)
+        for item in (doc.get("deleted") or [])[:200000]:
+            if isinstance(item, dict) and item.get("type") == "point":
+                pid, gone = str(item.get("id") or "")[:64], clean_stamp(str(item.get("deleted") or ""))
+                if pid and gone:
+                    other.deleted[pid] = max(gone, other.deleted.get(pid, ""))
+        return self.absorb(other)
+
+    def to_json(self):
+        a = self.appt
+        doc = {"points": [dict(p) for p in self.points],
+               "deleted": [{"id": pid, "type": "point", "deleted": gone}
+                           for pid, gone in sorted(self.deleted.items())]}
+        if a["updated"]:
+            doc["appointment"] = {"date": a["date"].isoformat() if a["date"] else "", "time": a["time"],
+                                  "with": a["with"],
+                                  "previous": a["previous"].isoformat() if a["previous"] else "",
+                                  "updated": a["updated"]}
+        return doc
+
+    def save(self):
+        if not self.path:
+            return
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(self.to_json(), f, ensure_ascii=False, indent=1)
+        os.replace(tmp, self.path)
+        self.mtime = file_mtime(self.path)
+
+    def absorb(self, other):
+        changed = 0
+        if other.appt["updated"] > self.appt["updated"]:
+            self.appt = dict(other.appt)
+            changed += 1
+        mine = {p["id"]: p for p in self.points}
+        for pid, gone in other.deleted.items():
+            p = mine.get(pid)
+            if p is not None and p["updated"] <= gone:
+                self.remove_point(p, stamp=gone)
+                mine.pop(pid)
+                changed += 1
+            elif p is None and self.deleted.get(pid, "") < gone:
+                self.deleted[pid] = gone
+        for theirs in other.points:
+            pid = theirs["id"]
+            if pid in self.deleted and self.deleted[pid] >= theirs["updated"]:
+                continue
+            p = mine.get(pid)
+            if p is None:
+                copy = dict(theirs)
+                self.points.append(copy)
+                mine[pid] = copy
+                self.deleted.pop(pid, None)
+                changed += 1
+            elif theirs["updated"] > p["updated"]:
+                p.update(theirs)
+                changed += 1
+        return changed
+
+    def set_appointment(self, day, time="", with_="", today=None):
+        """Set (or with day None, clear) the next appointment. When the old one has already
+        happened, it becomes "previous", where the recap starts from."""
+        today = today or dt.date.today()
+        old = self.appt
+        previous = old["previous"]
+        if old["date"] and old["date"] <= today and old["date"] != day:
+            previous = old["date"]
+        self.appt = {"date": day, "time": time if day else "", "with": with_ if day else "",
+                     "previous": previous, "updated": now_stamp()}
+
+    def add_point(self, text_):
+        point = {"id": new_id(), "text": " ".join(text_.split())[:500], "done": False, "updated": now_stamp()}
+        self.points.append(point)
+        return point
+
+    def set_done(self, point, done):
+        point["done"] = bool(done)
+        point["updated"] = now_stamp()
+
+    def remove_point(self, point, stamp=None):
+        self.points = [p for p in self.points if p["id"] != point["id"]]
+        self.deleted[point["id"]] = stamp or now_stamp()
+
+    def open_points(self):
+        return [p for p in self.points if not p["done"]]
+
+    def card_shown(self, today=None):
+        """The appointment card on the Log page: from a week before until the day after."""
+        today = today or dt.date.today()
+        day = self.appt["date"]
+        return bool(day) and -1 <= (day - today).days <= 7
+
+    def recap_start(self, today=None):
+        """Where "since the last appointment" starts: the previous one, or 30 days ago."""
+        today = today or dt.date.today()
+        prev = self.appt["previous"]
+        return prev if prev and prev < today else today - dt.timedelta(days=29)
+
+
+def empty_appointment():
+    return {"date": None, "time": "", "with": "", "previous": None, "updated": ""}
+
+
+def clean_appointment(item):
+    if not isinstance(item, dict):
+        return None
+    stamp = clean_stamp(str(item.get("updated") or ""))
+    if not stamp:
+        return None
+
+    def day(value):
+        try:
+            return dt.date.fromisoformat(str(value or ""))
+        except ValueError:
+            return None
+    time = str(item.get("time") or "")
+    return {"date": day(item.get("date")), "time": time if TIME_RE.match(time) else "",
+            "with": " ".join(str(item.get("with") or "").split())[:200],
+            "previous": day(item.get("previous")), "updated": stamp}
+
+
+def clean_point(item):
+    if not isinstance(item, dict):
+        return None
+    pid, stamp = str(item.get("id") or "")[:64], clean_stamp(str(item.get("updated") or ""))
+    text_ = " ".join(str(item.get("text") or "").split())[:500]
+    if not pid or not stamp or not text_:
+        return None
+    return {"id": pid, "text": text_, "done": item.get("done") is True, "updated": stamp}
+
+
+def appointment_when(appt, today=None):
+    """"Thursday 3 December at 16:30 · in 3 days" (with whom, when known)."""
+    today = today or dt.date.today()
+    day = appt["date"]
+    text_ = fmt_date(day, tr("%A %-d %B"))
+    if appt["time"]:
+        text_ = tr("%s at %s") % (text_, appt["time"])
+    if appt["with"]:
+        text_ = tr("%s, with %s") % (text_, appt["with"])
+    days = (day - today).days
+    rel = (tr("today") if days == 0 else tr("tomorrow") if days == 1 else tr("yesterday") if days == -1
+           else trn("in %d day", "in %d days", days) % days if days > 0
+           else trn("%d day ago", "%d days ago", -days) % -days)
+    return "%s · %s" % (text_, rel)
+
+
+def appointment_recap(store, events, start, end):
+    """One calm line about the time since the last appointment: days logged, the usual mood,
+    the most frequent feeling words and how many events."""
+    days = [start + dt.timedelta(days=i) for i in range((end - start).days + 1)]
+    logged = [d for d in days if store.day_avg(d)]
+    if not logged:
+        return tr("Since %s: no moods logged yet.") % fmt_date(start, "%-d %B")
+    moods = [m for _d, _t, m in store.timed(start, end) if m]
+    parts = [trn("%d day logged", "%d days logged", len(logged)) % len(logged)]
+    if moods:
+        common = max(range(1, 6), key=lambda m: (moods.count(m), m))
+        parts.append(tr("mostly %s") % MOOD_NAMES[common].lower())
+    counts = feeling_counts(store, start, end)
+    top = [FEELING_LABELS[k] for k, n in counts[:2] if n > 1]
+    if top:
+        parts.append(tr("often %s") % ", ".join(top))
+    n_events = len(events.between(start, end))
+    if n_events:
+        parts.append(trn("%d event", "%d events", n_events) % n_events)
+    return tr("Since %s: %s.") % (fmt_date(start, "%-d %B"), " · ".join(parts))
+
+
+def week_look_back(store, now=None):
+    """"Your week, gently": from Sunday 18:00 until the end of Monday, a few plain sentences about
+    the week (Monday to Sunday) that is ending or just ended. None when there is nothing to say.
+    Returns (monday, text)."""
+    now = now or dt.datetime.now()
+    today = now.date()
+    if today.weekday() == 6 and now.hour >= 18:
+        monday = today - dt.timedelta(days=6)
+    elif today.weekday() == 0:
+        monday = today - dt.timedelta(days=7)
+    else:
+        return None
+    sunday = monday + dt.timedelta(days=6)
+    days = [monday + dt.timedelta(days=i) for i in range(7)]
+    logged = [d for d in days if store.day_avg(d)]
+    if not logged:
+        return None
+    moods = [m for _d, _t, m in store.timed(monday, sunday) if m]
+    common = max(range(1, 6), key=lambda m: (moods.count(m), m))
+    lines = [trn("%d day logged, mostly %s.", "%d days logged, mostly %s.", len(logged)) % (
+        len(logged), MOOD_NAMES[common].lower())]
+    counts = feeling_counts(store, monday, sunday)
+    if counts:
+        key, n = counts[0]
+        if n > 1:
+            lines.append(trn("%s came up %d time.", "%s came up %d times.", n) % (FEELING_LABELS[key], n))
+    if len(logged) >= 2:
+        avgs = {d: store.day_avg(d) for d in logged}
+        best = max(logged, key=lambda d: (avgs[d], d))
+        if avgs[best] > min(avgs.values()):
+            lines.append(tr("%s was your best day.") % fmt_date(best, "%A").capitalize())
+    return monday, " ".join(lines)
+
+
 def survey_name(kind):
     return SURVEY_TEXT["en"][kind]["name"]
 
@@ -3008,8 +3267,8 @@ def stores_from_json(doc):
             continue
         if item.get("type") == "event":
             events.deleted[eid] = max(gone, events.deleted.get(eid, ""))
-        elif item.get("type") in ("dream", "survey"):
-            continue  # read by dreams_from_json and SurveyStore
+        elif item.get("type") in ("dream", "survey", "point"):
+            continue  # read by dreams_from_json, SurveyStore and AppointmentStore
         else:
             store.deleted[eid] = (gone, day_of(item.get("date")))
     return store, events
@@ -3042,7 +3301,7 @@ def dreams_from_json(doc):
     return dreams
 
 
-def stores_to_json(store, events, dreams=None, surveys=None):
+def stores_to_json(store, events, dreams=None, surveys=None, appointment=None):
     entries = [dict({"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
                      "anxiety": e[4], "note": e[2], "updated": e[6]},
                     **({"private": True} if is_private(e, 7) else {}),
@@ -3066,6 +3325,12 @@ def stores_to_json(store, events, dreams=None, surveys=None):
         part = surveys.to_json()
         doc["surveys"] = part["surveys"]
         deleted += part["deleted"]
+    if appointment is not None:
+        part = appointment.to_json()
+        if "appointment" in part:
+            doc["appointment"] = part["appointment"]
+        doc["points"] = part["points"]
+        deleted += part["deleted"]
     return doc
 
 
@@ -3078,9 +3343,13 @@ def sync_with_phone(body):
     remote_store, remote_events = stores_from_json(doc)
     remote_dreams = dreams_from_json(doc)
     store, events, dreams, surveys = Store(), EventStore(), DreamStore(), SurveyStore()
+    appointment = AppointmentStore()
     changed = store.absorb(remote_store) + events.absorb(remote_events)
     dream_changes = dreams.absorb(remote_dreams)
     survey_changes = surveys.absorb_json(doc) if isinstance(doc, dict) else 0
+    appointment_changes = appointment.absorb_json(doc) if isinstance(doc, dict) else 0
+    if appointment_changes:
+        appointment.save()
     if changed:
         store.save()
         events.save()
@@ -3088,8 +3357,8 @@ def sync_with_phone(body):
         dreams.save()
     if survey_changes:
         surveys.save()
-    changed += dream_changes + survey_changes
-    state = stores_to_json(store, events, dreams, surveys)
+    changed += dream_changes + survey_changes + appointment_changes
+    state = stores_to_json(store, events, dreams, surveys, appointment)
     state["changed"] = changed
     return state
 
@@ -5716,6 +5985,158 @@ class EventWindow(Gtk.Window):
             self.fail(tr("Could not save the change to events.csv."))
 
 
+class AppointmentWindow(Gtk.Window):
+    """Before the appointment: when it is, a calm recap since the last one, and a list of things
+    to talk about. Every change is saved at once (and synced with the phone)."""
+
+    def __init__(self, win):
+        super().__init__(title=tr("Before the appointment"), transient_for=win, modal=True)
+        self.set_default_size(480, 680)
+        self.win = win
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(18)
+        intro = Gtk.Label(xalign=0, wrap=True, label=tr(
+            "When is your next appointment with your doctor or therapist? In the week before, the "
+            "Log shows how things have gone since the last one."))
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        grid = Gtk.Grid(column_spacing=12, row_spacing=10)
+        self.date_entry = Gtk.Entry(hexpand=True, placeholder_text="YYYY-MM-DD")
+        self.time_entry = Gtk.Entry(hexpand=True, placeholder_text=tr("HH:MM (optional)"), max_length=5)
+        self.with_entry = Gtk.Entry(hexpand=True, placeholder_text=tr("e.g. Dr Rossi (optional)"))
+        for r, (name, widget) in enumerate(((tr("Date"), self.date_entry), (tr("Time"), self.time_entry),
+                                            (tr("With"), self.with_entry))):
+            label = Gtk.Label(label=name, xalign=0)
+            label.add_css_class("dim-label")
+            grid.attach(label, 0, r, 1, 1)
+            grid.attach(widget, 1, r, 1, 1)
+        col.append(grid)
+        self.error = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self.error.add_css_class("error")
+        col.append(self.error)
+        buttons = Gtk.Box(spacing=8)
+        self.clear_b = Gtk.Button(label=tr("Remove the appointment"))
+        self.clear_b.add_css_class("flat")
+        self.clear_b.connect("clicked", self.on_clear)
+        save = Gtk.Button(label=tr("Save the date"))
+        save.add_css_class("suggested-action")
+        save.connect("clicked", self.on_save_date)
+        for e in (self.date_entry, self.time_entry, self.with_entry):
+            e.connect("activate", self.on_save_date)
+        buttons.append(self.clear_b)
+        buttons.append(Gtk.Box(hexpand=True))
+        buttons.append(save)
+        col.append(buttons)
+        self.recap = Gtk.Label(xalign=0, wrap=True)
+        self.recap.add_css_class("dim-label")
+        col.append(self.recap)
+
+        head = Gtk.Label(label=tr("Things I want to talk about"), xalign=0)
+        head.add_css_class("heading")
+        head.set_margin_top(6)
+        col.append(head)
+        hint = Gtk.Label(xalign=0, wrap=True, label=tr(
+            "Tick what you've said. The rest can go in the doctor report, if you choose so there."))
+        hint.add_css_class("dim-label")
+        hint.add_css_class("caption")
+        col.append(hint)
+        add_row = Gtk.Box(spacing=8)
+        self.point_entry = Gtk.Entry(hexpand=True, placeholder_text=tr("e.g. I sleep badly since the new dose"))
+        self.point_entry.connect("activate", self.on_add)
+        add_b = Gtk.Button(label=tr("Add"))
+        add_b.connect("clicked", self.on_add)
+        add_row.append(self.point_entry)
+        add_row.append(add_b)
+        col.append(add_row)
+        self.list = Gtk.ListBox()
+        self.list.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.list.add_css_class("boxed-list")
+        scroll = Gtk.ScrolledWindow(vexpand=True)
+        scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scroll.set_min_content_height(170)
+        scroll.set_child(self.list)
+        col.append(scroll)
+        close = Gtk.Button(label=tr("Close"), halign=Gtk.Align.END)
+        close.connect("clicked", lambda *_: self.close())
+        col.append(close)
+        self.set_child(col)
+        self.update(fields=True)
+
+    def update(self, fields=False):
+        store, appt, today = self.win.appointment, self.win.appointment.appt, dt.date.today()
+        if fields:
+            self.date_entry.set_text(appt["date"].isoformat() if appt["date"] else "")
+            self.time_entry.set_text(appt["time"])
+            self.with_entry.set_text(appt["with"])
+        self.clear_b.set_visible(bool(appt["date"]))
+        self.recap.set_text(appointment_recap(self.win.store, self.win.events, store.recap_start(today), today))
+        child = self.list.get_first_child()
+        while child:
+            self.list.remove(child)
+            child = self.list.get_first_child()
+        for point in sorted(store.points, key=lambda p: (p["done"], p["updated"])):
+            row = Gtk.Box(spacing=8)
+            for side in ("top", "bottom", "start", "end"):
+                getattr(row, "set_margin_" + side)(8)
+            check = Gtk.CheckButton(active=point["done"], valign=Gtk.Align.START)
+            check.set_tooltip_text(tr("Said it"))
+            check.connect("toggled", self.on_done, point)
+            label = Gtk.Label(label=point["text"], xalign=0, wrap=True, hexpand=True)
+            label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            if point["done"]:
+                label.add_css_class("dim-label")
+            remove = Gtk.Button.new_from_icon_name("user-trash-symbolic")
+            remove.add_css_class("flat")
+            remove.set_valign(Gtk.Align.START)
+            remove.set_tooltip_text(tr("Delete"))
+            remove.connect("clicked", self.on_remove, point)
+            row.append(check)
+            row.append(label)
+            row.append(remove)
+            self.list.append(row)
+        self.list.set_visible(bool(store.points))
+
+    def on_save_date(self, *_):
+        raw = self.date_entry.get_text().strip()
+        try:
+            day = dt.date.fromisoformat(raw)
+        except ValueError:
+            self.error.set_text(tr("Write the date as year-month-day, for example %s.") % dt.date.today().isoformat())
+            self.error.set_visible(True)
+            return
+        time = self.time_entry.get_text().strip()
+        if time and not TIME_RE.match(time):
+            self.error.set_text(tr("Write the time as hours:minutes, for example 16:30."))
+            self.error.set_visible(True)
+            return
+        self.error.set_visible(False)
+        self.win.appointment.set_appointment(day, time, " ".join(self.with_entry.get_text().split()))
+        self.win.save_appointment()
+        self.win.notify(tr("Appointment saved"))
+
+    def on_clear(self, *_):
+        self.win.appointment.set_appointment(None)
+        self.win.save_appointment()
+        self.update(fields=True)
+
+    def on_add(self, *_):
+        text_ = " ".join(self.point_entry.get_text().split())
+        if not text_:
+            return
+        self.win.appointment.add_point(text_)
+        self.point_entry.set_text("")
+        self.win.save_appointment()
+
+    def on_done(self, check, point):
+        self.win.appointment.set_done(point, check.get_active())
+        GLib.idle_add(lambda: self.win.save_appointment() and False)
+
+    def on_remove(self, _b, point):
+        self.win.appointment.remove_point(point)
+        GLib.idle_add(lambda: self.win.save_appointment() and False)
+
+
 class ReportWindow(Gtk.Window):
     """Choose a period and what to include, then save the doctor report."""
 
@@ -5772,6 +6193,9 @@ class ReportWindow(Gtk.Window):
         has_dreams = bool(win.dreams.items) and win.prefs["dreams"]
         self.dreams_check.set_visible(has_dreams)
         self.dream_text_check.set_visible(has_dreams)
+        self.points_check = Gtk.CheckButton(label=tr("Include the things I want to talk about"))
+        self.points_check.set_visible(bool(win.appointment.open_points()))
+        col.append(self.points_check)
         for wdg in (self.notes_check, notes_hint, self.health_check, self.meds_check,
                     self.surveys_check, self.dreams_check, self.dream_text_check):
             col.append(wdg)
@@ -5845,7 +6269,9 @@ class ReportWindow(Gtk.Window):
                                   surveys=win.surveys if self.surveys_check.get_active() else None,
                                   dreams=win.dreams, dream_mode=(
                                       "off" if not self.dreams_check.get_active() else
-                                      "text" if self.dream_text_check.get_active() else "summary"))
+                                      "text" if self.dream_text_check.get_active() else "summary"),
+                                  points=win.appointment.open_points() if self.points_check.get_active()
+                                  else None)
         except (OSError, Exception) as err:
             self.error.set_text(tr("Could not make the report: %s") % err)
             self.error.set_visible(True)
@@ -5863,6 +6289,10 @@ class ReportWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.0.2", "2026-11-24", [
+        "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the Log shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with your phones.",
+        "Your week, gently: on Sunday evening and on Monday, a few calm words about your week on the Log — days logged, the usual mood, your best day. No scores; turn it off in Customize.",
+    ]),
     ("3.0.1", "2026-11-23", [
         "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.",
     ]),
@@ -6019,6 +6449,10 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.0.3", "2026-11-24", [
+        "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.",
+        "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings.",
+    ]),
     ("2.0.2", "2026-11-23", [
         "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day.",
     ]),
@@ -6069,6 +6503,10 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.3", "2026-11-24", [
+        "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.",
+        "Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings.",
+    ]),
     ("2.0.2", "2026-11-23", [
         "Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day.",
     ]),
@@ -6292,6 +6730,18 @@ def customize_more(win):
     box.append(option_row(tr("A kind word on hard days"),
                           tr("After a few very hard days close together, the Log shows a short, kind note "
                              "with a helpline. It never tells anyone; you can hide it any time."), kind))
+
+    week = Gtk.Switch(active=cfg.get("week_card", True))
+
+    def on_week(w, _p):
+        c = load_config()
+        c["week_card"] = w.get_active()
+        save_config(c)
+        win.refresh_week()
+    week.connect("notify::active", on_week)
+    box.append(option_row(tr("Your week, gently"),
+                          tr("On Sunday evening and on Monday, a few calm words about your week: "
+                             "days logged, the usual mood, your best day. No scores."), week))
 
     if win.link.available():
         link = Gtk.Switch(active=win.link.enabled)
@@ -6568,7 +7018,8 @@ class DataWindow(Gtk.Window):
                          EventStore(os.path.join(folder, "events.csv")),
                          HealthStore(os.path.join(folder, "health.csv")),
                          DreamStore(os.path.join(folder, "dreams.csv")),
-                         SurveyStore(os.path.join(folder, "surveys.json")))
+                         SurveyStore(os.path.join(folder, "surveys.json")),
+                         AppointmentStore(os.path.join(folder, "appointment.json")))
                 merge_folder_into(old, *there)
                 for store in there:
                     store.save()
@@ -7265,6 +7716,7 @@ class Window(Adw.ApplicationWindow):
         self.events = EventStore()
         self.dreams = DreamStore()
         self.surveys = SurveyStore()
+        self.appointment = AppointmentStore()
         self.survey_windows = []
         self.link = GridgetsLink(self.store)
         if self.link.reconcile_all():
@@ -7538,6 +7990,91 @@ class Window(Adw.ApplicationWindow):
     def refresh_kind_word(self):
         if hasattr(self, "kind_card"):
             self.kind_card.set_visible(show_kind_word(self.store, load_config()))
+        self.refresh_week()
+
+    # -- "Before the appointment"
+
+    def build_appointment_card(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.add_css_class("kind-word")
+        self.appt_title = Gtk.Label(xalign=0, wrap=True)
+        self.appt_title.add_css_class("heading")
+        self.appt_recap = Gtk.Label(xalign=0, wrap=True)
+        self.appt_points = Gtk.Label(xalign=0, wrap=True)
+        self.appt_points.add_css_class("dim-label")
+        open_b = Gtk.Button(label=tr("Open"), halign=Gtk.Align.START)
+        open_b.connect("clicked", lambda *_: AppointmentWindow(self).present())
+        for wdg in (self.appt_title, self.appt_recap, self.appt_points, open_b):
+            box.append(wdg)
+        box.set_visible(False)
+        return box
+
+    def refresh_appointment(self):
+        for window in self.list_toplevels_of(AppointmentWindow):
+            window.update()
+        if hasattr(self, "appt_row"):
+            appt = self.appointment.appt
+            self.appt_row_text.set_text(appointment_when(appt) if appt["date"]
+                                        else tr("No appointment set"))
+        if not hasattr(self, "appt_card"):
+            return
+        shown = self.appointment.card_shown()
+        self.appt_card.set_visible(shown)
+        if not shown:
+            return
+        appt, today = self.appointment.appt, dt.date.today()
+        self.appt_title.set_text(tr("Your appointment") + " · " + appointment_when(appt, today))
+        self.appt_recap.set_text(appointment_recap(self.store, self.events,
+                                                   self.appointment.recap_start(today), today))
+        n = len(self.appointment.open_points())
+        self.appt_points.set_text(trn("%d thing to talk about", "%d things to talk about", n) % n if n
+                                  else tr("Anything you want to remember to say? Add it here."))
+
+    def list_toplevels_of(self, cls):
+        return [w for w in Gtk.Window.list_toplevels() if isinstance(w, cls)]
+
+    def save_appointment(self):
+        try:
+            self.appointment.save()
+        except OSError:
+            return False
+        self.refresh_appointment()
+        return True
+
+    # -- "Your week, gently"
+
+    def build_week_card(self):
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        box.add_css_class("kind-word")
+        title = Gtk.Label(label=tr("Your week"), xalign=0)
+        title.add_css_class("heading")
+        self.week_text = Gtk.Label(xalign=0, wrap=True)
+        hide = Gtk.Button(label=tr("Close"), halign=Gtk.Align.START)
+        hide.add_css_class("flat")
+        hide.connect("clicked", self.on_hide_week)
+        for wdg in (title, self.week_text, hide):
+            box.append(wdg)
+        box.set_visible(False)
+        return box
+
+    def refresh_week(self):
+        if not hasattr(self, "week_card"):
+            return
+        cfg = load_config()
+        found = week_look_back(self.store) if cfg.get("week_card", True) else None
+        if found and cfg.get("week_hidden") == found[0].isoformat():
+            found = None
+        self.week_card.set_visible(bool(found))
+        if found:
+            self.week_text.set_text(found[1])
+
+    def on_hide_week(self, *_):
+        found = week_look_back(self.store)
+        if found:
+            cfg = load_config()
+            cfg["week_hidden"] = found[0].isoformat()
+            save_config(cfg)
+        self.week_card.set_visible(False)
 
     def build_log_page(self):
         prev_b = Gtk.Button.new_from_icon_name("go-previous-symbolic")
@@ -7563,6 +8100,10 @@ class Window(Adw.ApplicationWindow):
         left.append(self.kind_card)
         self.survey_card = self.build_survey_card()
         left.append(self.survey_card)
+        self.appt_card = self.build_appointment_card()
+        left.append(self.appt_card)
+        self.week_card = self.build_week_card()
+        left.append(self.week_card)
         left.append(nav)
         left.append(self.calendar)
         left.append(self.month_summary)
@@ -8049,6 +8590,24 @@ class Window(Adw.ApplicationWindow):
         top = Gtk.Box(spacing=16)
         top.append(intro)
         top.append(add)
+        self.appt_row = Gtk.Box(spacing=12)
+        self.appt_row.add_css_class("card")
+        for side in ("top", "bottom", "start", "end"):
+            getattr(self.appt_row, "set_margin_" + side)(0)
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
+        for side in ("top", "bottom", "start"):
+            getattr(texts, "set_margin_" + side)(12)
+        head = Gtk.Label(label=tr("Next appointment"), xalign=0)
+        head.add_css_class("heading")
+        self.appt_row_text = Gtk.Label(xalign=0, wrap=True)
+        self.appt_row_text.add_css_class("dim-label")
+        texts.append(head)
+        texts.append(self.appt_row_text)
+        appt_b = Gtk.Button(label=tr("Open"), valign=Gtk.Align.CENTER)
+        appt_b.set_margin_end(12)
+        appt_b.connect("clicked", lambda *_: AppointmentWindow(self).present())
+        self.appt_row.append(texts)
+        self.appt_row.append(appt_b)
         self.events_list = Gtk.ListBox()
         self.events_list.set_selection_mode(Gtk.SelectionMode.NONE)
         self.events_list.add_css_class("boxed-list")
@@ -8060,7 +8619,7 @@ class Window(Adw.ApplicationWindow):
         col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
         for side in ("top", "bottom", "start", "end"):
             getattr(col, "set_margin_" + side)(16)
-        for wdg in (top, self.events_list, self.events_empty):
+        for wdg in (top, self.appt_row, self.events_list, self.events_empty):
             col.append(wdg)
         clamp = Adw.Clamp(maximum_size=760)
         clamp.set_child(col)
@@ -8546,6 +9105,9 @@ class Window(Adw.ApplicationWindow):
         if self.surveys.changed_on_disk():
             self.surveys.load()
             self.refresh_surveys()
+        if self.appointment.changed_on_disk():
+            self.appointment.load()
+            self.refresh_appointment()
         return True
 
     def insight(self):
@@ -8807,6 +9369,8 @@ class Window(Adw.ApplicationWindow):
         self.meds = MedicationStore()
         self.surveys = SurveyStore()
         self.refresh_surveys()
+        self.appointment = AppointmentStore()
+        self.refresh_appointment()
         self.link.store = self.store
         items = self.store.entries(self.selected)
         self.current = items[index] if index is not None and index < len(items) else None
@@ -8857,6 +9421,7 @@ class Window(Adw.ApplicationWindow):
             self.month_summary.set_text(tr("Nothing logged this month yet"))
         self.calendar.queue_draw()
         self.refresh_kind_word()
+        self.refresh_appointment()
 
         visible = self.stack.get_visible_child_name()
         if visible == "charts":
