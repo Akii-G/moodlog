@@ -38,6 +38,7 @@ import androidx.health.connect.client.PermissionController
 import io.github.akiig.moodlog.Backup
 import io.github.akiig.moodlog.BuildConfigVersion
 import io.github.akiig.moodlog.Day
+import io.github.akiig.moodlog.DoseLink
 import io.github.akiig.moodlog.Reminder
 import io.github.akiig.moodlog.trn
 import io.github.akiig.moodlog.LocalApp
@@ -147,6 +148,19 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
                 ActionRow(tr("Sync now"), enabled = ready, busy = app.sync.busy) { scope.launch { app.sync.run(app.store) } }
                 Text(app.sync.status, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
+            }
+
+            if (DoseLink.installed(context)) {
+                var doseAllowed by remember { mutableStateOf(DoseLink.allowed(context)) }
+                val askDose = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+                    doseAllowed = ok; if (ok) app.readDose()
+                }
+                Section(tr("Dose on this phone"), tr("Your medicines and doses from Dose, on the day and in the doctor report. Sottovoce only reads them; nothing leaves the phone.")) {
+                    if (doseAllowed) Text(tr("Sottovoce reads your medicines from Dose on this phone."),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 10.dp))
+                    else ActionRow(tr("Read my medicines from Dose")) { askDose.launch(DoseLink.PERMISSION) }
+                }
             }
 
             Section(tr("Health Connect"), tr("Sends sleep, steps and resting heart rate from Health Connect to Sottovoce on your PC, so you can compare them with your mood. Your watch or fitness app needs to share them with Health Connect.")) {

@@ -12,9 +12,12 @@
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <!-- Dose on the same phone: read your medicines and doses, only after you allow it. -->
+    <uses-permission android:name="io.github.akiig.dose.permission.READ_DOSES" />
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <package android:name="io.github.akiig.dose" />
     </queries>
 
     <application

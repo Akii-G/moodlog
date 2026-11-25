@@ -32,6 +32,10 @@ class AppStore(private val file: File?) {
     /** Medication from Dose on the PC (null when it has none): shown on the day and in the report. */
     var doseFeed by mutableStateOf<DoseFeed?>(null)
         private set
+    /** Medication from Dose on this phone, read directly when you allowed it (see DoseLink). */
+    var localDose by mutableStateOf<DoseFeed?>(null)
+    /** Where medication comes from: Dose on this phone if it's there, else Dose on the PC. */
+    val dose: DoseFeed? get() = localDose ?: doseFeed
 
     var onChange: (() -> Unit)? = null
 

@@ -95,6 +95,23 @@ class FeaturesTest {
         assertEquals(true, Dream.from(org.json.JSONObject(d.json().toString())).private)
     }
 
+    /** Dose on the same phone, read directly: the same feed the PC sends (marked, not taken, own amounts). */
+    @Test fun doseOnThisPhone() {
+        val doc = org.json.JSONObject("""{"medicines": [
+            {"id": "a", "name": "Depakin", "strength": "500 mg", "amount": 1, "unit": "pill",
+             "schedule": {"kind": "daily", "times": ["08:00", "20:00"], "start": "2026-11-20", "amounts": {"20:00": 0.5}}},
+            {"id": "n", "name": "Ibuprofen", "amount": 1, "unit": "pill", "schedule": {"kind": "needed", "times": []}}],
+          "doses": [{"id": "a@2026-11-20@08:00", "med": "a", "day": "2026-11-20", "time": "08:00", "status": "taken", "at": "08:05", "amount": 1},
+                    {"id": "x", "med": "n", "day": "2026-11-21", "time": "", "status": "taken", "at": "15:00", "amount": 1}],
+          "deleted": []}""")
+        val feed = DoseLink.feed(doc, java.time.LocalDate.parse("2026-11-21"))
+        assertEquals(listOf("Depakin 500 mg", "Ibuprofen"), feed.medicines.map { it.name })
+        assertTrue(feed.medicines.single { it.name == "Ibuprofen" }.asNeeded)
+        val day1 = feed.on("2026-11-20")
+        assertEquals(listOf("08:05 taken 1 pill", "20:00 pending ½ pill"), day1.map { "${it.time} ${it.status} ${it.amount}" })
+        assertEquals(3, feed.on("2026-11-21").size)       // two not marked, one taken when needed
+    }
+
     @Test fun doseFeed() {
         val o = org.json.JSONObject("""{"entries":[],"events":[],"deleted":[],"dose":{"medicines":[{"name":"A 50 mg","archived":false,"asNeeded":false}],
             "doses":[{"date":"2026-11-20","time":"08:00","status":"pending","amount":"1 pill","name":"A 50 mg"},

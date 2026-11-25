@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.4.0",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Dose on this phone: Sottovoce can now read your medicines straight from Dose on the same phone, without the PC. Allow it once in Settings → Dose on this phone; your doses then show on the day and in the doctor report."
+   ],
+   "it": [
+    "Dose su questo telefono: Sottovoce ora può leggere i tuoi farmaci direttamente da Dose sullo stesso telefono, senza il PC. Consentilo una volta in Impostazioni → Dose su questo telefono; le tue dosi compaiono poi nel giorno e nel resoconto per il medico."
+   ]
+  }
+ },
+ {
   "version": "2.3.0",
   "date": "2026-11-25",
   "items": {

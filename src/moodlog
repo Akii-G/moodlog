@@ -34,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.3.0"
+VERSION = "3.3.1"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -2887,8 +2887,9 @@ class DoseMedication:
                 if dose_due(s, day):
                     for t in s.get("times") or []:
                         if (m["id"], day.isoformat(), t) not in marked:
+                            own = (s.get("amounts") or {}).get(t) if isinstance(s.get("amounts"), dict) else None
                             self.doses.append((day, t, "pending", None,
-                                               dose_amount_text(float(m.get("amount") or 1), m.get("unit", "pill")),
+                                               dose_amount_text(float(own or m.get("amount") or 1), m.get("unit", "pill")),
                                                self.title(m), "dose"))
                 day += dt.timedelta(days=1)
         self.doses.sort()
@@ -2982,7 +2983,10 @@ def dose_events_path():
 def dose_change_text(detail):
     """"1½ pills · every day at 08:00" for a change in Dose."""
     s = detail.get("schedule") or {}
-    times = ", ".join(s.get("times") or [])
+    own = s.get("amounts") if isinstance(s.get("amounts"), dict) else {}
+    unit = detail.get("unit", "pill")
+    times = ", ".join(("%s (%s)" % (t, dose_amount_text(float(own[t]), unit)) if t in own else t)
+                      for t in s.get("times") or [])
     kind = s.get("kind")
     if kind == "needed":
         when = tr("when needed")
@@ -2992,7 +2996,9 @@ def dose_change_text(detail):
         when = tr("every %d days at %s") % (int(s.get("every") or 2), times)
     else:
         when = tr("every day at %s") % times
-    return "%s · %s" % (dose_amount_text(float(detail.get("amount") or 1), detail.get("unit", "pill")), when)
+    if own:          # each time has its amount in brackets already
+        return when[:1].upper() + when[1:]
+    return "%s · %s" % (dose_amount_text(float(detail.get("amount") or 1), unit), when)
 
 
 def import_dose_events(events, dose=None):
@@ -6837,6 +6843,9 @@ class BookWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.3.1", "2026-11-25", [
+        "Medication from Dose: a medicine taken in different amounts at different times (for example 1 in the morning and ½ in the evening) shows the right amount for each dose.",
+    ]),
     ("3.3.0", "2026-11-25", [
         "Dose, the sister app for your medicines: if Dose is on this PC, its doses show on the day and in the doctor report, and starting, changing or stopping a medicine in Dose adds a Medication change event here, once. Turn the events off in Customize.",
         "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication. On the day, a dose nobody marked now says Not taken, or Yet to take before its time.",
@@ -7008,6 +7017,9 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.4.0", "2026-11-25", [
+        "Dose on this phone: Sottovoce can now read your medicines straight from Dose on the same phone, without the PC. Allow it once in Settings → Dose on this phone; your doses then show on the day and in the doctor report.",
+    ]),
     ("2.3.0", "2026-11-25", [
         "Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.",
         "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication.",

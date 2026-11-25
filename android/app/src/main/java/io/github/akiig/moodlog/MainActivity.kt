@@ -35,6 +35,14 @@ class AppState private constructor(app: Application) {
     var openAppointment by androidx.compose.runtime.mutableStateOf(false)
     var backupStatus by androidx.compose.runtime.mutableStateOf("")
 
+    /** Reads Dose on this phone, if it's there and you allowed it (off the main thread). */
+    fun readDose() {
+        scope.launch {
+            val feed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { DoseLink.read(context) }
+            store.localDose = feed
+        }
+    }
+
     // Customize your experience (state, so the screens follow at once)
     var showDreams by androidx.compose.runtime.mutableStateOf(prefs.showDreams)
         private set
@@ -150,6 +158,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        state.readDose()
         state.sync.syncSoon(state.store, 0)
     }
 }

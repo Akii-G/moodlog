@@ -88,8 +88,8 @@ fun DayScreen(day: String, startAdding: Boolean = false, onBack: () -> Unit) {
                 }
                 ActionRow(tr("Add an event, e.g. a medication change")) { addingEvent = true }
             }
-            val doses = store.doseFeed?.on(day) ?: emptyList()
-            if (doses.isNotEmpty()) Section(tr("Medication"), tr("From Dose on your PC.")) {
+            val doses = store.dose?.on(day) ?: emptyList()
+            if (doses.isNotEmpty()) Section(tr("Medication"), if (store.localDose != null) tr("From Dose on this phone.") else tr("From Dose on your PC.")) {
                 doses.forEachIndexed { i, d ->
                     if (i > 0) Line()
                     Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,

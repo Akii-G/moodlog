@@ -4,6 +4,33 @@ Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their 
 
 ## Sottovoce for the PC
 
+### 3.3.1 (2026-11-25)
+
+- Medication from Dose: a medicine taken in different amounts at different times (for example 1 in the morning and ½ in the evening) shows the right amount for each dose.
+
+### 3.3.0 (2026-11-25)
+
+- Dose, the sister app for your medicines: if Dose is on this PC, its doses show on the day and in the doctor report, and starting, changing or stopping a medicine in Dose adds a Medication change event here, once. Turn the events off in Customize.
+- Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication. On the day, a dose nobody marked now says Not taken, or Yet to take before its time.
+
+### 3.2.0 (2026-11-25)
+
+- Report for your doctor: two new periods, the last 7 days and the last 2 weeks, handy before a check-up.
+
+### 3.1.0 (2026-11-25)
+
+- Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the phones, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Customize.
+- Your diary as a book: Export → Your diary as a book (.pdf). Your notes month by month, with the mood faces, feeling words, activities and events, laid out as a PDF to keep or print. Private moments stay out unless you choose to include them.
+
+### 3.0.2 (2026-11-24)
+
+- Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the Log shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with your phones.
+- Your week, gently: on Sunday evening and on Monday, a few calm words about your week on the Log — days logged, the usual mood, your best day. No scores; turn it off in Customize.
+
+### 3.0.1 (2026-11-23)
+
+- Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.
+
 ### 3.0.0 (2026-11-22)
 
 - Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data, settings and phone sync stay exactly as they were.
@@ -160,6 +187,53 @@ Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their 
 
 ## Sottovoce for iPhone
 
+### 2.3.0 (2026-11-25)
+
+- Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.
+- Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication.
+
+### 2.2.0 (2026-11-25)
+
+- Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording.
+
+### 2.1.0 (2026-11-25)
+
+- Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.
+- Your diary as a book: in Charts, Export → Your diary as a book makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them.
+
+### 2.0.7 (2026-11-25)
+
+- Backup: when you choose the backup file, Sottovoce now asks for one more tap on the file you just saved. iOS only lets an app keep updating a file it has opened that way, so the backup no longer stops working after the app restarts.
+
+### 2.0.6 (2026-11-25)
+
+- Backup: no more warning when you close the app. iOS often won't let an app that's leaving write to iCloud Drive, so Sottovoce now writes the backup while it's open (a few seconds after each change) and, if something was left over, as soon as you open it again.
+
+### 2.0.5 (2026-11-25)
+
+- Backup: the warning that the backup file can't be reached no longer appears by mistake when you leave the app. It now shows only when a backup really failed, says why, and Sottovoce tries again when you come back. Backing up while leaving the app also gets a little more time to finish.
+
+### 2.0.4 (2026-11-24)
+
+- Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about.
+
+### 2.0.3 (2026-11-24)
+
+- Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.
+- Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings.
+
+### 2.0.2 (2026-11-23)
+
+- Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day.
+
+### 3.0.1 (2026-11-23)
+
+- Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.
+
+### 2.0.1 (2026-11-22)
+
+- Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it.
+
 ### 2.0.0 (2026-11-22)
 
 - Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data and sync stay exactly as they were.
@@ -253,6 +327,45 @@ Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their 
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Sottovoce on your PC over your home Wi-Fi.
 
 ## Sottovoce for Android
+
+### 2.4.0 (2026-11-25)
+
+- Dose on this phone: Sottovoce can now read your medicines straight from Dose on the same phone, without the PC. Allow it once in Settings → Dose on this phone; your doses then show on the day and in the doctor report.
+
+### 2.3.0 (2026-11-25)
+
+- Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.
+- Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication.
+
+### 2.2.0 (2026-11-25)
+
+- Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording.
+
+### 2.1.0 (2026-11-25)
+
+- Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.
+- Your diary as a book: in Charts, the book button makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them.
+
+### 2.0.4 (2026-11-24)
+
+- Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about.
+
+### 2.0.3 (2026-11-24)
+
+- Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the diary shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with the PC.
+- Your week, gently: on Sunday evening and on Monday, a few calm words about your week in the diary — days logged, the usual mood, your best day. No scores; turn it off in Settings.
+
+### 2.0.2 (2026-11-23)
+
+- Search: the magnifying glass next to + in the diary. Read back every note, newest first, or find words in your notes, feeling words and events, without minding capitals or accents. Tap a result to open its day.
+
+### 3.0.1 (2026-11-23)
+
+- Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it.
+
+### 2.0.1 (2026-11-22)
+
+- Sync: when the app opened, two syncs could start at once and the first was cut off, showing “The PC can't be reached… (cancelled)” even with the PC on. Now syncs never interrupt each other, and a change made during a sync is sent right after it.
 
 ### 2.0.0 (2026-11-22)
 

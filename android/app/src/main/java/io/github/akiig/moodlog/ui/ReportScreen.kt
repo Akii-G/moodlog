@@ -67,7 +67,7 @@ fun ReportDialog(onClose: () -> Unit) {
         return withContext(Dispatchers.Default) {
             Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams,
                 surveys && app.showQuestionnaires, if (points) app.store.openPoints else emptyList(),
-                if (medication) app.store.doseFeed else null).write(file)
+                if (medication) app.store.dose else null).write(file)
         }
     }
 
@@ -120,7 +120,7 @@ fun ReportDialog(onClose: () -> Unit) {
                 Line()
                 SwitchRow(tr("Include the things I want to talk about"), points) { points = it }
             }
-            if (app.store.doseFeed != null) {
+            if (app.store.dose != null) {
                 Line()
                 SwitchRow(tr("Include medication (from Dose)"), medication) { medication = it }
             }

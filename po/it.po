@@ -2852,3 +2852,9 @@ msgstr "Dose, l'app sorella per i tuoi farmaci: quando Dose è sul tuo PC, le su
 
 msgid "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication."
 msgstr "Report per il medico: per ogni farmaco, quante dosi sono state prese, saltate, non prese e ancora da prendere oggi; i farmaci che non prendi più sono elencati a parte, in Farmaci precedenti."
+
+msgid "Dose on this phone: Sottovoce can now read your medicines straight from Dose on the same phone, without the PC. Allow it once in Settings → Dose on this phone; your doses then show on the day and in the doctor report."
+msgstr "Dose su questo telefono: Sottovoce ora può leggere i tuoi farmaci direttamente da Dose sullo stesso telefono, senza il PC. Consentilo una volta in Impostazioni → Dose su questo telefono; le tue dosi compaiono poi nel giorno e nel resoconto per il medico."
+
+msgid "Medication from Dose: a medicine taken in different amounts at different times (for example 1 in the morning and ½ in the evening) shows the right amount for each dose."
+msgstr "Farmaci da Dose: un farmaco preso in quantità diverse a orari diversi (per esempio 1 la mattina e ½ la sera) mostra la quantità giusta per ogni dose."
