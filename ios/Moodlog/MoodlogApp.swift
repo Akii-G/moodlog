@@ -73,11 +73,12 @@ struct MoodlogApp: App {
                         Reminder.plan(store)
                         SurveyReminder.plan(store)
                         AppointmentReminder.plan(store)
-                        if Backup.lastError != nil { backupSoon(store) }   // try again after a failed write
+                        // changes the file doesn't have yet, or a write that failed: try now
+                        if Backup.pending || Backup.lastError != nil { backupSoon(store) }
                     } else if newPhase == .background {
-                        // ask iOS for a little time, so the write to iCloud Drive can finish
+                        // only if something changed in the last seconds; ask iOS for a little time
                         let id = UIApplication.shared.beginBackgroundTask(withName: "backup")
-                        Backup.write(store)
+                        Backup.writeLeaving(store)
                         if id != .invalid { UIApplication.shared.endBackgroundTask(id) }
                     }
                 }
@@ -90,6 +91,7 @@ extension MoodlogApp {
     @MainActor
     func backupSoon(_ store: AppStore) {
         guard Backup.placeName != nil else { return }
+        Backup.pending = true
         backupTask?.cancel()
         backupTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 4_000_000_000)

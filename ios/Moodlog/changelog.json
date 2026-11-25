@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.6",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Backup: no more warning when you close the app. iOS often won't let an app that's leaving write to iCloud Drive, so Sottovoce now writes the backup while it's open (a few seconds after each change) and, if something was left over, as soon as you open it again."
+   ],
+   "it": [
+    "Backup: niente più avvisi quando chiudi l'app. iOS spesso non lascia scrivere su iCloud Drive a un'app che si sta chiudendo, quindi ora Sottovoce fa il backup mentre è aperta (pochi secondi dopo ogni modifica) e, se è rimasto qualcosa, appena la riapri."
+   ]
+  }
+ },
+ {
   "version": "2.0.5",
   "date": "2026-11-25",
   "items": {

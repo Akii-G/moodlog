@@ -68,6 +68,7 @@ enum Backup {
 
     static func forget() {
         picked = nil
+        pending = false
         UserDefaults.standard.removeObject(forKey: "backupError")
         UserDefaults.standard.removeObject(forKey: key)
         UserDefaults.standard.removeObject(forKey: "backupFileName")
@@ -120,12 +121,32 @@ enum Backup {
     @discardableResult
     static func write(_ store: AppStore) -> Bool { writeError(store) == nil }
 
+    /// True when there are changes the backup file doesn't have yet.
+    static var pending: Bool {
+        get { UserDefaults.standard.bool(forKey: "backupPending") }
+        set { UserDefaults.standard.set(newValue, forKey: "backupPending") }
+    }
+
+    /// The last chance while the app goes to the background. iOS often won't let an app that is
+    /// leaving write to a file in iCloud Drive, so a failure here is not shown as a problem: the
+    /// changes stay pending and are written as soon as the app is open again.
+    @MainActor
+    static func writeLeaving(_ store: AppStore) {
+        guard placeName != nil, pending else { return }
+        if tryWrite(store) == nil {
+            pending = false
+            _ = note(nil)
+        }
+    }
+
     /// Writes the backup over the saved file; nil if it worked, otherwise why not.
     /// The file is overwritten in place, not replaced: Moodlog may change that one file, but
     /// not create new ones next to it, which is what an "atomic" save would need.
     @MainActor
     static func writeError(_ store: AppStore) -> String? {
-        note(tryWrite(store))
+        let error = note(tryWrite(store))
+        if error == nil { pending = false }
+        return error
     }
 
     @MainActor

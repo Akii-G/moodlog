@@ -2574,3 +2574,6 @@ msgstr "Prima dell'appuntamento: scegli le notifiche 1 settimana, 3, 2 o 1 giorn
 
 msgid "Backup: the warning that the backup file can't be reached no longer appears by mistake when you leave the app. It now shows only when a backup really failed, says why, and Sottovoce tries again when you come back. Backing up while leaving the app also gets a little more time to finish."
 msgstr "Backup: l'avviso che il file di backup non si raggiunge non compare più per sbaglio quando esci dall'app. Ora appare solo quando un backup non è davvero riuscito, dice perché, e Sottovoce riprova quando torni. Il backup fatto mentre esci dall'app ha anche un po' più di tempo per finire."
+
+msgid "Backup: no more warning when you close the app. iOS often won't let an app that's leaving write to iCloud Drive, so Sottovoce now writes the backup while it's open (a few seconds after each change) and, if something was left over, as soon as you open it again."
+msgstr "Backup: niente più avvisi quando chiudi l'app. iOS spesso non lascia scrivere su iCloud Drive a un'app che si sta chiudendo, quindi ora Sottovoce fa il backup mentre è aperta (pochi secondi dopo ogni modifica) e, se è rimasto qualcosa, appena la riapri."

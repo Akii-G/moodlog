@@ -6506,6 +6506,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.6", "2026-11-25", [
+        "Backup: no more warning when you close the app. iOS often won't let an app that's leaving write to iCloud Drive, so Sottovoce now writes the backup while it's open (a few seconds after each change) and, if something was left over, as soon as you open it again.",
+    ]),
     ("2.0.5", "2026-11-25", [
         "Backup: the warning that the backup file can't be reached no longer appears by mistake when you leave the app. It now shows only when a backup really failed, says why, and Sottovoce tries again when you come back. Backing up while leaving the app also gets a little more time to finish.",
     ]),
