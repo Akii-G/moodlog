@@ -68,6 +68,7 @@ enum Backup {
 
     static func forget() {
         picked = nil
+        UserDefaults.standard.removeObject(forKey: "backupError")
         UserDefaults.standard.removeObject(forKey: key)
         UserDefaults.standard.removeObject(forKey: "backupFileName")
     }
@@ -97,9 +98,22 @@ enum Backup {
         }
     }
 
-    /// True when a file was chosen but Moodlog can no longer reach it (for example after
-    /// installing a new version with a sideloading app, which can change how iOS sees the app).
-    static var lostFile: Bool { placeName != nil && file() == nil }
+    /// Why the last attempt to write the backup failed, or nil when it worked. Settings shows a
+    /// warning only for this: looking the file up again just to draw the screen could fail for a
+    /// moment (for example while the app goes to the background) even though the backups work.
+    static var lastError: String? {
+        guard placeName != nil else { return nil }
+        return UserDefaults.standard.string(forKey: "backupError")
+    }
+
+    private static func note(_ error: String?) -> String? {
+        if let error {
+            UserDefaults.standard.set(error, forKey: "backupError")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "backupError")
+        }
+        return error
+    }
 
     /// Writes the backup over the saved file; true if it worked.
     @MainActor
@@ -111,6 +125,11 @@ enum Backup {
     /// not create new ones next to it, which is what an "atomic" save would need.
     @MainActor
     static func writeError(_ store: AppStore) -> String? {
+        note(tryWrite(store))
+    }
+
+    @MainActor
+    private static func tryWrite(_ store: AppStore) -> String? {
         guard let url = file() else {
             return tr("Sottovoce can't reach the backup file any more (%@). Tap Choose another file… and save it again.",
                       problem ?? tr("No backup file chosen."))

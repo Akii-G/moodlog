@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage("reminderTime") private var reminderTime = "20:30"
     @AppStorage("kindWord") private var kindWord = true
     @AppStorage("weekCard") private var weekCard = true
+    @AppStorage("backupError") private var backupError = ""   // set by Backup when a write fails
     @AppStorage("showQuestionnaires") private var showQuestionnaires = true
     @AppStorage("lastBackup") private var lastBackup = ""
     @State private var backupPlace = Backup.placeName
@@ -223,8 +224,8 @@ struct SettingsView: View {
 
                 Section {
                     if let place = backupPlace {
-                        if Backup.lostFile {
-                            Label(tr("Sottovoce can't reach the backup file any more. Tap Choose another file… and save it again."),
+                        if !backupError.isEmpty {
+                            Label(tr("The last backup didn't work (%@). This often happens after installing an update with a sideloading app: tap Choose another file… and save it again in the same place, replacing the old one.", backupError),
                                   systemImage: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
                         }

@@ -2571,3 +2571,6 @@ msgstr "La tua settimana, con calma: la domenica sera e il lunedì, poche parole
 
 msgid "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about."
 msgstr "Prima dell'appuntamento: scegli le notifiche 1 settimana, 3, 2 o 1 giorno prima dell'appuntamento, o il giorno stesso, quante ne vuoi. Dicono solo che hai un appuntamento, mai con chi. Toccane una per aprire la lista delle cose di cui parlare."
+
+msgid "Backup: the warning that the backup file can't be reached no longer appears by mistake when you leave the app. It now shows only when a backup really failed, says why, and Sottovoce tries again when you come back. Backing up while leaving the app also gets a little more time to finish."
+msgstr "Backup: l'avviso che il file di backup non si raggiunge non compare più per sbaglio quando esci dall'app. Ora appare solo quando un backup non è davvero riuscito, dice perché, e Sottovoce riprova quando torni. Il backup fatto mentre esci dall'app ha anche un po' più di tempo per finire."

@@ -6506,6 +6506,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.0.5", "2026-11-25", [
+        "Backup: the warning that the backup file can't be reached no longer appears by mistake when you leave the app. It now shows only when a backup really failed, says why, and Sottovoce tries again when you come back. Backing up while leaving the app also gets a little more time to finish.",
+    ]),
     ("2.0.4", "2026-11-24", [
         "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about.",
     ]),

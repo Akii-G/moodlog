@@ -73,8 +73,12 @@ struct MoodlogApp: App {
                         Reminder.plan(store)
                         SurveyReminder.plan(store)
                         AppointmentReminder.plan(store)
+                        if Backup.lastError != nil { backupSoon(store) }   // try again after a failed write
                     } else if newPhase == .background {
+                        // ask iOS for a little time, so the write to iCloud Drive can finish
+                        let id = UIApplication.shared.beginBackgroundTask(withName: "backup")
                         Backup.write(store)
+                        if id != .invalid { UIApplication.shared.endBackgroundTask(id) }
                     }
                 }
         }

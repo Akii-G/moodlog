@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.5",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Backup: the warning that the backup file can't be reached no longer appears by mistake when you leave the app. It now shows only when a backup really failed, says why, and Sottovoce tries again when you come back. Backing up while leaving the app also gets a little more time to finish."
+   ],
+   "it": [
+    "Backup: l'avviso che il file di backup non si raggiunge non compare più per sbaglio quando esci dall'app. Ora appare solo quando un backup non è davvero riuscito, dice perché, e Sottovoce riprova quando torni. Il backup fatto mentre esci dall'app ha anche un po' più di tempo per finire."
+   ]
+  }
+ },
+ {
   "version": "2.0.4",
   "date": "2026-11-24",
   "items": {

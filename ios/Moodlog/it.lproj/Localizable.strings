@@ -310,7 +310,6 @@
 "Not taken yet" = "Non ancora presa";
 "Not logged" = "Non registrata";
 "Sottovoce can't reach the backup file any more (%@). Tap Choose another file… and save it again." = "Sottovoce non riesce più a raggiungere il file di backup (%@). Tocca Scegli un altro file… e salvalo di nuovo.";
-"Sottovoce can't reach the backup file any more. Tap Choose another file… and save it again." = "Sottovoce non riesce più a raggiungere il file di backup. Tocca Scegli un altro file… e salvalo di nuovo.";
 
 /* Customize */
 "All of them, in a grid" = "Tutti, in una griglia";
@@ -468,3 +467,4 @@
 "%@ thing to talk about." = "%@ cosa di cui parlare.";
 "%@ things to talk about." = "%@ cose di cui parlare.";
 "A notification on this iPhone: the days before at 18:00, on the day in the morning. It says only that you have an appointment, not with whom." = "Una notifica su questo iPhone: i giorni prima alle 18:00, il giorno stesso al mattino. Dice solo che hai un appuntamento, non con chi.";
+"The last backup didn't work (%@). This often happens after installing an update with a sideloading app: tap Choose another file… and save it again in the same place, replacing the old one." = "L'ultimo backup non è riuscito (%@). Succede spesso dopo aver installato un aggiornamento con un'app di sideloading: tocca Scegli un altro file… e salvalo di nuovo nello stesso posto, sostituendo quello vecchio.";
