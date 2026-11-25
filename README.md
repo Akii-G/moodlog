@@ -2,6 +2,10 @@
 
 *Formerly called Moodlog. Same app, new name: your data and sync carry on as before.*
 
+> **New: [Dose](https://github.com/Akii-G/dose-tracker)**, Sottovoce's sister app for your
+> medicines. It reminds you when a dose is due and remembers what you took, on Linux, Windows,
+> iPhone and Android. Sottovoce reads it on the PC, so your doses show up in the doctor report.
+
 > **The Windows version is in beta.** It's new and hasn't been used much yet, so
 > something may not work as it should. If you find a problem, please
 > [open an issue](https://github.com/Akii-G/sottovoce/issues).
