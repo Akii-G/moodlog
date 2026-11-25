@@ -4,6 +4,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
@@ -83,6 +87,29 @@ fun DayScreen(day: String, startAdding: Boolean = false, onBack: () -> Unit) {
                     Line()
                 }
                 ActionRow(tr("Add an event, e.g. a medication change")) { addingEvent = true }
+            }
+            val doses = store.doseFeed?.on(day) ?: emptyList()
+            if (doses.isNotEmpty()) Section(tr("Medication"), tr("From Dose on your PC.")) {
+                doses.forEachIndexed { i, d ->
+                    if (i > 0) Line()
+                    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val colour = when {
+                            d.status == "taken" -> Color(0xFF34C759)
+                            d.status == "skipped" -> Color(0xFF8E8E93)
+                            d.missed() -> Color(0xFFCF3F3F)
+                            else -> Color(0xFFFF9F0A)
+                        }
+                        Box(Modifier.size(12.dp).background(colour, CircleShape))
+                        Column(Modifier.weight(1f)) {
+                            Text(d.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                            Text(listOf(d.time, d.amount).filter { it.isNotEmpty() }.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(d.statusText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                            color = if (d.status == "skipped") MaterialTheme.colorScheme.onSurfaceVariant else colour)
+                    }
+                }
             }
             if (LocalApp.current.showDreams) Section(tr("Dreams")) {
                 for (d in store.dreamsOn(day)) {

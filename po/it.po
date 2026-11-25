@@ -2722,3 +2722,133 @@ msgstr "Report per il medico: due nuovi periodi, gli ultimi 7 giorni e le ultime
 
 msgid "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording."
 msgstr "Report per il medico: due nuovi periodi, gli ultimi 7 giorni e le ultime 2 settimane, e Scegli le date per qualsiasi periodo. Il report ora è identico a quello del PC: stesse sezioni, grafici, tabelle e parole."
+
+msgid "As marked in Dose."
+msgstr "Come segnato in Dose."
+
+msgid "As logged in Apple Health."
+msgstr "Come registrato in Salute di Apple."
+
+msgid "As marked in Dose and logged in Apple Health."
+msgstr "Come segnato in Dose e registrato in Salute di Apple."
+
+msgid "Not taken: doses that were due and never marked. Yet to take: due later today."
+msgstr "Non prese: dosi previste e mai segnate. Da prendere: previste più tardi oggi."
+
+msgid "Not taken"
+msgstr "Non presa"
+
+msgid "Yet to take"
+msgstr "Da prendere"
+
+msgid "Previous medication"
+msgstr "Farmaci precedenti"
+
+msgid "pill"
+msgstr "compressa"
+
+msgid "pills"
+msgstr "compresse"
+
+msgid "capsule"
+msgstr "capsula"
+
+msgid "capsules"
+msgstr "capsule"
+
+msgid "drop"
+msgstr "goccia"
+
+msgid "drops"
+msgstr "gocce"
+
+msgid "puff"
+msgstr "spruzzo"
+
+msgid "puffs"
+msgstr "spruzzi"
+
+msgid "sachet"
+msgstr "bustina"
+
+msgid "sachets"
+msgstr "bustine"
+
+msgid "patch"
+msgstr "cerotto"
+
+msgid "patches"
+msgstr "cerotti"
+
+msgid "injection"
+msgstr "iniezione"
+
+msgid "injections"
+msgstr "iniezioni"
+
+msgid "application"
+msgstr "applicazione"
+
+msgid "applications"
+msgstr "applicazioni"
+
+msgid "when needed"
+msgstr "al bisogno"
+
+msgid "every %d days at %s"
+msgstr "ogni %d giorni alle %s"
+
+msgid "every day at %s"
+msgstr "ogni giorno alle %s"
+
+msgid "Started %s"
+msgstr "Iniziato %s"
+
+msgid "New dose of %s"
+msgstr "Nuova dose di %s"
+
+msgid "Stopped %s"
+msgstr "Sospeso %s"
+
+msgid "Started %s again"
+msgstr "Ripreso %s"
+
+msgid "From Dose and from Apple Health"
+msgstr "Da Dose e da Salute di Apple"
+
+msgid "From Dose"
+msgstr "Da Dose"
+
+msgid "Include medication (from Dose and Apple Health)"
+msgstr "Includi i farmaci (da Dose e Salute di Apple)"
+
+msgid "Doses from Dose, and from Apple Health on your iPhone."
+msgstr "Le dosi da Dose, e da Salute di Apple sull'iPhone."
+
+msgid "Medication changes from Dose"
+msgstr "Cambi di terapia da Dose"
+
+msgid "Starting, changing or stopping a medicine in Dose adds a Medication change event here, once. Delete one and it stays deleted."
+msgstr "Iniziare, cambiare o sospendere un farmaco in Dose aggiunge qui un evento Cambio di terapia, una volta sola. Se lo elimini, resta eliminato."
+
+msgid "%d not taken"
+msgid_plural "%d not taken"
+msgstr[0] "%d non presa"
+msgstr[1] "%d non prese"
+
+msgid "%d yet to take"
+msgid_plural "%d yet to take"
+msgstr[0] "%d da prendere"
+msgstr[1] "%d da prendere"
+
+msgid "Dose, the sister app for your medicines: if Dose is on this PC, its doses show on the day and in the doctor report, and starting, changing or stopping a medicine in Dose adds a Medication change event here, once. Turn the events off in Customize."
+msgstr "Dose, l'app sorella per i tuoi farmaci: se Dose è su questo PC, le sue dosi compaiono nel giorno e nel report per il medico, e iniziare, cambiare o sospendere un farmaco in Dose aggiunge qui un evento Cambio di terapia, una volta sola. Puoi disattivare gli eventi in Personalizza."
+
+msgid "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication. On the day, a dose nobody marked now says Not taken, or Yet to take before its time."
+msgstr "Report per il medico: per ogni farmaco, quante dosi sono state prese, saltate, non prese e ancora da prendere oggi; i farmaci che non prendi più sono elencati a parte, in Farmaci precedenti. Nel giorno, una dose che nessuno ha segnato ora dice Non presa, o Da prendere prima del suo orario."
+
+msgid "Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report."
+msgstr "Dose, l'app sorella per i tuoi farmaci: quando Dose è sul tuo PC, le sue dosi arrivano con la sincronizzazione e compaiono nel giorno e nel report per il medico."
+
+msgid "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication."
+msgstr "Report per il medico: per ogni farmaco, quante dosi sono state prese, saltate, non prese e ancora da prendere oggi; i farmaci che non prendi più sono elencati a parte, in Farmaci precedenti."

@@ -95,6 +95,21 @@ class FeaturesTest {
         assertEquals(true, Dream.from(org.json.JSONObject(d.json().toString())).private)
     }
 
+    @Test fun doseFeed() {
+        val o = org.json.JSONObject("""{"entries":[],"events":[],"deleted":[],"dose":{"medicines":[{"name":"A 50 mg","archived":false,"asNeeded":false}],
+            "doses":[{"date":"2026-11-20","time":"08:00","status":"pending","amount":"1 pill","name":"A 50 mg"},
+                     {"date":"2026-11-25","time":"23:59","status":"pending","amount":"1 pill","name":"A 50 mg"},
+                     {"date":"2026-11-20","time":"09:00","status":"weird","amount":"","name":"A 50 mg"}]}}""")
+        val s = AppStore(null)
+        s.absorb(SyncState.from(o))
+        val feed = s.doseFeed!!
+        assertEquals(2, feed.doses.size)
+        val now = java.time.LocalDateTime.of(2026, 11, 25, 12, 0)
+        assertTrue(feed.doses[0].missed(now))
+        assertFalse(feed.doses[1].missed(now))
+        assertEquals(1, feed.on("2026-11-20").size)
+    }
+
     @Test fun activitiesAndBook() {
         assertEquals(16, Activity.keys.size)
         assertEquals(listOf("work", "walk"), Activity.clean(listOf("Walk", "work", "nope")))

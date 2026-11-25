@@ -32,8 +32,8 @@ assert [d[2] for d in meds.doses] == ["taken", "skipped", "taken"]
 assert m.dose_text(meds.on(dt.date(2026, 11, 18))[0]) == "08:10 Sertraline 50 mg"
 assert m.dose_text(meds.on(dt.date(2026, 11, 19))[1]) == "13:30 Ibuprofen; with food 1"
 assert m.MedicationStore().summary(dt.date(2026, 11, 1), dt.date(2026, 11, 30)) == [
-    ("Ibuprofen; with food", 1, 0, dt.date(2026, 11, 19), dt.date(2026, 11, 19)),
-    ("Sertraline", 1, 1, dt.date(2026, 11, 18), dt.date(2026, 11, 19))]
+    ("Ibuprofen; with food", 1, 0, 0, 0, dt.date(2026, 11, 19), dt.date(2026, 11, 19)),
+    ("Sertraline", 1, 1, 0, 0, dt.date(2026, 11, 18), dt.date(2026, 11, 19))]
 
 # A later send covers 19-20 November only: the dose deleted in Health goes, the 18th stays.
 later = "\n".join(["med_range;2026-11-19;2026-11-20",
@@ -58,13 +58,13 @@ assert m.export_report(out, store, events, health, dt.date(2026, 11, 1), dt.date
 with_meds = os.path.getsize(out)
 m.export_report(out, store, events, health, dt.date(2026, 11, 1), dt.date(2026, 11, 20))
 assert with_meds > os.path.getsize(out), "the medication section adds to the PDF"
-# A dose not answered yet is kept and shown, but not counted in the report.
+# A dose not answered: yet to take on its day before its time, not taken after.
 ok, _ = m.store_health_lines(("med_range;2026-11-21;2026-11-21\ndose;%s;pending;1;count;Litio" % local("2026-11-21", 21, 30)).encode())
 meds = m.MedicationStore()
 assert meds.on(dt.date(2026, 11, 21))[0][2] == "pending"
-assert m.dose_status(meds.on(dt.date(2026, 11, 21))[0], today=dt.date(2026, 11, 21)) == "Not taken yet"
-assert m.dose_status(meds.on(dt.date(2026, 11, 21))[0], today=dt.date(2026, 11, 22)) == "Not logged"
+assert m.dose_status(meds.on(dt.date(2026, 11, 21))[0], today=dt.date(2026, 11, 21)) == "Yet to take"
+assert m.dose_status(meds.on(dt.date(2026, 11, 21))[0], today=dt.date(2026, 11, 22)) == "Not taken"
 assert m.dose_amount(meds.on(dt.date(2026, 11, 21))[0]) == "× 1"
-assert all(r[0] != "Litio" for r in meds.summary(dt.date(2026, 11, 1), dt.date(2026, 11, 30)))
+assert [r for r in meds.summary(dt.date(2026, 11, 1), dt.date(2026, 11, 30)) if r[0] == "Litio"][0][3:5] == (1, 0)
 assert "medications.json" in m.CONTENT_FILES
 print("medications OK")

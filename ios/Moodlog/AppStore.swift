@@ -15,6 +15,8 @@ final class AppStore {
     var appointment: Appointment?
     var points: [TalkPoint] = []
     var deleted: [Tombstone] = []
+    /// Medication from Dose on the PC (nil when it has none): shown on the day and in the report.
+    var doseFeed: DoseFeed?
 
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
     @ObservationIgnored private let fileURL: URL
@@ -27,6 +29,7 @@ final class AppStore {
         var surveys: [Survey]?  // optional: files saved by 1.7 and older have none
         var appointment: Appointment?
         var points: [TalkPoint]?  // optional: files saved by 2.0.2 and older have none
+        var dose: DoseFeed?
     }
 
     init() {
@@ -46,11 +49,12 @@ final class AppStore {
         appointment = saved.appointment
         points = saved.points ?? []
         deleted = saved.deleted
+        doseFeed = saved.dose
     }
 
     func save() {
         let saved = Saved(entries: entries, events: events, deleted: deleted, dreams: dreams, surveys: surveys,
-                          appointment: appointment, points: points)
+                          appointment: appointment, points: points, dose: doseFeed)
         if let data = try? JSONEncoder().encode(saved) {
             try? data.write(to: fileURL, options: .atomic)
         }
@@ -286,6 +290,7 @@ final class AppStore {
     @discardableResult
     func absorb(_ other: SyncState) -> Int {
         var changes = 0
+        if let feed = other.dose, feed != doseFeed { doseFeed = feed; save() }
         var tombs: [String: Tombstone] = [:]
         for t in deleted + other.deleted {
             if let old = tombs[t.id], old.deleted >= t.deleted { continue }

@@ -34,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.2.0"
+VERSION = "3.3.0"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -2025,46 +2025,54 @@ def export_report(path, store, events, health, start, end, include_notes=False,
             cr.stroke()
         pdf.y += 12
 
-    # ---- medication (from Apple Health)
+    # ---- medication (from Dose and Apple Health): current ones, then the ones no longer taken
     med_rows = meds.summary(start, end) if meds else []
     if med_rows:
-        pdf.ensure(80)
-        pdf.text(tr("Medication"), M, pdf.y, 12, ink["ink"], bold=True)
-        pdf.y += 20
-        note = tr("As logged in Apple Health. Doses that were neither ticked as taken nor as "
-                  "skipped are not counted.")
-        _w, h = pdf.text(note, M, 0, 8, measure=True, width=W - 2 * M)
-        pdf.text(note, M, pdf.y, 8, ink["muted"], width=W - 2 * M)
-        pdf.y += h + 8
-        colx = [M, M + 210, M + 270, M + 330, M + 420]
-        heads = [tr("Medication"), tr("Doses taken"), tr("Doses skipped"), tr("First in period"),
-                 tr("Last in period")]
+        current = [r for r in med_rows if not meds.meds.get(r[0], {}).get("archived")]
+        previous = [r for r in med_rows if meds.meds.get(r[0], {}).get("archived")]
+        sources = meds.sources() if hasattr(meds, "sources") else ["health"]
+        note = {("dose",): tr("As marked in Dose."), ("health",): tr("As logged in Apple Health."),
+                }.get(tuple(sources), tr("As marked in Dose and logged in Apple Health."))
+        note += " " + tr("Not taken: doses that were due and never marked. Yet to take: due later today.")
+        colx = [M, M + 182, M + 232, M + 282, M + 334, M + 390, M + 452]
+        heads = [tr("Medication"), tr("Taken"), tr("Skipped"), tr("Not taken"), tr("Yet to take"),
+                 tr("First in period"), tr("Last in period")]
 
         def med_head():
             for x, h_ in zip(colx, heads):
-                pdf.text(h_, x, pdf.y, 7.5, ink["muted"], bold=True)
-            pdf.y += 14
+                pdf.text(h_, x, pdf.y, 7.5, ink["muted"], bold=True, width=58 if x > colx[0] else None)
+            pdf.y += 22
             src(cr, ink["axis"])
             cr.set_line_width(0.6)
             cr.move_to(M, pdf.y - 3)
             cr.line_to(W - M, pdf.y - 3)
             cr.stroke()
-        med_head()
-        for name, taken, skipped, first, last in med_rows:
-            info = meds.meds.get(name, {})
-            label = name + (" · " + tr("as needed") if info.get("as_needed") else "") + \
-                (" · " + tr("no longer taken") if info.get("archived") else "")
-            _w, h = pdf.text(label, colx[0], 0, 8.5, measure=True, width=200)
-            if pdf.ensure(h + 8):
-                med_head()
-            y = pdf.y
-            pdf.text(label, colx[0], y, 8.5, ink["ink"], width=200)
-            pdf.text(str(taken), colx[1], y, 8.5, ink["ink"])
-            pdf.text(str(skipped), colx[2], y, 8.5, ink["ink"])
-            pdf.text(fmt_date(first, "%-d %b %Y"), colx[3], y, 8.5, ink["ink"])
-            pdf.text(fmt_date(last, "%-d %b %Y"), colx[4], y, 8.5, ink["ink"])
-            pdf.y += max(h, 12) + 6
-        pdf.y += 10
+
+        for title, rows in ((tr("Medication"), current), (tr("Previous medication"), previous)):
+            if not rows:
+                continue
+            pdf.ensure(80)
+            pdf.text(title, M, pdf.y, 12, ink["ink"], bold=True)
+            pdf.y += 20
+            if rows is current or not current:
+                _w, h = pdf.text(note, M, 0, 8, measure=True, width=W - 2 * M)
+                pdf.text(note, M, pdf.y, 8, ink["muted"], width=W - 2 * M)
+                pdf.y += h + 8
+            med_head()
+            for name, taken, skipped, missed, upcoming, first, last in rows:
+                info = meds.meds.get(name, {})
+                label = name + (" · " + tr("as needed") if info.get("as_needed") else "")
+                _w, h = pdf.text(label, colx[0], 0, 8.5, measure=True, width=172)
+                if pdf.ensure(h + 8):
+                    med_head()
+                y = pdf.y
+                pdf.text(label, colx[0], y, 8.5, ink["ink"], width=172)
+                for x, n in zip(colx[1:5], (taken, skipped, missed, upcoming)):
+                    pdf.text(str(n) if n else "–", x, y, 8.5, ink["ink"] if n else ink["muted"])
+                pdf.text(fmt_date(first, "%-d %b %Y"), colx[5], y, 8.5, ink["ink"])
+                pdf.text(fmt_date(last, "%-d %b %Y"), colx[6], y, 8.5, ink["ink"])
+                pdf.y += max(h, 12) + 6
+            pdf.y += 10
 
     # ---- questionnaires (PHQ-9, GAD-7)
     taken = [x for x in surveys.between(start, end) if not x.get("private")] if surveys else []
@@ -2764,16 +2772,264 @@ class MedicationStore:
     def between(self, start, end):
         return [x for x in self.doses if start <= x[0] <= end]
 
-    def summary(self, start, end):
-        """[(name, taken, skipped, first day, last day)] for the doses in the period."""
-        out = {}
-        for day, _t, status, _a, _u, name in self.between(start, end):
-            if status == "pending":
+    def summary(self, start, end, now=None):
+        return medication_summary(self.between(start, end), now)
+
+    def sources(self):
+        return ["health"] if self.doses else []
+
+
+# ----------------------------------------------------------------- Dose, the sister app
+# Dose (github.com/Akii-G/dose-tracker) keeps your medicines and the doses you mark in its own
+# dose.json. Sottovoce on the same PC only reads it: the doses show on the day and in the doctor
+# report, and starting, changing or stopping a medicine becomes a Medication change event.
+# A scheduled dose nobody marked is "pending": not taken (its time has passed) or yet to take.
+
+DOSE_UNITS = {"pill": (tr("pill"), tr("pills")), "capsule": (tr("capsule"), tr("capsules")),
+              "drop": (tr("drop"), tr("drops")), "ml": ("ml", "ml"), "puff": (tr("puff"), tr("puffs")),
+              "sachet": (tr("sachet"), tr("sachets")), "patch": (tr("patch"), tr("patches")),
+              "injection": (tr("injection"), tr("injections")),
+              "application": (tr("application"), tr("applications"))}
+
+
+def dose_path():
+    base = os.environ.get("DOSE_DATA_DIR") or (
+        os.path.join(GLib.get_user_data_dir(), "Dose") if IS_WINDOWS else
+        os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "dose"))
+    return os.path.join(base, "dose.json")
+
+
+def dose_amount_text(amount, unit):
+    """1.5, "pill" -> "1½ pills"."""
+    one, many = DOSE_UNITS.get(unit, (unit, unit))
+    whole, frac = int(amount), round(amount - int(amount), 2)
+    glyph = {0.25: "¼", 0.5: "½", 0.75: "¾"}.get(frac)
+    if not frac:
+        num = str(whole)
+    elif glyph and unit != "ml":
+        num = (str(whole) if whole else "") + glyph
+    else:
+        num = ("%g" % amount).replace(".", "," if LANG_CODE == "it" else ".")
+    return "%s %s" % (num, one if amount <= 1 else many)
+
+
+def dose_due(schedule, day):
+    """Whether a Dose schedule has doses on `day` (the same rule as Dose's due_on)."""
+    try:
+        start = dt.date.fromisoformat(schedule.get("start") or "")
+    except ValueError:
+        start = None
+    try:
+        end = dt.date.fromisoformat(schedule.get("end") or "")
+    except ValueError:
+        end = None
+    kind = schedule.get("kind")
+    if kind == "needed" or (start and day < start) or (end and day > end):
+        return False
+    if kind == "weekdays":
+        return day.isoweekday() in (schedule.get("weekdays") or [])
+    if kind == "every":
+        every = max(int(schedule.get("every") or 1), 1)
+        return ((day - (start or day)).days % every) == 0
+    return True
+
+
+class DoseMedication:
+    """Dose's medicines and doses, in the same shape as MedicationStore."""
+
+    DAYS = 400   # how far back unmarked doses are filled in
+
+    def __init__(self, path=None):
+        self.path = path or dose_path()
+        self.meds, self.doses, self.medicines = {}, [], []
+        self.mtime = 0
+        self.load()
+
+    @staticmethod
+    def title(med):
+        return med.get("name", "") + (" " + med["strength"] if med.get("strength") else "")
+
+    def load(self, today=None):
+        self.meds, self.doses, self.medicines = {}, [], []
+        try:
+            self.mtime = os.path.getmtime(self.path)
+            with open(self.path, encoding="utf-8") as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            self.mtime = 0
+            return
+        today = today or dt.date.today()
+        meds = {m["id"]: m for m in doc.get("medicines") or [] if isinstance(m, dict) and m.get("id") and m.get("name")}
+        self.medicines = list(meds.values())
+        for m in meds.values():
+            self.meds[self.title(m)] = {"archived": bool(m.get("archived")),
+                                        "as_needed": (m.get("schedule") or {}).get("kind") == "needed"}
+        marked = set()
+        for d in doc.get("doses") or []:
+            m = meds.get(d.get("med")) if isinstance(d, dict) else None
+            try:
+                day = dt.date.fromisoformat(d["day"])
+            except (KeyError, TypeError, ValueError):
                 continue
-            row = out.setdefault(name, [0, 0, day, day])
-            row[0 if status == "taken" else 1] += 1
-            row[2], row[3] = min(row[2], day), max(row[3], day)
-        return [(name, *row) for name, row in sorted(out.items(), key=lambda kv: kv[0].lower())]
+            if not m or d.get("status") not in ("taken", "skipped"):
+                continue
+            marked.add((d["med"], d["day"], d.get("time") or ""))
+            when = d.get("at") if d.get("status") == "taken" and d.get("at") else d.get("time") or d.get("at") or ""
+            self.doses.append((day, when, d["status"], None,
+                               dose_amount_text(float(d.get("amount") or 1), m.get("unit", "pill")), self.title(m), "dose"))
+        # scheduled doses nobody marked, up to today: not taken, or yet to take
+        for m in meds.values():
+            s = m.get("schedule") or {}
+            if m.get("archived") or s.get("kind") == "needed":
+                continue
+            day = max(today - dt.timedelta(days=self.DAYS), _date_or(s.get("start"), today))
+            while day <= today:
+                if dose_due(s, day):
+                    for t in s.get("times") or []:
+                        if (m["id"], day.isoformat(), t) not in marked:
+                            self.doses.append((day, t, "pending", None,
+                                               dose_amount_text(float(m.get("amount") or 1), m.get("unit", "pill")),
+                                               self.title(m), "dose"))
+                day += dt.timedelta(days=1)
+        self.doses.sort()
+
+    def changed_on_disk(self):
+        try:
+            return os.path.getmtime(self.path) != self.mtime
+        except OSError:
+            return self.mtime != 0
+
+
+def _date_or(value, fallback):
+    try:
+        return dt.date.fromisoformat(value or "")
+    except ValueError:
+        return fallback
+
+
+def medication_summary(doses, now=None):
+    """[(name, taken, skipped, not taken, yet to take, first day, last day)] for some doses."""
+    out = {}
+    for dose in doses:
+        day, status, name = dose[0], dose[2], dose[5]
+        row = out.setdefault(name, [0, 0, 0, 0, day, day])
+        if status == "taken":
+            row[0] += 1
+        elif status == "skipped":
+            row[1] += 1
+        elif dose_missed(dose, now):
+            row[2] += 1
+        else:
+            row[3] += 1
+        row[4], row[5] = min(row[4], day), max(row[5], day)
+    return [(name, *row) for name, row in sorted(out.items(), key=lambda kv: kv[0].lower())]
+
+
+def dose_missed(dose, now=None):
+    """A pending dose whose time has passed: not taken. Otherwise it's still to take."""
+    now = now or dt.datetime.now()
+    if dose[0] != now.date():
+        return dose[0] < now.date()
+    return bool(dose[1]) and dose[1] <= now.strftime("%H:%M")
+
+
+class Medication:
+    """Medication from Dose and from Apple Health (sent by Sottovoce for iPhone), together.
+    Doses are (day, time, status, amount, unit, name) from Health; Dose's have a seventh item,
+    "dose", with the amount already written out in the unit's place."""
+
+    def __init__(self):
+        self.health = MedicationStore()
+        self.dose = DoseMedication()
+        self.merge()
+
+    def merge(self):
+        self.meds = dict(self.health.meds)
+        self.meds.update(self.dose.meds)
+        self.doses = sorted(self.health.doses + self.dose.doses)
+
+    def load(self):
+        self.health.load()
+        self.dose.load()
+        self.merge()
+
+    def changed_on_disk(self):
+        return self.health.changed_on_disk() or self.dose.changed_on_disk()
+
+    def sources(self):
+        """Where the doses come from, for the notes under them."""
+        out = []
+        if self.dose.doses:
+            out.append("dose")
+        if self.health.doses:
+            out.append("health")
+        return out
+
+    def on(self, day):
+        return [x for x in self.doses if x[0] == day]
+
+    def between(self, start, end):
+        return [x for x in self.doses if start <= x[0] <= end]
+
+    def summary(self, start, end, now=None):
+        return medication_summary(self.between(start, end), now)
+
+
+def dose_events_path():
+    return os.path.join(data_dir(), "dose-events.json")
+
+
+def dose_change_text(detail):
+    """"1½ pills · every day at 08:00" for a change in Dose."""
+    s = detail.get("schedule") or {}
+    times = ", ".join(s.get("times") or [])
+    kind = s.get("kind")
+    if kind == "needed":
+        when = tr("when needed")
+    elif kind == "weekdays":
+        when = tr("%s at %s") % (", ".join(WEEKDAYS[d - 1] for d in s.get("weekdays") or [] if 1 <= d <= 7), times)
+    elif kind == "every":
+        when = tr("every %d days at %s") % (int(s.get("every") or 2), times)
+    else:
+        when = tr("every day at %s") % times
+    return "%s · %s" % (dose_amount_text(float(detail.get("amount") or 1), detail.get("unit", "pill")), when)
+
+
+def import_dose_events(events, dose=None):
+    """Add Dose's medicine changes as Medication change events, once each: an event you delete
+    here stays deleted. Returns how many were added (the caller saves)."""
+    if not load_prefs().get("dose_events", True):
+        return 0
+    dose = dose or DoseMedication()
+    if not dose.medicines:
+        return 0
+    try:
+        with open(dose_events_path(), encoding="utf-8") as f:
+            done = set(json.load(f))
+    except (OSError, ValueError, TypeError):
+        done = set()
+    added = 0
+    for med in dose.medicines:
+        name = DoseMedication.title(med)
+        for i, h in enumerate(med.get("history") or []):
+            key = "dose-%s-%d" % (med["id"], i)
+            day = _date_or(h.get("date"), None) if isinstance(h, dict) else None
+            if key in done or day is None:
+                continue
+            kind, detail = h.get("kind"), h.get("detail") or {}
+            title = {"started": tr("Started %s"), "changed": tr("New dose of %s"),
+                     "stopped": tr("Stopped %s"), "restarted": tr("Started %s again")}.get(kind)
+            if title:
+                note = dose_change_text(detail) if detail and kind != "stopped" else ""
+                events.add(day, "medication", title % name, note, eid=key)
+                added += 1
+            done.add(key)
+    try:
+        with open(dose_events_path(), "w", encoding="utf-8") as f:
+            json.dump(sorted(done), f)
+    except OSError:
+        pass
+    return added
 
 
 # ----------------------------------------------------------------- questionnaires (PHQ-9, GAD-7)
@@ -3307,6 +3563,8 @@ def dose_text(dose):
 
 def dose_amount(dose):
     """'× 1', '× 1 mL', or '' when Health has no amount."""
+    if len(dose) > 6:      # from Dose: "1½ pills"
+        return dose[4]
     amount, unit = dose[3], dose[4]
     if not amount:
         return ""
@@ -3314,12 +3572,13 @@ def dose_amount(dose):
 
 
 def dose_status(dose, today=None):
+    now = dt.datetime.combine(today, dt.time(0, 0)) if today else None
     status = dose[2]
     if status == "taken":
         return tr("Taken")
     if status == "skipped":
         return tr("Skipped")
-    return tr("Not taken yet") if dose[0] >= (today or dt.date.today()) else tr("Not logged")
+    return tr("Not taken") if dose_missed(dose, now) else tr("Yet to take")
 
 
 def draw_pill(cr, cx, cy, r, status, liquid=False):
@@ -3524,6 +3783,9 @@ def sync_with_phone(body):
     remote_store, remote_events = stores_from_json(doc)
     remote_dreams = dreams_from_json(doc)
     store, events, dreams, surveys = Store(), EventStore(), DreamStore(), SurveyStore()
+    dose = DoseMedication()
+    if import_dose_events(events, dose):
+        events.save()
     appointment = AppointmentStore()
     changed = store.absorb(remote_store) + events.absorb(remote_events)
     dream_changes = dreams.absorb(remote_dreams)
@@ -3541,7 +3803,19 @@ def sync_with_phone(body):
     changed += dream_changes + survey_changes + appointment_changes
     state = stores_to_json(store, events, dreams, surveys, appointment)
     state["changed"] = changed
+    if dose.medicines:
+        state["dose"] = dose_to_json(dose)
     return state
+
+
+def dose_to_json(dose):
+    """Dose's medicines and doses for the phones' Sottovoce (their report and day), as
+    {"medicines": [{name, archived, asNeeded}], "doses": [{date, time, status, amount, name}]}.
+    "pending" is a scheduled dose nobody marked; the phone tells not taken from yet to take."""
+    return {"medicines": [{"name": n, "archived": i["archived"], "asNeeded": i["as_needed"]}
+                          for n, i in sorted(dose.meds.items())],
+            "doses": [{"date": d[0].isoformat(), "time": d[1], "status": d[2], "amount": d[4], "name": d[5]}
+                      for d in dose.doses]}
 
 
 def sync_config():
@@ -5486,6 +5760,15 @@ class PillIcon(Gtk.DrawingArea):
         draw_pill(cr, w / 2, h / 2, min(w, h) / 2 - 1, self.status, self.liquid)
 
 
+def medication_source_text(doses):
+    """Where a day's doses come from, for the tooltip and the note under them."""
+    from_dose = any(len(d) > 6 for d in doses)
+    from_health = any(len(d) <= 6 for d in doses)
+    if from_dose and from_health:
+        return tr("From Dose and from Apple Health")
+    return tr("From Dose") if from_dose else tr("From Apple Health, sent by Sottovoce for iPhone")
+
+
 def medication_button(doses, today=None):
     """'Medication · 4 taken · 1 skipped': opens the list of every dose that day."""
     counts = {k: sum(1 for d in doses if d[2] == k) for k in DOSE_STATUSES}
@@ -5494,17 +5777,18 @@ def medication_button(doses, today=None):
         bits.append(trn("%d taken", "%d taken", counts["taken"]) % counts["taken"])
     if counts["skipped"]:
         bits.append(trn("%d skipped", "%d skipped", counts["skipped"]) % counts["skipped"])
-    if counts["pending"]:
-        n = counts["pending"]
-        future = doses and doses[0][0] >= (today or dt.date.today())
-        bits.append((trn("%d not taken yet", "%d not taken yet", n) if future
-                     else trn("%d not logged", "%d not logged", n)) % n)
+    missed = sum(1 for d in doses if d[2] == "pending" and dose_missed(d))
+    upcoming = counts["pending"] - missed
+    if missed:
+        bits.append(trn("%d not taken", "%d not taken", missed) % missed)
+    if upcoming:
+        bits.append(trn("%d yet to take", "%d yet to take", upcoming) % upcoming)
     main = "taken" if counts["taken"] else ("skipped" if counts["skipped"] else "pending")
 
     button = Gtk.MenuButton()
     button.add_css_class("flat")
     button.add_css_class("medication-button")
-    button.set_tooltip_text(tr("From Apple Health, sent by Sottovoce for iPhone"))
+    button.set_tooltip_text(medication_source_text(doses))
     head = Gtk.Box(spacing=8)
     head.append(PillIcon(22, main))
     head.append(Gtk.Label(label=tr("Medication"), xalign=0))
@@ -5556,7 +5840,7 @@ def medication_button(doses, today=None):
     scroll.set_min_content_width(380)
     scroll.set_child(rows)
     col.append(scroll)
-    note = Gtk.Label(label=tr("From Apple Health, sent by Sottovoce for iPhone"), xalign=0)
+    note = Gtk.Label(label=medication_source_text(doses), xalign=0)
     note.add_css_class("dim-label")
     note.add_css_class("caption")
     col.append(note)
@@ -6359,7 +6643,7 @@ class ReportWindow(Gtk.Window):
         notes_hint.set_margin_start(28)
         self.health_check = Gtk.CheckButton(label=tr("Include sleep from my phone"), active=True)
         self.health_check.set_visible(bool(win.health.values.get("sleep_hours")))
-        self.meds_check = Gtk.CheckButton(label=tr("Include medication from Apple Health"), active=True)
+        self.meds_check = Gtk.CheckButton(label=tr("Include medication (from Dose and Apple Health)"), active=True)
         self.meds_check.set_visible(bool(win.meds.doses) and win.prefs["medication"])
         self.meds_check.set_active(win.prefs["medication"])
         self.surveys_check = Gtk.CheckButton(label=tr("Include questionnaires (PHQ-9, GAD-7)"))
@@ -6553,6 +6837,10 @@ class BookWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.3.0", "2026-11-25", [
+        "Dose, the sister app for your medicines: if Dose is on this PC, its doses show on the day and in the doctor report, and starting, changing or stopping a medicine in Dose adds a Medication change event here, once. Turn the events off in Customize.",
+        "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication. On the day, a dose nobody marked now says Not taken, or Yet to take before its time.",
+    ]),
     ("3.2.0", "2026-11-25", [
         "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, handy before a check-up.",
     ]),
@@ -6720,6 +7008,10 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.3.0", "2026-11-25", [
+        "Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.",
+        "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication.",
+    ]),
     ("2.2.0", "2026-11-25", [
         "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording.",
     ]),
@@ -6784,6 +7076,10 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.3.0", "2026-11-25", [
+        "Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.",
+        "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication.",
+    ]),
     ("2.2.0", "2026-11-25", [
         "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording.",
     ]),
@@ -7505,7 +7801,7 @@ def card(child, title=None):
 PREF_DEFAULTS = {"dreams": True, "medication": True, "several": "grid",   # several: grid|latest
                  "private_tick": True, "private_default": False,
                  "questionnaires": True, "survey_remind": True, "feelings": True, "prompts": True,
-                 "activities": True}
+                 "activities": True, "dose_events": True}
 
 
 def load_prefs():
@@ -7574,7 +7870,10 @@ def customize_options(win, compact=False):
                           tr("The Dreams tab and the moons on the calendar. Your dreams are kept "
                              "even when it's off.")))
     box.append(switch_row("medication", tr("Medication"),
-                          tr("Doses from Apple Health, sent by Sottovoce for iPhone.")))
+                          tr("Doses from Dose, and from Apple Health on your iPhone.")))
+    box.append(switch_row("dose_events", tr("Medication changes from Dose"),
+                          tr("Starting, changing or stopping a medicine in Dose adds a Medication change "
+                             "event here, once. Delete one and it stays deleted.")))
     box.append(switch_row("feelings", tr("Feeling words"),
                           tr("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off.")))
     box.append(switch_row("activities", tr("Activities"),
@@ -8014,9 +8313,14 @@ class Window(Adw.ApplicationWindow):
         self.set_default_size(940, 680)
         self.store = Store()
         self.health = HealthStore()
-        self.meds = MedicationStore()
+        self.meds = Medication()
         self.prefs = load_prefs()
         self.events = EventStore()
+        if import_dose_events(self.events, self.meds.dose):
+            try:
+                self.events.save()
+            except OSError:
+                pass
         self.dreams = DreamStore()
         self.surveys = SurveyStore()
         self.appointment = AppointmentStore()
@@ -9458,6 +9762,8 @@ class Window(Adw.ApplicationWindow):
                 self.refresh_charts()
         if self.meds.changed_on_disk():
             self.meds.load()
+            if import_dose_events(self.events, self.meds.dose):
+                self.save_events()
             self.rebuild_day_events()
         if self.surveys.changed_on_disk():
             self.surveys.load()
@@ -9723,7 +10029,7 @@ class Window(Adw.ApplicationWindow):
         self.events = EventStore()
         self.dreams = DreamStore()
         self.health = HealthStore()
-        self.meds = MedicationStore()
+        self.meds = Medication()
         self.surveys = SurveyStore()
         self.refresh_surveys()
         self.appointment = AppointmentStore()

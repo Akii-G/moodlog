@@ -30,6 +30,7 @@ class Report(
     private val dreamText: Boolean,
     private val includeSurveys: Boolean = false,
     private val points: List<TalkPoint> = emptyList(),
+    private val dose: DoseFeed? = null,   // medication from Dose on the PC, when included
 ) {
     companion object {
         const val W = 595f
@@ -409,6 +410,61 @@ class Report(
                 hline(M, W - M, y - 3f, grid, 0.5f)
             }
             y += 12f
+        }
+
+        // ---- medication (from Dose): current ones, then the ones no longer taken
+        val medDoses = dose?.between(start, end) ?: emptyList()
+        if (medDoses.isNotEmpty()) {
+            data class Row(var taken: Int = 0, var skipped: Int = 0, var missed: Int = 0, var upcoming: Int = 0,
+                           var first: String = "", var last: String = "")
+            val rows = sortedMapOf<String, Row>(String.CASE_INSENSITIVE_ORDER)
+            for (d in medDoses) {
+                val r = rows.getOrPut(d.name) { Row(first = d.date, last = d.date) }
+                when {
+                    d.status == "taken" -> r.taken++
+                    d.status == "skipped" -> r.skipped++
+                    d.missed() -> r.missed++
+                    else -> r.upcoming++
+                }
+                if (d.date < r.first) r.first = d.date
+                if (d.date > r.last) r.last = d.date
+            }
+            val archived = dose!!.medicines.filter { it.archived }.map { it.name }.toSet()
+            val asNeeded = dose.medicines.filter { it.asNeeded }.map { it.name }.toSet()
+            val current = rows.keys.filter { it !in archived }
+            val previous = rows.keys.filter { it in archived }
+            val note = tr("As marked in Dose.") + " " + tr("Not taken: doses that were due and never marked. Yet to take: due later today.")
+            val colx = listOf(M, M + 182f, M + 232f, M + 282f, M + 334f, M + 390f, M + 452f)
+            val heads = listOf(tr("Medication"), tr("Taken"), tr("Skipped"), tr("Not taken"), tr("Yet to take"),
+                tr("First in period"), tr("Last in period"))
+            fun head() {
+                colx.zip(heads).forEach { (x, h) -> t(h, x, y, 7.5f, muted, bold = true, width = if (x > colx[0]) 58f else null) }
+                y += 22f
+                hline(M, W - M, y - 3f, axis, 0.6f)
+            }
+            for ((title, names) in listOf(tr("Medication") to current, tr("Previous medication") to previous)) {
+                if (names.isEmpty()) continue
+                ensure(80f)
+                t(title, M, y, 12f, ink, bold = true)
+                y += 20f
+                if (names == current || current.isEmpty()) y += t(note, M, y, 8f, muted, width = W - 2 * M).second + 8f
+                head()
+                for (name in names) {
+                    val r = rows[name]!!
+                    val label = name + if (name in asNeeded) " · " + tr("as needed") else ""
+                    val h = t(label, colx[0], 0f, 8.5f, width = 172f, measure = true).second
+                    if (y + h + 8f > H - M - 18f) { newPage(); head() }
+                    val yy = y
+                    t(label, colx[0], yy, 8.5f, ink, width = 172f)
+                    colx.subList(1, 5).zip(listOf(r.taken, r.skipped, r.missed, r.upcoming)).forEach { (x, n) ->
+                        t(if (n > 0) "$n" else "–", x, yy, 8.5f, if (n > 0) ink else muted)
+                    }
+                    t(Day.pretty(r.first, "d MMM yyyy"), colx[5], yy, 8.5f, ink)
+                    t(Day.pretty(r.last, "d MMM yyyy"), colx[6], yy, 8.5f, ink)
+                    y += maxOf(h, 12f) + 6f
+                }
+                y += 10f
+            }
         }
 
         // ---- questionnaires (PHQ-9, GAD-7)

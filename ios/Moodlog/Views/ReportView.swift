@@ -44,7 +44,9 @@ struct ReportView: View {
                 Section {
                     Toggle("Include my notes", isOn: $notes)
                     if HealthSender.isAvailable { Toggle("Include sleep from Apple Health", isOn: $sleep) }
-                    if Medications.isOn && showMedication { Toggle("Include medication from Apple Health", isOn: $medication) }
+                    if (Medications.isOn || store.doseFeed != nil) && showMedication {
+                        Toggle("Include medication (from Dose and Apple Health)", isOn: $medication)
+                    }
                     if showQuestionnaires && !store.surveys.isEmpty {
                         Toggle("Include questionnaires (PHQ-9, GAD-7)", isOn: $surveys)
                     }
@@ -95,6 +97,10 @@ struct ReportView: View {
            let to = Day.calendar.date(byAdding: .day, value: 1, to: last) {
             doses = await Medications.doses(from: from, to: to)
             meds = await Medications.list()
+        }
+        if medication && showMedication, let feed = store.doseFeed {
+            doses += feed.records(from: start, to: end)
+            meds += feed.infos
         }
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(tr("Sottovoce report") + " \(start) – \(end).pdf")

@@ -67,13 +67,16 @@ struct DayView: View {
                     Label("Add an event, e.g. a medication change", systemImage: "flag")
                 }
             }
-            if Medications.isOn && showMedication {
+            let fromDose = store.doseFeed?.records(from: day, to: day) ?? []
+            if (Medications.isOn || store.doseFeed != nil) && showMedication {
+                let all = doses + fromDose
                 Section {
-                    if doses.isEmpty {
-                        Text("No doses logged in Apple Health on this day.").foregroundStyle(.secondary)
+                    if all.isEmpty {
+                        Text(Medications.isOn ? tr("No doses logged in Apple Health on this day.") : tr("No doses on this day."))
+                            .foregroundStyle(.secondary)
                     }
-                    ForEach(doses.sorted { ($0.clock, $0.name) < ($1.clock, $1.name) }) { dose in
-                        let colour: Color = dose.status == "taken" ? .green : (dose.status == "skipped" ? .gray : .orange)
+                    ForEach(all.sorted { ($0.clock, $0.name) < ($1.clock, $1.name) }) { dose in
+                        let colour: Color = dose.status == "taken" ? .green : (dose.status == "skipped" ? .gray : (dose.missed ? .red : .orange))
                         HStack(spacing: 12) {
                             Image(systemName: dose.liquid ? "drop.fill" : "pills.fill")
                                 .font(.system(size: 14, weight: .semibold))
@@ -94,7 +97,8 @@ struct DayView: View {
                 } header: {
                     Text("Medication")
                 } footer: {
-                    Text("From the Health app.")
+                    Text(store.doseFeed == nil ? tr("From the Health app.")
+                         : Medications.isOn ? tr("From Dose on your PC, and from the Health app.") : tr("From Dose on your PC."))
                 }
             }
             if showDreams {

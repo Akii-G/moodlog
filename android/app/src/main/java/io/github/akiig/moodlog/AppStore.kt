@@ -29,6 +29,9 @@ class AppStore(private val file: File?) {
         private set
     var deleted by mutableStateOf(listOf<Tombstone>())
         private set
+    /** Medication from Dose on the PC (null when it has none): shown on the day and in the report. */
+    var doseFeed by mutableStateOf<DoseFeed?>(null)
+        private set
 
     var onChange: (() -> Unit)? = null
 
@@ -48,6 +51,7 @@ class AppStore(private val file: File?) {
             appointment = s.appointment
             points = (s.points ?: emptyList()).filter { it.isValid }
             deleted = s.deleted
+            doseFeed = s.dose
         } catch (e: Exception) {
             // an unreadable file is kept as it is, not overwritten with nothing
             f.copyTo(File(f.path + ".unreadable"), overwrite = true)
@@ -66,7 +70,7 @@ class AppStore(private val file: File?) {
     fun save() {
         val f = file ?: return
         val tmp = File(f.path + ".tmp")
-        tmp.writeText(toJson().toString())
+        tmp.writeText(toJson().also { o -> doseFeed?.let { o.put("dose", it.json()) } }.toString())
         tmp.renameTo(f)
     }
 
@@ -252,6 +256,7 @@ class AppStore(private val file: File?) {
     /** Merge what the PC sent. Returns how many things changed here. */
     fun absorb(other: SyncState): Int {
         var changes = 0
+        if (other.dose != null && other.dose != doseFeed) { doseFeed = other.dose; save() }
         val tombs = HashMap<String, Tombstone>()
         for (t in deleted + other.deleted) {
             val old = tombs[t.id]

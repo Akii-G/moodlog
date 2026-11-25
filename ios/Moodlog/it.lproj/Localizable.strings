@@ -270,18 +270,13 @@
 /* Medication from Apple Health */
 "Needs iOS 26 or newer." = "Serve iOS 26 o successivo.";
 "Medication" = "Farmaci";
-"As logged in Apple Health. Doses that were neither ticked as taken nor as skipped are not counted." = "Come registrato in Salute di Apple. Le dosi non segnate né come prese né come saltate non sono contate.";
 "Taken" = "Presa";
-"Doses taken" = "Prese";
 "Skipped" = "Saltata";
-"Doses skipped" = "Saltate";
 "First in period" = "Prima nel periodo";
 "Last in period" = "Ultima nel periodo";
 "as needed" = "al bisogno";
-"no longer taken" = "non più assunto";
 "No doses logged in Apple Health on this day." = "Nessuna dose registrata in Salute di Apple in questo giorno.";
 "From the Health app." = "Dall'app Salute.";
-"Include medication from Apple Health" = "Includi i farmaci da Salute di Apple";
 "Sottovoce can read %@ medication." = "Sottovoce può leggere %@ farmaco.";
 "Sottovoce can read %@ medications." = "Sottovoce può leggere %@ farmaci.";
 "Read my medications from Apple Health" = "Leggi i miei farmaci da Salute di Apple";
@@ -302,8 +297,6 @@
 "Health doesn't tell Sottovoce the names of these medications. Open Health → Medications: the groups below are in the same order as its medication log. Type each name once." = "Salute non dice a Sottovoce i nomi di questi farmaci. Apri Salute → Farmaci: i gruppi qui sotto sono nello stesso ordine del suo registro farmaci. Scrivi ogni nome una volta sola.";
 "Taken as needed" = "Farmaci assunti al bisogno";
 "No doses in the last 90 days" = "Nessuna dose negli ultimi 90 giorni";
-"Not taken yet" = "Non ancora presa";
-"Not logged" = "Non registrata";
 "Sottovoce can't reach the backup file any more (%@). Tap Choose another file… and save it again." = "Sottovoce non riesce più a raggiungere il file di backup (%@). Tocca Scegli un altro file… e salvalo di nuovo.";
 
 /* Customize */
@@ -513,3 +506,14 @@
 "Choose the dates" = "Scegli le date";
 "From" = "Dal";
 "To" = "Al";
+"Not taken" = "Non presa";
+"Yet to take" = "Da prendere";
+"As marked in Dose and logged in Apple Health." = "Come segnato in Dose e registrato in Salute di Apple.";
+"As marked in Dose." = "Come segnato in Dose.";
+"As logged in Apple Health." = "Come registrato in Salute di Apple.";
+"Not taken: doses that were due and never marked. Yet to take: due later today." = "Non prese: dosi previste e mai segnate. Da prendere: previste più tardi oggi.";
+"Previous medication" = "Farmaci precedenti";
+"From Dose on your PC, and from the Health app." = "Da Dose sul PC, e dall'app Salute.";
+"From Dose on your PC." = "Da Dose sul PC.";
+"Include medication (from Dose and Apple Health)" = "Includi i farmaci (da Dose e Salute di Apple)";
+"No doses on this day." = "Nessuna dose in questo giorno.";

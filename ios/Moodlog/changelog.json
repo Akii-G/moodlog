@@ -1,5 +1,19 @@
 [
  {
+  "version": "2.3.0",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.",
+    "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication."
+   ],
+   "it": [
+    "Dose, l'app sorella per i tuoi farmaci: quando Dose è sul tuo PC, le sue dosi arrivano con la sincronizzazione e compaiono nel giorno e nel report per il medico.",
+    "Report per il medico: per ogni farmaco, quante dosi sono state prese, saltate, non prese e ancora da prendere oggi; i farmaci che non prendi più sono elencati a parte, in Farmaci precedenti."
+   ]
+  }
+ },
+ {
   "version": "2.2.0",
   "date": "2026-11-25",
   "items": {

@@ -149,6 +149,7 @@ data class SyncState(
     val surveys: List<Survey>? = null,   // null when the PC runs Moodlog older than 2.10
     val appointment: Appointment? = null,
     val points: List<TalkPoint>? = null,   // null when the PC runs Sottovoce older than 3.0.2
+    val dose: DoseFeed? = null,   // Dose's medication, from a PC with Dose installed
 ) {
     companion object {
         fun from(o: JSONObject): SyncState {
@@ -161,7 +162,8 @@ data class SyncState(
                 if (o.has("dreams")) list("dreams", Dream::from) else null,
                 if (o.has("surveys")) list("surveys", Survey::from) else null,
                 Appointment.from(o.optJSONObject("appointment")),
-                if (o.has("points")) list("points", TalkPoint::from) else null)
+                if (o.has("points")) list("points", TalkPoint::from) else null,
+                DoseFeed.from(o.optJSONObject("dose")))
         }
     }
 }
@@ -249,3 +251,48 @@ object Day {
 }
 
 fun one(value: Double): String = String.format(Locale.US, "%.1f", value)
+
+/**
+ * Medication from Dose, the sister app, sent by Sottovoce on the PC with each sync (see
+ * dose_to_json in src/moodlog). Only read here: Dose keeps the medicines and the doses.
+ * A "pending" dose is scheduled and nobody marked it: not taken once its time has passed,
+ * otherwise yet to take.
+ */
+data class DoseFeed(val medicines: List<Med>, val doses: List<Item>) {
+    data class Med(val name: String, val archived: Boolean, val asNeeded: Boolean)
+    data class Item(val date: String, val time: String, val status: String, val amount: String, val name: String) {
+        fun missed(now: java.time.LocalDateTime = java.time.LocalDateTime.now()): Boolean {
+            if (status != "pending") return false
+            val today = now.toLocalDate().toString()
+            if (date != today) return date < today
+            return time.isNotEmpty() && time <= now.toLocalTime().toString().take(5)
+        }
+        val statusText: String get() = when (status) {
+            "taken" -> tr("Taken")
+            "skipped" -> tr("Skipped")
+            else -> if (missed()) tr("Not taken") else tr("Yet to take")
+        }
+    }
+
+    fun on(day: String) = doses.filter { it.date == day }.sortedWith(compareBy({ it.time }, { it.name.lowercase() }))
+    fun between(start: String, end: String) = doses.filter { it.date in start..end }
+
+    fun json(): JSONObject = JSONObject()
+        .put("medicines", JSONArray(medicines.map { JSONObject().put("name", it.name).put("archived", it.archived).put("asNeeded", it.asNeeded) }))
+        .put("doses", JSONArray(doses.map { JSONObject().put("date", it.date).put("time", it.time).put("status", it.status)
+            .put("amount", it.amount).put("name", it.name) }))
+
+    companion object {
+        fun from(o: JSONObject?): DoseFeed? {
+            o ?: return null
+            val meds = o.optJSONArray("medicines") ?: return null
+            val doses = o.optJSONArray("doses") ?: JSONArray()
+            return DoseFeed(
+                (0 until meds.length()).mapNotNull { meds.optJSONObject(it) }.map {
+                    Med(it.optString("name"), it.optBoolean("archived"), it.optBoolean("asNeeded")) }.filter { it.name.isNotEmpty() },
+                (0 until doses.length()).mapNotNull { doses.optJSONObject(it) }.map {
+                    Item(it.optString("date"), it.optString("time"), it.optString("status"), it.optString("amount"), it.optString("name"))
+                }.filter { it.name.isNotEmpty() && it.date.length == 10 && it.status in setOf("taken", "skipped", "pending") })
+        }
+    }
+}

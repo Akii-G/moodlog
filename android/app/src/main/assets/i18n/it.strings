@@ -484,3 +484,16 @@
 "Choose the dates" = "Scegli le date";
 "From" = "Dal";
 "To" = "Al";
+"Taken" = "Presa";
+"Skipped" = "Saltata";
+"Not taken" = "Non presa";
+"Yet to take" = "Da prendere";
+"As marked in Dose." = "Come segnato in Dose.";
+"Not taken: doses that were due and never marked. Yet to take: due later today." = "Non prese: dosi previste e mai segnate. Da prendere: previste più tardi oggi.";
+"Medication" = "Farmaci";
+"First in period" = "Prima nel periodo";
+"Last in period" = "Ultima nel periodo";
+"Previous medication" = "Farmaci precedenti";
+"as needed" = "al bisogno";
+"From Dose on your PC." = "Da Dose sul PC.";
+"Include medication (from Dose)" = "Includi i farmaci (da Dose)";

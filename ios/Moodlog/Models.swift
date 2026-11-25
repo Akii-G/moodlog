@@ -113,6 +113,7 @@ struct SyncState: Codable {
     var changed: Int?
     var appointment: Appointment? = nil  // missing when the PC runs Sottovoce older than 3.0.2
     var points: [TalkPoint]? = nil
+    var dose: DoseFeed? = nil   // Dose's medication, from a PC with Dose installed
 }
 
 enum Mood {

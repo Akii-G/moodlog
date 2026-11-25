@@ -54,6 +54,7 @@ fun ReportDialog(onClose: () -> Unit) {
     var dreamText by remember { mutableStateOf(false) }
     var surveys by remember { mutableStateOf(true) }
     var points by remember { mutableStateOf(false) }
+    var medication by remember { mutableStateOf(true) }
     var canSleep by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
@@ -65,7 +66,8 @@ fun ReportDialog(onClose: () -> Unit) {
         val file = File(context.cacheDir, "reports/" + tr("Sottovoce report") + " $start – $end.pdf")
         return withContext(Dispatchers.Default) {
             Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams,
-                surveys && app.showQuestionnaires, if (points) app.store.openPoints else emptyList()).write(file)
+                surveys && app.showQuestionnaires, if (points) app.store.openPoints else emptyList(),
+                if (medication) app.store.doseFeed else null).write(file)
         }
     }
 
@@ -117,6 +119,10 @@ fun ReportDialog(onClose: () -> Unit) {
             if (app.store.openPoints.isNotEmpty()) {
                 Line()
                 SwitchRow(tr("Include the things I want to talk about"), points) { points = it }
+            }
+            if (app.store.doseFeed != null) {
+                Line()
+                SwitchRow(tr("Include medication (from Dose)"), medication) { medication = it }
             }
             if (app.showDreams) {
                 Line()

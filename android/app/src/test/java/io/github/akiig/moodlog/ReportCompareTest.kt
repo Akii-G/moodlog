@@ -23,7 +23,7 @@ class ReportCompareTest {
         val sleep = sj.keys().asSequence().associateWith { sj.getDouble(it) }
         val bitmaps = mutableListOf<android.graphics.Bitmap>()
         Report(store, "2026-10-27", "2026-11-25", includeNotes = true, sleep = sleep,
-            includeDreams = true, dreamText = true).draw(object : Report.Pages {
+            includeDreams = true, dreamText = true, dose = store.doseFeed).draw(object : Report.Pages {
             override fun start(number: Int): android.graphics.Canvas {
                 val b = android.graphics.Bitmap.createBitmap(1190, 1684, android.graphics.Bitmap.Config.ARGB_8888)
                 bitmaps.add(b)

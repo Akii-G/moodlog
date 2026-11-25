@@ -394,45 +394,58 @@ final class Report {
             y += 12
         }
 
-        // ---- medication (from Apple Health)
-        var medRows: [String: (taken: Int, skipped: Int, first: String, last: String)] = [:]
-        for d in doses where d.status != "pending" {
-            var r = medRows[d.name] ?? (0, 0, d.day, d.day)
-            if d.taken { r.taken += 1 } else { r.skipped += 1 }
+        // ---- medication (from Dose and Apple Health): current ones, then the ones no longer taken
+        var medRows: [String: (taken: Int, skipped: Int, missed: Int, upcoming: Int, first: String, last: String)] = [:]
+        for d in doses {
+            var r = medRows[d.name] ?? (0, 0, 0, 0, d.day, d.day)
+            if d.status == "taken" { r.taken += 1 }
+            else if d.status == "skipped" { r.skipped += 1 }
+            else if d.missed { r.missed += 1 }
+            else { r.upcoming += 1 }
             r.first = min(r.first, d.day); r.last = max(r.last, d.day)
             medRows[d.name] = r
         }
         if !medRows.isEmpty {
-            ensure(80)
-            t(tr("Medication"), M, y, 12, ink, bold: true)
-            y += 20
-            y += t(tr("As logged in Apple Health. Doses that were neither ticked as taken nor as skipped are not counted."),
-                   M, y, 8, muted, width: W - 2 * M).1 + 8
-            let colx = [M, M + 210, M + 270, M + 330, M + 420]
-            let heads = [tr("Medication"), tr("Doses taken"), tr("Doses skipped"), tr("First in period"), tr("Last in period")]
+            let archived = Set(meds.filter(\.archived).map(\.name))
+            let names = medRows.keys.sorted { $0.lowercased() < $1.lowercased() }
+            let current = names.filter { !archived.contains($0) }, previous = names.filter { archived.contains($0) }
+            let fromDose = doses.contains { $0.fromDose }, fromHealth = doses.contains { !$0.fromDose }
+            let note = (fromDose && fromHealth ? tr("As marked in Dose and logged in Apple Health.")
+                        : fromDose ? tr("As marked in Dose.") : tr("As logged in Apple Health."))
+                + " " + tr("Not taken: doses that were due and never marked. Yet to take: due later today.")
+            let colx = [M, M + 182, M + 232, M + 282, M + 334, M + 390, M + 452]
+            let heads = [tr("Medication"), tr("Taken"), tr("Skipped"), tr("Not taken"), tr("Yet to take"),
+                         tr("First in period"), tr("Last in period")]
             func head() {
-                for (x, h) in zip(colx, heads) { t(h, x, y, 7.5, muted, bold: true) }
-                y += 14
+                for (x, h) in zip(colx, heads) { t(h, x, y, 7.5, muted, bold: true, width: x > colx[0] ? 58 : nil) }
+                y += 22
                 hline(M, W - M, y - 3, axis, 0.6)
             }
-            head()
-            for name in medRows.keys.sorted() {
-                let r = medRows[name]!
-                let info = meds.first { $0.name == name }
-                var label = name
-                if info?.asNeeded == true { label += " · " + tr("as needed") }
-                if info?.archived == true { label += " · " + tr("no longer taken") }
-                let h = t(label, colx[0], 0, 8.5, width: 200, measure: true).1
-                if y + h + 8 > bottom { newPage(); head() }
-                let yy = y
-                t(label, colx[0], yy, 8.5, ink, width: 200)
-                t("\(r.taken)", colx[1], yy, 8.5, ink)
-                t("\(r.skipped)", colx[2], yy, 8.5, ink)
-                t(Day.pretty(r.first, style: "d MMM yyyy"), colx[3], yy, 8.5, ink)
-                t(Day.pretty(r.last, style: "d MMM yyyy"), colx[4], yy, 8.5, ink)
-                y += max(h, 12) + 6
+            for (title, rows) in [(tr("Medication"), current), (tr("Previous medication"), previous)] where !rows.isEmpty {
+                ensure(80)
+                t(title, M, y, 12, ink, bold: true)
+                y += 20
+                if rows == current || current.isEmpty {
+                    y += t(note, M, y, 8, muted, width: W - 2 * M).1 + 8
+                }
+                head()
+                for name in rows {
+                    let r = medRows[name]!
+                    var label = name
+                    if meds.first(where: { $0.name == name })?.asNeeded == true { label += " · " + tr("as needed") }
+                    let h = t(label, colx[0], 0, 8.5, width: 172, measure: true).1
+                    if y + h + 8 > bottom { newPage(); head() }
+                    let yy = y
+                    t(label, colx[0], yy, 8.5, ink, width: 172)
+                    for (x, n) in zip(colx[1...4], [r.taken, r.skipped, r.missed, r.upcoming]) {
+                        t(n > 0 ? "\(n)" : "–", x, yy, 8.5, n > 0 ? ink : muted)
+                    }
+                    t(Day.pretty(r.first, style: "d MMM yyyy"), colx[5], yy, 8.5, ink)
+                    t(Day.pretty(r.last, style: "d MMM yyyy"), colx[6], yy, 8.5, ink)
+                    y += max(h, 12) + 6
+                }
+                y += 10
             }
-            y += 10
         }
 
         // ---- questionnaires (PHQ-9, GAD-7)

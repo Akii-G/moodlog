@@ -9,12 +9,19 @@ struct DoseRecord: Hashable, Identifiable {
     let status: String
     let amount: Double?
     let unit: String
+    /// From Dose: the amount already written out ("1½ pills"). nil for Health's doses.
+    var label: String? = nil
 
     var taken: Bool { status == "taken" }
+    var fromDose: Bool { label != nil }
+
+    /// A dose nobody marked whose time has passed: not taken. Otherwise it's still to take.
+    var missed: Bool { status == "pending" && time <= Date() }
     var liquid: Bool { unit.lowercased().hasSuffix("ml") }
 
     /// "× 1", "× 1 mL" ("" when Health has no amount).
     var amountText: String {
+        if let label { return label }
         guard let amount, amount > 0 else { return "" }
         let number = amount == amount.rounded() ? String(Int(amount)) : String(format: "%g", amount)
         return "× " + number + (["", "count", "1"].contains(unit) ? "" : " \(unit)")
@@ -24,7 +31,7 @@ struct DoseRecord: Hashable, Identifiable {
         switch status {
         case "taken": return tr("Taken")
         case "skipped": return tr("Skipped")
-        default: return day >= Day.today ? tr("Not taken yet") : tr("Not logged")
+        default: return missed ? tr("Not taken") : tr("Yet to take")
         }
     }
 
@@ -318,5 +325,34 @@ private final class Collected: @unchecked Sendable {
         if !done { return nil }
         finished = true
         return items.compactMap { $0 as? HKUserAnnotatedMedication }
+    }
+}
+
+/// Medication from Dose, the sister app, sent by Sottovoce on the PC with each sync (see
+/// dose_to_json in src/moodlog). Only read here: Dose keeps the medicines and the doses.
+struct DoseFeed: Codable, Hashable {
+    struct Medicine: Codable, Hashable {
+        var name: String
+        var archived: Bool
+        var asNeeded: Bool
+    }
+    struct Item: Codable, Hashable {
+        var date: String
+        var time: String
+        var status: String      // taken, skipped, pending (scheduled, nobody marked it)
+        var amount: String      // "1½ pills"
+        var name: String
+    }
+    var medicines: [Medicine]
+    var doses: [Item]
+
+    var infos: [MedicationInfo] { medicines.map { MedicationInfo(name: $0.name, archived: $0.archived, asNeeded: $0.asNeeded) } }
+
+    func records(from start: String, to end: String) -> [DoseRecord] {
+        doses.filter { $0.date >= start && $0.date <= end }.compactMap { d in
+            guard let at = Day.time(d.time.isEmpty ? "12:00" : d.time, on: d.date) else { return nil }
+            return DoseRecord(id: "dose-\(d.date)-\(d.time)-\(d.name)", name: d.name, time: at, status: d.status,
+                              amount: nil, unit: "", label: d.amount)
+        }
     }
 }

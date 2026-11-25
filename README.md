@@ -115,6 +115,15 @@ Private moments stay out unless you choose to include them. On the phones it's i
 The **Export** menu also saves everything as a spreadsheet (.xlsx, with colours and
 charts) or a plain CSV file, which open in LibreOffice Calc, Excel or Google Sheets.
 
+### Dose, the sister app for your medicines
+
+[Dose](https://github.com/Akii-G/dose-tracker) keeps your medicines and reminds you when it's
+time. When it's on the same PC, Sottovoce reads it: the day shows what you took, the doctor
+report counts each medicine's doses taken, skipped, not taken and still to take (medicines you
+no longer take go under **Previous medication**), and starting, changing or stopping a medicine
+adds a Medication change event, so you see your mood before and after. The phones get it with
+the sync.
+
 ### Questionnaires for your doctor
 
 Two short questionnaires doctors use, with their official words in English and
@@ -231,7 +240,7 @@ each tab as it goes.
 Download `sottovoce_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/sottovoce/releases/latest), then:
 
-    sudo apt install ./sottovoce_3.2.0_all.deb
+    sudo apt install ./sottovoce_3.3.0_all.deb
 
 Remove it with `sudo apt remove sottovoce`; your data is kept.
 
