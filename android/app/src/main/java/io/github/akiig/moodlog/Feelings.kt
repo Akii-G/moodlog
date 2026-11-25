@@ -48,6 +48,49 @@ object Feeling {
 }
 
 /**
+ * Optional tags for what you did, to see later what helps. The keys are stored and synced; the
+ * same list, in the same order, in every app.
+ */
+object Activity {
+    val keys = listOf("work", "study", "family", "friends", "partner", "exercise", "walk", "outdoors", "hobby", "gaming", "reading", "music", "shows", "cooking", "chores", "rest")
+
+    fun label(key: String): String = when (key) {
+        "work" -> tr("Work")
+        "study" -> tr("Study")
+        "family" -> tr("Family")
+        "friends" -> tr("Friends")
+        "partner" -> tr("Partner")
+        "exercise" -> tr("Exercise")
+        "walk" -> tr("Walk")
+        "outdoors" -> tr("Outdoors")
+        "hobby" -> tr("Hobby")
+        "gaming" -> tr("Gaming")
+        "reading" -> tr("Reading")
+        "music" -> tr("Music")
+        "shows" -> tr("TV and series")
+        "cooking" -> tr("Cooking")
+        "chores" -> tr("Chores")
+        "rest" -> tr("Rest")
+        else -> key
+    }
+
+    /** Known keys only, in the list's order. */
+    fun clean(values: List<String>): List<String> {
+        val wanted = values.map { it.lowercase() }.toSet()
+        return keys.filter { it in wanted }
+    }
+
+    fun text(values: List<String>): String = clean(values).joinToString(", ") { label(it) }
+
+    /** (key, how many entries) in a period, most often first; private entries left out. */
+    fun counts(store: AppStore, start: String, end: String): List<Pair<String, Int>> {
+        val counts = HashMap<String, Int>()
+        for (e in store.entries) if (e.date in start..end && !e.private) for (k in clean(e.activities)) counts[k] = (counts[k] ?: 0) + 1
+        return counts.entries.sortedWith(compareBy({ -it.value }, { keys.indexOf(it.key) })).map { it.key to it.value }
+    }
+}
+
+/**
  * Writing prompts: a gentle question when the note is empty. One a day, or another one when
  * asked. The same list, in the same order, in every app.
  */

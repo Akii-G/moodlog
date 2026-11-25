@@ -53,6 +53,9 @@ class AppState private constructor(app: Application) {
     var showPrompts by androidx.compose.runtime.mutableStateOf(prefs.prompts)
         private set
     fun chooseFeelings(on: Boolean) { showFeelings = on; prefs.feelings = on }
+    var showActivities by androidx.compose.runtime.mutableStateOf(prefs.activities)
+        private set
+    fun chooseActivities(on: Boolean) { showActivities = on; prefs.activities = on }
     fun choosePrompts(on: Boolean) { showPrompts = on; prefs.prompts = on }
     var showQuestionnaires by androidx.compose.runtime.mutableStateOf(prefs.questionnaires)
         private set

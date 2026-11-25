@@ -2580,3 +2580,133 @@ msgstr "Backup: niente più avvisi quando chiudi l'app. iOS spesso non lascia sc
 
 msgid "Backup: when you choose the backup file, Sottovoce now asks for one more tap on the file you just saved. iOS only lets an app keep updating a file it has opened that way, so the backup no longer stops working after the app restarts."
 msgstr "Backup: quando scegli il file di backup, Sottovoce ora chiede un altro tocco sul file appena salvato. iOS lascia aggiornare un file solo se l'app lo ha aperto così, quindi il backup non smette più di funzionare dopo un riavvio dell'app."
+
+msgid "%d day with words in it."
+msgid_plural "%d days with words in them."
+msgstr[0] "%d giorno con delle parole."
+msgstr[1] "%d giorni con delle parole."
+
+msgid "Activities"
+msgstr "Attività"
+
+msgid "Activities logged most often: %s."
+msgstr "Attività segnate più spesso: %s."
+
+msgid "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the phones, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Customize."
+msgstr "Attività: accanto alle emozioni, etichette facoltative per quello che hai fatto — Lavoro, Passeggiata, Amici, Riposo e altre. Si vedono nel giorno, si sincronizzano con i telefoni, si possono cercare, e il report per il medico elenca quelle segnate più spesso. Si disattivano in Personalizza."
+
+msgid "All of it"
+msgstr "Tutto"
+
+msgid "Chores"
+msgstr "Faccende"
+
+msgid "Cooking"
+msgstr "Cucinare"
+
+msgid "Could not make the book: %s"
+msgstr "Impossibile creare il libro: %s"
+
+msgid "Exercise"
+msgstr "Sport"
+
+msgid "Family"
+msgstr "Famiglia"
+
+msgid "Friends"
+msgstr "Amici"
+
+msgid "Gaming"
+msgstr "Videogiochi"
+
+msgid "Hobby"
+msgstr "Hobby"
+
+msgid "Include private moments"
+msgstr "Includi i momenti privati"
+
+msgid "Music"
+msgstr "Musica"
+
+msgid "My diary"
+msgstr "Il mio diario"
+
+msgid "Nothing written in this period yet."
+msgstr "Ancora niente di scritto in questo periodo."
+
+msgid "Optional tags for what you did, like Work or Walk. Kept even when it's off."
+msgstr "Etichette facoltative per quello che hai fatto, come Lavoro o Passeggiata. Restano salvate anche se lo disattivi."
+
+msgid "Outdoors"
+msgstr "All'aperto"
+
+msgid "Partner"
+msgstr "Partner"
+
+msgid "Reading"
+msgstr "Lettura"
+
+msgid "Rest"
+msgstr "Riposo"
+
+msgid "Save your diary"
+msgstr "Salva il tuo diario"
+
+msgid "Saved your diary (%d day) as %s"
+msgid_plural "Saved your diary (%d days) as %s"
+msgstr[0] "Diario salvato (%d giorno) come %s"
+msgstr[1] "Diario salvato (%d giorni) come %s"
+
+msgid "Search notes, feelings, activities and events"
+msgstr "Cerca tra note, emozioni, attività ed eventi"
+
+msgid "Study"
+msgstr "Studio"
+
+msgid "TV and series"
+msgstr "TV e serie"
+
+msgid "The last 12 months"
+msgstr "Gli ultimi 12 mesi"
+
+msgid "The last 3 months"
+msgstr "Gli ultimi 3 mesi"
+
+msgid "Walk"
+msgstr "Passeggiata"
+
+msgid "What did you do? Optional."
+msgstr "Cosa hai fatto? Facoltativo."
+
+msgid "What you did, to see later what helps"
+msgstr "Cosa hai fatto, per vedere poi cosa ti fa bene"
+
+msgid "Work"
+msgstr "Lavoro"
+
+msgid "Written sottovoce, made with Sottovoce"
+msgstr "Scritto sottovoce, con Sottovoce"
+
+msgid "Your diary as a book"
+msgstr "Il tuo diario come un libro"
+
+msgid "Your diary as a book (.pdf)…"
+msgstr "Il tuo diario come un libro (.pdf)…"
+
+msgid "Your diary as a book: Export → Your diary as a book (.pdf). Your notes month by month, with the mood faces, feeling words, activities and events, laid out as a PDF to keep or print. Private moments stay out unless you choose to include them."
+msgstr "Il tuo diario come un libro: Esporta → Il tuo diario come un libro (.pdf). Le tue note mese per mese, con le faccine dell'umore, le emozioni, le attività e gli eventi, impaginate in un PDF da tenere o stampare. I momenti privati restano fuori, a meno che tu non scelga di includerli."
+
+msgid "Your notes month by month, with the mood faces, feeling words, activities and events, as a PDF to keep or print. Moments with only a face and no words are left out."
+msgstr "Le tue note mese per mese, con le faccine dell'umore, le emozioni, le attività e gli eventi, in un PDF da tenere o stampare. I momenti con solo una faccina e nessuna parola restano fuori."
+
+msgid "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the phones, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Customize."
+msgstr "Attività: accanto alle emozioni, etichette facoltative per quello che hai fatto — Lavoro, Passeggiata, Amici, Riposo e altre. Si vedono nel giorno, si sincronizzano con i telefoni, si possono cercare, e il report per il medico elenca quelle segnate più spesso. Si disattivano in Personalizza."
+
+msgid "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize."
+msgstr "Attività: accanto alle emozioni, etichette facoltative per quello che hai fatto — Lavoro, Passeggiata, Amici, Riposo e altre. Si vedono nel giorno, si sincronizzano con il PC, si possono cercare, e il report per il medico elenca quelle segnate più spesso. Si disattivano in Impostazioni → Personalizza."
+
+msgid "Your diary as a book: in Charts, the book button makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them."
+msgstr "Il tuo diario come un libro: in Grafici, il pulsante del libro crea un PDF delle tue note mese per mese, con le faccine dell'umore, le emozioni, le attività e gli eventi, da tenere o stampare. I momenti privati restano fuori, a meno che tu non scelga di includerli."
+
+msgid "Your diary as a book: in Charts, Export → Your diary as a book makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them."
+msgstr "Il tuo diario come un libro: in Grafici, Esporta → Il tuo diario come un libro crea un PDF delle tue note mese per mese, con le faccine dell'umore, le emozioni, le attività e gli eventi, da tenere o stampare. I momenti privati restano fuori, a meno che tu non scelga di includerli."

@@ -39,6 +39,44 @@ enum Feeling {
     }
 }
 
+/// Optional tags for what you did, to see later what helps. The keys are stored and synced; the
+/// same list, in the same order, in every app.
+enum Activity {
+    static let all: [(key: String, label: String)] = [
+        ("work", tr("Work")), ("study", tr("Study")), ("family", tr("Family")), ("friends", tr("Friends")),
+        ("partner", tr("Partner")), ("exercise", tr("Exercise")), ("walk", tr("Walk")), ("outdoors", tr("Outdoors")),
+        ("hobby", tr("Hobby")), ("gaming", tr("Gaming")), ("reading", tr("Reading")), ("music", tr("Music")),
+        ("shows", tr("TV and series")), ("cooking", tr("Cooking")), ("chores", tr("Chores")), ("rest", tr("Rest")),
+    ]
+
+    static func label(_ key: String) -> String {
+        all.first { $0.key == key }?.label ?? key
+    }
+
+    /// Known keys only, in the list's order.
+    static func clean(_ keys: [String]) -> [String] {
+        let wanted = Set(keys.map { $0.lowercased() })
+        return all.map(\.key).filter { wanted.contains($0) }
+    }
+
+    static func text(_ keys: [String]) -> String {
+        clean(keys).map(label).joined(separator: ", ")
+    }
+
+    /// [(key, how many entries)] in a period, most often first; private entries left out.
+    @MainActor
+    static func counts(_ store: AppStore, from start: String, to end: String) -> [(String, Int)] {
+        var counts: [String: Int] = [:]
+        for e in store.entries where e.date >= start && e.date <= end && !e.hidden {
+            for k in clean(e.activities ?? []) { counts[k, default: 0] += 1 }
+        }
+        let order = all.map(\.key)
+        return counts.sorted { a, b in
+            a.value != b.value ? a.value > b.value : (order.firstIndex(of: a.key) ?? 0) < (order.firstIndex(of: b.key) ?? 0)
+        }.map { ($0.key, $0.value) }
+    }
+}
+
 /// Writing prompts: a gentle question when the note is empty. One a day, or another one when
 /// asked. The same list, in the same order, in every app.
 enum Prompts {

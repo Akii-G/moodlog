@@ -37,6 +37,8 @@ fun CustomizeOptions() {
     Line()
     OptionRow(tr("Feeling words"), tr("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off."),
         app.showFeelings) { app.chooseFeelings(it) }
+    OptionRow(tr("Activities"), tr("Optional tags for what you did, like Work or Walk. Kept even when it's off."),
+        app.showActivities) { app.chooseActivities(it) }
     Line()
     OptionRow(tr("Writing prompts"), tr("A gentle question in an empty note, for days you don't know what to write."),
         app.showPrompts) { app.choosePrompts(it) }

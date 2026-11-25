@@ -34,6 +34,7 @@ import io.github.akiig.moodlog.Day
 import io.github.akiig.moodlog.Dream
 import io.github.akiig.moodlog.Entry
 import io.github.akiig.moodlog.EventKind
+import io.github.akiig.moodlog.Activity
 import io.github.akiig.moodlog.Feeling
 import io.github.akiig.moodlog.Prompts
 import io.github.akiig.moodlog.LocalApp
@@ -119,6 +120,10 @@ fun EntryRow(entry: Entry, onClick: () -> Unit) {
                 Text(Feeling.text(entry.feelings), maxLines = 2, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            if (entry.activities.isNotEmpty() && LocalApp.current.showActivities) {
+                Text(Activity.text(entry.activities), maxLines = 2, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (entry.note.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (entry.private && LocalApp.current.privateTick) Icon(Icons.Filled.Lock, tr("Private note"),
@@ -148,16 +153,18 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
     var private by remember { mutableStateOf(original?.private ?: (app.privateTick && app.privateDefault)) }
     var pickTime by remember { mutableStateOf(false) }
     var feelings by remember { mutableStateOf(original?.feelings?.toSet() ?: emptySet()) }
+    var activities by remember { mutableStateOf(original?.activities?.toSet() ?: emptySet()) }
     var promptOffset by remember { mutableIntStateOf(0) }
-    val empty = mood == 0 && energy == 0 && anxiety == 0 && note.isBlank() && feelings.isEmpty()
+    val empty = mood == 0 && energy == 0 && anxiety == 0 && note.isBlank() && feelings.isEmpty() && activities.isEmpty()
 
     EditorDialog(tr(if (original == null) "New entry" else "Edit entry"), !empty, onClose, onSave = {
         val t = if (hasTime) Day.timeString(time) else ""
         val keep = if (app.privateTick) private else (original?.private ?: false)
         val words = Feeling.clean(feelings.toList())
+        val acts = Activity.clean(activities.toList())
         if (original != null) store.update(original.copy(time = t, mood = mood, energy = energy, anxiety = anxiety, note = note,
-            private = keep, feelings = words))
-        else store.addEntry(day, t, mood, energy, anxiety, note, keep, words)
+            private = keep, feelings = words, activities = acts))
+        else store.addEntry(day, t, mood, energy, anxiety, note, keep, words, acts)
         onClose()
     }) {
         Section(tr("How do you feel?"), padded = false) {
@@ -171,6 +178,9 @@ fun EntryEditor(day: String, original: Entry?, onClose: () -> Unit) {
         }
         if (app.showFeelings) Section(tr("Feelings"), tr("Pick any that fit. Optional.")) {
             FeelingChips(feelings) { key -> feelings = if (key in feelings) feelings - key else feelings + key }
+        }
+        if (app.showActivities) Section(tr("Activities"), tr("What did you do? Optional.")) {
+            ActivityChips(activities) { key -> activities = if (key in activities) activities - key else activities + key }
         }
         Section {
             SwitchRow(tr("Time"), hasTime) { hasTime = it }

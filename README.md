@@ -47,12 +47,13 @@ Pick one of five faces, from Awful to Great. That's the whole job. Energy, anxie
 time, and you can fill in any past day from the calendar. Each day takes the
 colour of its mood; a day with several shows one small tile per entry.
 
-If five faces aren't enough, add **feeling words** like Joy, Tiredness or Worry. And
+If five faces aren't enough, add **feeling words** like Joy, Tiredness or Worry, and
+**activities** for what you did, like Work, Walk or Friends, to see later what helps. And
 when you don't know what to write, an empty note shows a gentle **question**, a
-different one each day. Both are optional and can be turned off in Customize.
+different one each day. All optional, and each can be turned off in Customize.
 
-The **Notes** tab lists every note, newest first. Its search also finds feeling words and
-events, and doesn't mind capitals or accents. On the phones, it's the magnifying glass
+The **Notes** tab lists every note, newest first. Its search also finds feeling words,
+activities and events, and doesn't mind capitals or accents. On the phones, it's the magnifying glass
 next to + in the diary.
 
 **Before the appointment**: in Events, set the date of your next appointment with your
@@ -102,6 +103,13 @@ dreams are left out unless you tick them.
 
 The phone apps make the same report (the document button in **Charts**), to share,
 print or save straight from the phone.
+
+### Your diary as a book
+
+**Export → Your diary as a book (.pdf)** lays out your notes month by month, each day
+with its mood faces, feeling words, activities and events, as a PDF to keep or print.
+Private moments stay out unless you choose to include them. On the phones it's in
+**Charts** too.
 
 The **Export** menu also saves everything as a spreadsheet (.xlsx, with colours and
 charts) or a plain CSV file, which open in LibreOffice Calc, Excel or Google Sheets.
@@ -222,7 +230,7 @@ each tab as it goes.
 Download `sottovoce_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/sottovoce/releases/latest), then:
 
-    sudo apt install ./sottovoce_3.0.2_all.deb
+    sudo apt install ./sottovoce_3.1.0_all.deb
 
 Remove it with `sudo apt remove sottovoce`; your data is kept.
 

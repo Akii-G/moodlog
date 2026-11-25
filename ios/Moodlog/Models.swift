@@ -15,11 +15,13 @@ struct Entry: Codable, Identifiable, Hashable {
     var isPrivate: Bool? = nil
     /// Feeling words (keys like "joy", "tiredness"); nil or empty when none were picked.
     var feelings: [String]? = nil
+    /// Activity tags (keys like "work", "walk"); nil or empty when none were picked.
+    var activities: [String]? = nil
 
     var hidden: Bool { isPrivate == true }
 
     enum CodingKeys: String, CodingKey {
-        case id, date, time, mood, energy, anxiety, note, updated, feelings
+        case id, date, time, mood, energy, anxiety, note, updated, feelings, activities
         case isPrivate = "private"
     }
 }

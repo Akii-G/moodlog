@@ -44,7 +44,8 @@ enum Search {
         for e in store.entries {
             if q.isEmpty {
                 if !e.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { hits.append(.entry(e)) }
-            } else if matches(e.note, q) || matches(Feeling.text(e.feelings ?? []), q) {
+            } else if matches(e.note, q) || matches(Feeling.text(e.feelings ?? []), q)
+                        || matches(Activity.text(e.activities ?? []), q) {
                 hits.append(.entry(e))
             }
         }

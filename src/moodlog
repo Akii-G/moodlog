@@ -34,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.0.2"
+VERSION = "3.1.0"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -285,8 +285,8 @@ class Store:
     """All entries, kept in memory and mirrored to a CSV file.
 
     A day can hold several entries. Each entry is a list
-    [time, mood, note, energy, anxiety, id, updated, private, feelings]: time is "HH:MM" or ""
-    (unknown), feelings a clean_feelings() text,
+    [time, mood, note, energy, anxiety, id, updated, private, feelings, activities]: time is
+    "HH:MM" or "" (unknown), feelings a clean_feelings() text, activities a clean_activities() one,
     mood, energy and anxiety are 1-5 or 0 (not given), id identifies the entry on every
     device, updated is when it last changed. Deleted entries leave a record
     (self.deleted: id -> (time of deletion, date)) so a deletion syncs too.
@@ -335,7 +335,8 @@ class Store:
                     except ValueError:
                         value = 0
                     scales.append(value if 1 <= value <= 5 else 0)
-                if mood or note.strip() or any(scales) or clean_feelings(row.get("feelings") or ""):
+                if (mood or note.strip() or any(scales) or clean_feelings(row.get("feelings") or "")
+                        or clean_activities(row.get("activities") or "")):
                     eid = (row.get("id") or "").strip()
                     if not eid:  # written before version 2.0
                         key = (day, time, mood, note) + tuple(scales)
@@ -344,7 +345,8 @@ class Store:
                     self.days.setdefault(day, []).append(
                         [time, mood, note] + scales + [eid, clean_stamp(row.get("updated")),
                                                        truthy(row.get("private")),
-                                                       clean_feelings(row.get("feelings") or "")])
+                                                       clean_feelings(row.get("feelings") or ""),
+                                                       clean_activities(row.get("activities") or "")])
         for items in self.days.values():
             items.sort(key=lambda e: e[0])
 
@@ -355,15 +357,15 @@ class Store:
         with open(tmp, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
             w.writerow(["date", "time", "mood", "energy", "anxiety", "note", "id", "updated",
-                        "deleted", "private", "feelings"])
+                        "deleted", "private", "feelings", "activities"])
             for day in sorted(self.days):
                 for e in self.days[day]:
                     time, mood, note, energy, anxiety, eid, updated = e[:7]
                     w.writerow([day.isoformat(), time, mood or "", energy or "", anxiety or "",
                                 note, eid, updated, "", "1" if is_private(e, 7) else "",
-                                ",".join(entry_feelings(e))])
+                                ",".join(entry_feelings(e)), ",".join(entry_activities(e))])
             for eid, (gone, day) in sorted(self.deleted.items()):
-                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone, "", ""])
+                w.writerow([day.isoformat() if day else "", "", "", "", "", "", eid, "", gone, "", "", ""])
         os.replace(tmp, self.path)
         self.mtime = file_mtime(self.path)
 
@@ -422,9 +424,10 @@ class Store:
         return self.days.get(day, [])
 
     def add(self, day, time, mood, note, energy=0, anxiety=0, eid=None, updated=None,
-            private=False, feelings=""):
+            private=False, feelings="", activities=""):
         entry = [time if TIME_RE.match(time or "") else "", mood, note, energy, anxiety,
-                 eid or new_id(), updated or now_stamp(), bool(private), clean_feelings(feelings)]
+                 eid or new_id(), updated or now_stamp(), bool(private), clean_feelings(feelings),
+                 clean_activities(activities)]
         items = self.days.setdefault(day, [])
         items.append(entry)
         items.sort(key=lambda e: e[0])
@@ -563,6 +566,47 @@ def feelings_text(keys):
     return ", ".join(FEELING_LABELS[k] for k in keys if k in FEELING_LABELS)
 
 
+def activity_counts(store, start=None, end=None):
+    """[(key, how many entries)] in the period, most often first; private entries left out."""
+    counts = {}
+    for day in store.days:
+        if (start and day < start) or (end and day > end):
+            continue
+        for e in store.days[day]:
+            if not is_private(e, 7):
+                for k in entry_activities(e):
+                    counts[k] = counts.get(k, 0) + 1
+    order = [k for k, _l in ACTIVITIES]
+    return sorted(counts.items(), key=lambda kv: (-kv[1], order.index(kv[0])))
+
+
+# Optional tags for what you did, next to a mood: quick to tap, and the same list in every app.
+ACTIVITIES = [("work", tr("Work")), ("study", tr("Study")), ("family", tr("Family")),
+              ("friends", tr("Friends")), ("partner", tr("Partner")), ("exercise", tr("Exercise")),
+              ("walk", tr("Walk")), ("outdoors", tr("Outdoors")), ("hobby", tr("Hobby")),
+              ("gaming", tr("Gaming")), ("reading", tr("Reading")), ("music", tr("Music")),
+              ("shows", tr("TV and series")), ("cooking", tr("Cooking")), ("chores", tr("Chores")),
+              ("rest", tr("Rest"))]
+ACTIVITY_LABELS = dict(ACTIVITIES)
+
+
+def clean_activities(value):
+    """Activity tags as one text in a fixed order ("work,walk"); unknown ones are dropped."""
+    if isinstance(value, str):
+        value = value.replace(";", ",").split(",")
+    wanted = {str(v).strip().lower() for v in value or []} if isinstance(value, (list, tuple, set, str)) else set()
+    return ",".join(key for key, _label in ACTIVITIES if key in wanted)
+
+
+def entry_activities(entry):
+    """The activity keys of an entry ([] for entries without any)."""
+    return [k for k in (entry[9] if len(entry) > 9 and entry[9] else "").split(",") if k]
+
+
+def activities_text(keys):
+    return ", ".join(ACTIVITY_LABELS[k] for k in keys if k in ACTIVITY_LABELS)
+
+
 # ----------------------------------------------------------------- search
 
 def fold(text_):
@@ -601,7 +645,8 @@ def search_results(store, events, query):
             if not q:
                 if note.strip():
                     found.append(("entry", day, entry))
-            elif find_matches(note, q) or find_matches(feelings_text(entry_feelings(entry)), q):
+            elif (find_matches(note, q) or find_matches(feelings_text(entry_feelings(entry)), q)
+                  or find_matches(activities_text(entry_activities(entry)), q)):
                 found.append(("entry", day, entry))
     if q:
         for event in events.items:
@@ -1511,6 +1556,133 @@ class _Pdf:
         self.surface.finish()
 
 
+class _BookPdf(_Pdf):
+    """The same A4 pages, with a quiet footer: a diary isn't a medical report."""
+
+    def footer(self):
+        if self.page > 1:
+            self.text("%d" % self.page, self.W / 2, self.H - self.M + 4, 8, REPORT_INK["muted"], align=1)
+
+
+BOOK_PERIODS = [("all", tr("All of it")), ("year", tr("This year")), ("12m", tr("The last 12 months")),
+                ("3m", tr("The last 3 months"))]
+
+
+def book_range(store, period, today=None):
+    """(start, end) of a book period; start None means from the first day."""
+    today = today or dt.date.today()
+    start = {"year": dt.date(today.year, 1, 1), "12m": today - dt.timedelta(days=364),
+             "3m": today - dt.timedelta(days=90)}.get(period)
+    return start, today
+
+
+def book_days(store, events, start=None, end=None, include_private=False):
+    """[(day, [entries with something written or tagged], [events])], oldest first: the pages of
+    the book. Entries with only a face and nothing written are left out, so it reads as a diary."""
+    out = []
+    days = set(store.days) | {e[0] for e in events.items}
+    for day in sorted(days):
+        if (start and day < start) or (end and day > end):
+            continue
+        entries = [e for e in store.entries(day)
+                   if (include_private or not is_private(e, 7))
+                   and (e[2].strip() or entry_feelings(e) or entry_activities(e))]
+        evs = [e for e in events.items if e[0] == day]
+        if entries or evs:
+            out.append((day, entries, evs))
+    return out
+
+
+def _cap(text):
+    return text[:1].upper() + text[1:]
+
+
+def export_book(path, store, events, start=None, end=None, include_private=False):
+    """Your notes as a book: month by month, each day with its moods, words and events.
+    Returns the number of days in it (0 writes nothing)."""
+    pages = book_days(store, events, start, end, include_private)
+    if not pages:
+        return 0
+    ink = REPORT_INK
+    pdf = _BookPdf(path)
+    try:
+        pdf.surface.set_metadata(__import__("cairo").PDF_METADATA_TITLE, tr("My diary"))
+    except Exception:
+        pass
+    cr, M, W = pdf.cr, pdf.M, pdf.W
+    first, last = pages[0][0], pages[-1][0]
+
+    # ---- title page
+    pdf.y = 300
+    pdf.text(tr("My diary"), W / 2, pdf.y, 30, ink["ink"], bold=True, align=1)
+    pdf.y += 50
+    span = (_cap(fmt_date(first, "%B %Y")) if (first.year, first.month) == (last.year, last.month)
+            else "%s – %s" % (_cap(fmt_date(first, "%B %Y")), fmt_date(last, "%B %Y")))
+    pdf.text(span, W / 2, pdf.y, 13, ink["ink2"], align=1)
+    pdf.y += 26
+    pdf.text(trn("%d day", "%d days", len(pages)) % len(pages), W / 2, pdf.y, 10, ink["muted"], align=1)
+    pdf.text(tr("Written sottovoce, made with Sottovoce"), W / 2, pdf.H - 120, 9, ink["muted"], align=1)
+    pdf.new_page()
+
+    month = None
+    for day, entries, evs in pages:
+        if (day.year, day.month) != month:
+            if month is not None:
+                pdf.new_page()
+            month = (day.year, day.month)
+            pdf.text(_cap(fmt_date(day, "%B %Y")), M, pdf.y, 22, ink["ink"], bold=True)
+            pdf.y += 34
+            cr.rectangle(M, pdf.y, W - 2 * M, 0.8)
+            src(cr, ink["grid"])
+            cr.fill()
+            pdf.y += 16
+        # keep a day's heading with at least its first lines
+        pdf.ensure(60)
+        moods = [e[1] for e in store.entries(day) if e[1] and (include_private or not is_private(e, 7))]
+        avg = sum(moods) / len(moods) if moods else 0
+        if avg:
+            cr.new_path()
+            cr.arc(M + 5, pdf.y + 7.5, 5, 0, 2 * math.pi)
+            src(cr, ink["moods"][to_level(avg)])
+            cr.fill()
+        pdf.text(_cap(fmt_date(day, tr("%A %-d %B"))), M + 16, pdf.y, 12, ink["ink"], bold=True)
+        pdf.y += 22
+        for ev in evs:
+            line = "%s · %s" % (EVENT_LABELS.get(ev[1], ""), ev[2]) + (" — " + ev[3].strip() if ev[3].strip() else "")
+            _w, h = pdf.text(line, M + 16, 0, 9.5, measure=True, width=W - 2 * M - 16, italic=True)
+            pdf.ensure(h + 6)
+            pdf.text(line, M + 16, pdf.y, 9.5, ink["ink2"], width=W - 2 * M - 16, italic=True)
+            pdf.y += h + 6
+        for e in entries:
+            head = " · ".join(p for p in (e[0], MOOD_NAMES[e[1]] if e[1] else "") if p)
+            words = " · ".join(p for p in (feelings_text(entry_feelings(e)), activities_text(entry_activities(e))) if p)
+            if head:
+                pdf.ensure(18)
+                tx = M + 16
+                if e[1]:
+                    cr.new_path()
+                    draw_face(cr, M + 22, pdf.y + 6.5, 6, e[1], ink["moods"][e[1]])
+                    cr.new_path()
+                    tx = M + 34
+                pdf.text(head, tx, pdf.y + 0.5, 8.5, ink["muted"])
+                pdf.y += 17
+            if e[2].strip():
+                for para in [p.strip() for p in e[2].strip().split("\n") if p.strip()]:
+                    _w, h = pdf.text(para, M + 16, 0, 10.5, measure=True, width=W - 2 * M - 16)
+                    pdf.ensure(h + 4)
+                    pdf.text(para, M + 16, pdf.y, 10.5, ink["ink"], width=W - 2 * M - 16)
+                    pdf.y += h + 4
+            if words:
+                _w, h = pdf.text(words, M + 16, 0, 8.5, measure=True, width=W - 2 * M - 16)
+                pdf.ensure(h + 4)
+                pdf.text(words, M + 16, pdf.y, 8.5, ink["muted"], width=W - 2 * M - 16)
+                pdf.y += h + 4
+            pdf.y += 8
+        pdf.y += 10
+    pdf.finish()
+    return len(pages)
+
+
 def _avg(values):
     values = [v for v in values if v]
     return sum(values) / len(values) if values else 0.0
@@ -1626,6 +1798,13 @@ def export_report(path, store, events, health, start, end, include_notes=False,
     if words:
         line = tr("Feeling words picked most often: %s.") % ", ".join(
             "%s (%d)" % (FEELING_LABELS[k], n) for k, n in words[:8])
+        _w, h = pdf.text(line, M, 0, 9, measure=True, width=W - 2 * M)
+        pdf.text(line, M, pdf.y, 9, ink["ink2"], width=W - 2 * M)
+        pdf.y += h + 16
+    did = activity_counts(store, start, end)
+    if did:
+        line = tr("Activities logged most often: %s.") % ", ".join(
+            "%s (%d)" % (ACTIVITY_LABELS[k], n) for k, n in did[:8])
         _w, h = pdf.text(line, M, 0, 9, measure=True, width=W - 2 * M)
         pdf.text(line, M, pdf.y, 9, ink["ink2"], width=W - 2 * M)
         pdf.y += h + 16
@@ -3247,9 +3426,10 @@ def stores_from_json(doc):
         note = str(item.get("note") or "")[:20000]
         mood, energy, anxiety = level(item.get("mood")), level(item.get("energy")), level(item.get("anxiety"))
         feelings = clean_feelings(item.get("feelings") if isinstance(item.get("feelings"), (list, str)) else "")
-        if mood or energy or anxiety or note.strip() or feelings:
+        acts = clean_activities(item.get("activities") if isinstance(item.get("activities"), (list, str)) else "")
+        if mood or energy or anxiety or note.strip() or feelings or acts:
             store.add(day, time, mood, note, energy, anxiety, eid=eid, updated=stamp,
-                      private=item.get("private") is True, feelings=feelings)
+                      private=item.get("private") is True, feelings=feelings, activities=acts)
     for item in (doc.get("events") or [])[:20000]:
         if not isinstance(item, dict):
             continue
@@ -3305,7 +3485,8 @@ def stores_to_json(store, events, dreams=None, surveys=None, appointment=None):
     entries = [dict({"id": e[5], "date": day.isoformat(), "time": e[0], "mood": e[1], "energy": e[3],
                      "anxiety": e[4], "note": e[2], "updated": e[6]},
                     **({"private": True} if is_private(e, 7) else {}),
-                    **({"feelings": entry_feelings(e)} if entry_feelings(e) else {}))
+                    **({"feelings": entry_feelings(e)} if entry_feelings(e) else {}),
+                    **({"activities": entry_activities(e)} if entry_activities(e) else {}))
                for day in sorted(store.days) for e in store.days[day]]
     evs = [{"id": e[4], "date": e[0].isoformat(), "kind": e[1], "title": e[2], "note": e[3],
             "updated": e[5]} for e in events.items]
@@ -6285,10 +6466,97 @@ class ReportWindow(Gtk.Window):
             pages, os.path.basename(path)))
 
 
+class BookWindow(Gtk.Window):
+    """Your diary as a book: choose a period, then save it as a PDF to keep or print."""
+
+    def __init__(self, win):
+        super().__init__(title=tr("Your diary as a book"), transient_for=win, modal=True)
+        self.set_default_size(460, -1)
+        self.win = win
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        intro = Gtk.Label(xalign=0, wrap=True, label=tr(
+            "Your notes month by month, with the mood faces, feeling words, activities and events, "
+            "as a PDF to keep or print. Moments with only a face and no words are left out."))
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        self.period = "all"
+        group = None
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        for key, label in BOOK_PERIODS:
+            btn = Gtk.CheckButton(label=label, active=(key == "all"))
+            if group:
+                btn.set_group(group)
+            group = group or btn
+            btn.connect("toggled", lambda b, k=key: b.get_active() and self.choose(k))
+            box.append(btn)
+        col.append(box)
+        self.private_check = Gtk.CheckButton(label=tr("Include private moments"))
+        col.append(self.private_check)
+        self.info = Gtk.Label(xalign=0, wrap=True)
+        self.info.add_css_class("dim-label")
+        col.append(self.info)
+        self.private_check.connect("toggled", lambda *_: self.update())
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
+        cancel = Gtk.Button(label=tr("Cancel"))
+        cancel.connect("clicked", lambda *_: self.close())
+        self.save = Gtk.Button(label=tr("Save PDF…"))
+        self.save.add_css_class("suggested-action")
+        self.save.connect("clicked", self.on_save)
+        buttons.append(cancel)
+        buttons.append(self.save)
+        col.append(buttons)
+        self.set_child(col)
+        self.private_check.set_visible(any(is_private(e, 7) for items in win.store.days.values() for e in items))
+        self.update()
+
+    def choose(self, key):
+        self.period = key
+        self.update()
+
+    def days(self):
+        start, end = book_range(self.win.store, self.period)
+        return book_days(self.win.store, self.win.events, start, end, self.private_check.get_active())
+
+    def update(self):
+        n = len(self.days())
+        self.info.set_text(trn("%d day with words in it.", "%d days with words in them.", n) % n if n
+                           else tr("Nothing written in this period yet."))
+        self.save.set_sensitive(bool(n))
+
+    def on_save(self, *_):
+        start, end = book_range(self.win.store, self.period)
+        self.win._pick(tr("Save your diary"), "save", lambda path: self.write(path, start, end),
+                       "sottovoce-diary.pdf")
+
+    def write(self, path, start, end):
+        if not path.lower().endswith(".pdf"):
+            path += ".pdf"
+        win = self.win
+        win.flush()
+        try:
+            days = export_book(path, win.store, win.events, start, end, self.private_check.get_active())
+        except (OSError, Exception) as err:
+            self.info.set_text(tr("Could not make the book: %s") % err)
+            return
+        self.close()
+        try:
+            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+        except GLib.Error:
+            pass
+        win.notify(trn("Saved your diary (%d day) as %s", "Saved your diary (%d days) as %s", days) % (
+            days, os.path.basename(path)))
+
+
 # ----------------------------------------------------------------- changelog
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.1.0", "2026-11-25", [
+        "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the phones, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Customize.",
+        "Your diary as a book: Export → Your diary as a book (.pdf). Your notes month by month, with the mood faces, feeling words, activities and events, laid out as a PDF to keep or print. Private moments stay out unless you choose to include them.",
+    ]),
     ("3.0.2", "2026-11-24", [
         "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the Log shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with your phones.",
         "Your week, gently: on Sunday evening and on Monday, a few calm words about your week on the Log — days logged, the usual mood, your best day. No scores; turn it off in Customize.",
@@ -6449,6 +6717,10 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.1.0", "2026-11-25", [
+        "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.",
+        "Your diary as a book: in Charts, the book button makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them.",
+    ]),
     ("2.0.4", "2026-11-24", [
         "Before the appointment: choose notifications 1 week, 3, 2 or 1 day before the appointment, or on the day — as many as you like. They say only that you have an appointment, never with whom. Tap one to open the list of things to talk about.",
     ]),
@@ -6506,6 +6778,10 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.1.0", "2026-11-25", [
+        "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.",
+        "Your diary as a book: in Charts, Export → Your diary as a book makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them.",
+    ]),
     ("2.0.7", "2026-11-25", [
         "Backup: when you choose the backup file, Sottovoce now asks for one more tap on the file you just saved. iOS only lets an app keep updating a file it has opened that way, so the backup no longer stops working after the app restarts.",
     ]),
@@ -7219,7 +7495,8 @@ def card(child, title=None):
 
 PREF_DEFAULTS = {"dreams": True, "medication": True, "several": "grid",   # several: grid|latest
                  "private_tick": True, "private_default": False,
-                 "questionnaires": True, "survey_remind": True, "feelings": True, "prompts": True}
+                 "questionnaires": True, "survey_remind": True, "feelings": True, "prompts": True,
+                 "activities": True}
 
 
 def load_prefs():
@@ -7291,6 +7568,8 @@ def customize_options(win, compact=False):
                           tr("Doses from Apple Health, sent by Sottovoce for iPhone.")))
     box.append(switch_row("feelings", tr("Feeling words"),
                           tr("Optional words next to a mood, like Joy or Tiredness. Kept even when it's off.")))
+    box.append(switch_row("activities", tr("Activities"),
+                          tr("Optional tags for what you did, like Work or Walk. Kept even when it's off.")))
     box.append(switch_row("prompts", tr("Writing prompts"),
                           tr("A gentle question in an empty note, for days you don't know what to write.")))
     box.append(switch_row("questionnaires", tr("Questionnaires"),
@@ -7821,12 +8100,16 @@ class Window(Adw.ApplicationWindow):
         report_action = Gio.SimpleAction.new("report", None)
         report_action.connect("activate", lambda *_: ReportWindow(self).present())
         self.add_action(report_action)
+        book_action = Gio.SimpleAction.new("book", None)
+        book_action.connect("activate", lambda *_: BookWindow(self).present())
+        self.add_action(book_action)
         for name, kind in (("export-xlsx", "xlsx"), ("export-csv", "csv")):
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", lambda _a, _p, k=kind: self.on_export(k))
             self.add_action(action)
         menu = Gio.Menu()
         menu.append(tr("Report for your doctor (.pdf)\u2026"), "win.report")
+        menu.append(tr("Your diary as a book (.pdf)\u2026"), "win.book")
         menu.append(tr("Spreadsheet with colours and charts (.xlsx)"), "win.export-xlsx")
         menu.append(tr("Plain CSV file (.csv)"), "win.export-csv")
         export = Gtk.MenuButton(label=tr("Export"), menu_model=menu)
@@ -7946,6 +8229,7 @@ class Window(Adw.ApplicationWindow):
             self.stack.set_visible_child_name("log")
         self.private_check.set_visible(bool(self.prefs["private_tick"]))
         self.feel_row.set_visible(bool(self.prefs["feelings"]))
+        self.act_row.set_visible(bool(self.prefs["activities"]))
         self.update_prompt()
         self.survey_menu.remove_all()
         if self.prefs["questionnaires"]:
@@ -8229,6 +8513,36 @@ class Window(Adw.ApplicationWindow):
         self.feel_row = Gtk.Box(spacing=8)
         for wdg in (feel_title, self.feel_label, self.feel_button):
             self.feel_row.append(wdg)
+        # activities: the same, for what you did
+        self.act_buttons = {}
+        aflow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, column_spacing=6, row_spacing=6,
+                            min_children_per_line=3, max_children_per_line=3, homogeneous=True)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(aflow, "set_margin_" + side)(8)
+        for key, label in ACTIVITIES:
+            btn = Gtk.ToggleButton(label=label)
+            btn.add_css_class("feeling")
+            btn.connect("toggled", self.on_activity_toggled, key)
+            self.act_buttons[key] = btn
+            aflow.append(btn)
+        apop_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        apop_title = Gtk.Label(label=tr("What did you do? Optional."), xalign=0)
+        apop_title.add_css_class("dim-label")
+        for side in ("top", "start"):
+            getattr(apop_title, "set_margin_" + side)(8)
+        apop_box.append(apop_title)
+        apop_box.append(aflow)
+        apopover = Gtk.Popover()
+        apopover.set_child(apop_box)
+        self.act_button = Gtk.MenuButton(label=tr("Add…"), popover=apopover)
+        self.act_button.set_tooltip_text(tr("What you did, to see later what helps"))
+        act_title = Gtk.Label(label=tr("Activities"), xalign=0)
+        act_title.add_css_class("heading")
+        self.act_label = Gtk.Label(xalign=0, hexpand=True, wrap=True)
+        self.act_label.add_css_class("dim-label")
+        self.act_row = Gtk.Box(spacing=8)
+        for wdg in (act_title, self.act_label, self.act_button):
+            self.act_row.append(wdg)
         note_title = Gtk.Label(label=tr("Note"), xalign=0, hexpand=True)
         note_title.add_css_class("heading")
         self.private_check = Gtk.CheckButton(label=tr("Private"))
@@ -8282,7 +8596,7 @@ class Window(Adw.ApplicationWindow):
             bottom.append(wdg)
         right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         for wdg in (day_row, self.day_events, self.entry_scroll, mode_row, faces,
-                    self.scales_box, self.feel_row, note_label, frame, bottom):
+                    self.scales_box, self.feel_row, self.act_row, note_label, frame, bottom):
             right.append(wdg)
         right_card = card(right)
         right_card.set_size_request(350, -1)
@@ -8685,7 +8999,7 @@ class Window(Adw.ApplicationWindow):
 
 
     def build_notes_page(self):
-        self.search = Gtk.SearchEntry(placeholder_text=tr("Search notes, feelings and events"))
+        self.search = Gtk.SearchEntry(placeholder_text=tr("Search notes, feelings, activities and events"))
         self.search.connect("search-changed", lambda *_: self.refresh_notes())
         self.notes_list = Gtk.ListBox()
         self.notes_list.set_selection_mode(Gtk.SelectionMode.NONE)
@@ -8780,6 +9094,10 @@ class Window(Adw.ApplicationWindow):
         for key, btn in self.feel_buttons.items():
             btn.set_active(key in chosen)
         self.show_feelings(chosen)
+        doing = entry_activities(entry) if entry else []
+        for key, btn in self.act_buttons.items():
+            btn.set_active(key in doing)
+        self.show_activities(doing)
         self.prompt_offset = 0
         self.update_prompt()
         self.private_check.set_active(is_private(entry, 7) if entry else
@@ -8893,6 +9211,19 @@ class Window(Adw.ApplicationWindow):
     def show_feelings(self, keys):
         self.feel_label.set_text(feelings_text(keys) or tr("none"))
 
+    def current_activities(self):
+        return ",".join(key for key, btn in self.act_buttons.items() if btn.get_active())
+
+    def show_activities(self, keys):
+        self.act_label.set_text(activities_text(keys) or tr("none"))
+
+    def on_activity_toggled(self, _btn, _key):
+        if self._loading:
+            return
+        self.show_activities(self.current_activities().split(","))
+        self.commit()
+        self.rebuild_entries()
+
     def on_feeling_toggled(self, _btn, _key):
         if self._loading:
             return
@@ -8955,8 +9286,8 @@ class Window(Adw.ApplicationWindow):
         """Write the editor into the store: creates the entry on first input."""
         mood, note, day = self.current_mood(), self.current_note(), self.selected
         energy, anxiety = self.current_scale(3), self.current_scale(4)
-        feelings = self.current_feelings()
-        empty = not mood and not note.strip() and not energy and not anxiety and not feelings
+        feelings, acts = self.current_feelings(), self.current_activities()
+        empty = not mood and not note.strip() and not energy and not anxiety and not feelings and not acts
         if self.current is None:
             if empty:
                 return
@@ -8965,7 +9296,7 @@ class Window(Adw.ApplicationWindow):
                 value = dt.datetime.now().strftime("%H:%M")
             private = self.prefs["private_tick"] and self.private_check.get_active()
             self.current = self.store.add(day, value, mood, note, energy, anxiety, private=private,
-                                          feelings=feelings)
+                                          feelings=feelings, activities=acts)
             self._loading = True
             self.time_entry.set_text(self.current[0])
             self.time_entry.remove_css_class("error")
@@ -8973,9 +9304,10 @@ class Window(Adw.ApplicationWindow):
             self.update_mode()
         else:
             self.current[1:5] = [mood, note, energy, anxiety]
-            while len(self.current) < 9:
+            while len(self.current) < 10:
                 self.current.append(False if len(self.current) == 7 else "")
             self.current[8] = feelings
+            self.current[9] = acts
             self.store.touch(self.current)
             if empty:
                 self.store.remove(day, self.current)
@@ -9017,7 +9349,8 @@ class Window(Adw.ApplicationWindow):
                 extra.add_css_class("caption")
                 box.append(extra)
             words = feelings_text(entry_feelings(entry)) if self.prefs["feelings"] else ""
-            snippet = Gtk.Label(label=" · ".join(p for p in (words, " ".join(note.split())) if p),
+            did = activities_text(entry_activities(entry)) if self.prefs["activities"] else ""
+            snippet = Gtk.Label(label=" · ".join(p for p in (words, did, " ".join(note.split())) if p),
                                 xalign=0, hexpand=True)
             snippet.set_ellipsize(Pango.EllipsizeMode.END)
             snippet.add_css_class("dim-label")
@@ -9541,6 +9874,9 @@ class Window(Adw.ApplicationWindow):
                 feelings = feelings_text(entry_feelings(item))
                 if feelings and (not lines or find_matches(feelings, query)):
                     lines.append(feelings)
+                did = activities_text(entry_activities(item))
+                if did and (not lines or find_matches(did, query)):
+                    lines.append(did)
             else:
                 icon = EventIcon(34)
                 icon.set_valign(Gtk.Align.START)

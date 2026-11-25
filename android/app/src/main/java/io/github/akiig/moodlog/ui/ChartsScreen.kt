@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -57,6 +58,7 @@ fun ChartsScreen() {
     val app = LocalApp.current
     val store = app.store
     var report by remember { mutableStateOf(false) }
+    var book by remember { mutableStateOf(false) }
     var monthText by rememberSaveable { mutableStateOf(Day.monthStart().toString()) }
     val month = LocalDate.parse(monthText)
     val days = Day.days(month)
@@ -68,6 +70,7 @@ fun ChartsScreen() {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         LargeTitle(tr("Charts")) {
+            CircleButton(Icons.Outlined.AutoStories, tr("Your diary as a book")) { book = true }
             CircleButton(Icons.Outlined.Description, tr("Report for your doctor")) { report = true }
         }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -100,6 +103,7 @@ fun ChartsScreen() {
         }
     }
     if (report) ReportDialog { report = false }
+    if (book) BookDialog { book = false }
 }
 
 /** Sleep from Health Connect night by night, with the day's mood on top of each bar, and the

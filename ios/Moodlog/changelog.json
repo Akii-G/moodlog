@@ -1,5 +1,19 @@
 [
  {
+  "version": "2.1.0",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.",
+    "Your diary as a book: in Charts, Export → Your diary as a book makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them."
+   ],
+   "it": [
+    "Attività: accanto alle emozioni, etichette facoltative per quello che hai fatto — Lavoro, Passeggiata, Amici, Riposo e altre. Si vedono nel giorno, si sincronizzano con il PC, si possono cercare, e il report per il medico elenca quelle segnate più spesso. Si disattivano in Impostazioni → Personalizza.",
+    "Il tuo diario come un libro: in Grafici, Esporta → Il tuo diario come un libro crea un PDF delle tue note mese per mese, con le faccine dell'umore, le emozioni, le attività e gli eventi, da tenere o stampare. I momenti privati restano fuori, a meno che tu non scelga di includerli."
+   ]
+  }
+ },
+ {
   "version": "2.0.7",
   "date": "2026-11-25",
   "items": {

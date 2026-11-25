@@ -43,7 +43,8 @@ abstract class Screens(private val lang: String) {
             moods.forEachIndexed { i, m ->
                 val d = Day.adding(-i, today)
                 if (Day.date(d)!!.monthValue != Day.date(today)!!.monthValue && i > 18) return@forEachIndexed
-                entries.add(Entry("s$i", d, "09:${10 + i}", m, (m % 5) + 1, 6 - m, if (i == 0) "Coffee with a friend, felt lighter" else "", "2026-01-01T00:00:00.000Z"))
+                entries.add(Entry("s$i", d, "09:${10 + i}", m, (m % 5) + 1, 6 - m, if (i == 0) "Coffee with a friend, felt lighter" else if (i == 3) "Long day. Went for a walk after work and it helped a bit." else "", "2026-01-01T00:00:00.000Z",
+                    activities = if (i == 0) listOf("friends") else if (i == 3) listOf("work", "walk") else emptyList()))
                 if (i % 4 == 1) entries.add(Entry("t$i", d, "21:05", (m % 5) + 1, 3, 2, "", "2026-01-01T00:00:00.000Z"))
             }
             state.store.absorb(SyncState(entries,
@@ -209,6 +210,36 @@ abstract class Screens(private val lang: String) {
         rule.onAllNodes(hasText(tr("Save")))[0].performClick()
         rule.mainClock.advanceTimeBy(1000)
         shot("private-day")
+    }
+
+    /** The entry editor with activities picked, and the book's pages drawn onto images. */
+    @Test fun activitiesAndBook() {
+        rule.waitForIdle()
+        rule.onAllNodes(hasText(tr("Done"))).fetchSemanticsNodes().takeIf { it.isNotEmpty() }?.let {
+            rule.onAllNodes(hasText(tr("Done")))[0].performClick(); rule.waitForIdle()
+        }
+        tab("Log")
+        rule.onAllNodes(androidx.compose.ui.test.hasContentDescription(tr("Today")))[0].performClick()
+        rule.onAllNodes(hasText(tr("How do you feel now?")))[0].performClick()
+        rule.waitForIdle()
+        rule.onAllNodes(hasText(tr("Walk")))[0].performScrollTo().performClick()
+        rule.onAllNodes(hasText(tr("Friends")))[0].performScrollTo().performClick()
+        rule.waitForIdle()
+        shot("activities")
+        rule.onAllNodes(hasText(tr("Cancel")))[0].performClick()
+        val store = AppState.get(ApplicationProvider.getApplicationContext()).store
+        val bitmaps = mutableListOf<android.graphics.Bitmap>()
+        Book(store, null, Day.today, false).draw(object : Report.Pages {
+            override fun start(number: Int): android.graphics.Canvas {
+                val b = android.graphics.Bitmap.createBitmap(1190, 1684, android.graphics.Bitmap.Config.ARGB_8888)
+                bitmaps.add(b)
+                return android.graphics.Canvas(b).apply { scale(2f, 2f) }
+            }
+            override fun end() {}
+        })
+        bitmaps.take(3).forEachIndexed { i, b ->
+            java.io.FileOutputStream("build/screenshots/${lang}_book-${i + 1}.png").use { b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
     }
 
     /** The doctor report's pages, drawn onto images instead of a PDF. */

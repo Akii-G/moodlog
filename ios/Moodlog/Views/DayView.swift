@@ -162,6 +162,10 @@ struct EntryRow: View {
                 if Prefs.feelings, let words = entry.feelings, !words.isEmpty {
                     Text(Feeling.text(words)).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
+                if Prefs.activities, let acts = entry.activities, !acts.isEmpty {
+                    Label(Activity.text(acts), systemImage: "figure.walk")
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
                 if !entry.note.isEmpty {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         if entry.hidden && Prefs.privateTick {
@@ -192,10 +196,12 @@ struct EntryEditor: View {
     @State private var note: String
     @State private var isPrivate: Bool
     @State private var feelings: Set<String>
+    @State private var activities: Set<String>
     @State private var promptOffset = 0
     @AppStorage("privateTick") private var privateTick = true
     @AppStorage("showFeelings") private var showFeelings = true
     @AppStorage("showPrompts") private var showPrompts = true
+    @AppStorage("showActivities") private var showActivities = true
 
     init(day: String, original: Entry?) {
         self.day = day
@@ -211,10 +217,11 @@ struct EntryEditor: View {
         _note = State(initialValue: original?.note ?? "")
         _isPrivate = State(initialValue: original.map { $0.hidden } ?? (Prefs.privateTick && Prefs.privateDefault))
         _feelings = State(initialValue: Set(original?.feelings ?? []))
+        _activities = State(initialValue: Set(original?.activities ?? []))
     }
 
     private var isEmpty: Bool {
-        return mood == 0 && energy == 0 && anxiety == 0 && feelings.isEmpty
+        return mood == 0 && energy == 0 && anxiety == 0 && feelings.isEmpty && activities.isEmpty
             && note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -240,30 +247,22 @@ struct EntryEditor: View {
                 }
                 if showFeelings {
                     Section {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
-                            ForEach(Feeling.all, id: \.key) { f in
-                                let on = feelings.contains(f.key)
-                                Button {
-                                    if on { feelings.remove(f.key) } else { feelings.insert(f.key) }
-                                } label: {
-                                    Text(f.label)
-                                        .font(.subheadline.weight(on ? .semibold : .regular))
-                                        .lineLimit(1).minimumScaleFactor(0.8)
-                                        .frame(maxWidth: .infinity, minHeight: 34)
-                                        .background(on ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06),
-                                                    in: Capsule())
-                                        .overlay(Capsule().stroke(on ? Color.accentColor : .clear, lineWidth: 1.5))
-                                        .foregroundStyle(on ? Color.accentColor : .primary)
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityAddTraits(on ? .isSelected : [])
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        WordChips(words: Feeling.all, picked: $feelings)
+                            .padding(.vertical, 4)
                     } header: {
                         Text("Feelings")
                     } footer: {
                         Text("Pick any that fit. Optional.")
+                    }
+                }
+                if showActivities {
+                    Section {
+                        WordChips(words: Activity.all, picked: $activities)
+                            .padding(.vertical, 4)
+                    } header: {
+                        Text("Activities")
+                    } footer: {
+                        Text("What did you do? Optional.")
                     }
                 }
                 Section {
@@ -322,11 +321,41 @@ struct EntryEditor: View {
             entry.note = note
             if privateTick { entry.isPrivate = isPrivate ? true : nil }
             entry.feelings = feelings.isEmpty ? nil : Feeling.clean(Array(feelings))
+            entry.activities = activities.isEmpty ? nil : Activity.clean(Array(activities))
             store.update(entry)
         } else {
             store.addEntry(date: day, time: t, mood: mood, energy: energy, anxiety: anxiety, note: note,
-                           isPrivate: privateTick && isPrivate, feelings: Array(feelings))
+                           isPrivate: privateTick && isPrivate, feelings: Array(feelings),
+                           activities: Array(activities))
         }
         dismiss()
+    }
+}
+
+/// Tappable word chips (feeling words, activities): tap to pick, tap again to drop.
+struct WordChips: View {
+    let words: [(key: String, label: String)]
+    @Binding var picked: Set<String>
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+            ForEach(words, id: \.key) { f in
+                let on = picked.contains(f.key)
+                Button {
+                    if on { picked.remove(f.key) } else { picked.insert(f.key) }
+                } label: {
+                    Text(f.label)
+                        .font(.subheadline.weight(on ? .semibold : .regular))
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(on ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06),
+                                    in: Capsule())
+                        .overlay(Capsule().stroke(on ? Color.accentColor : .clear, lineWidth: 1.5))
+                        .foregroundStyle(on ? Color.accentColor : .primary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
     }
 }

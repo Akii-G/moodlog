@@ -24,7 +24,7 @@ struct SearchView: View {
             }
         }
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: Text("Search notes, feelings and events"))
+                    prompt: Text("Search notes, feelings, activities and events"))
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -58,6 +58,10 @@ struct SearchRow: View {
                     let words = Feeling.text(e.feelings ?? [])
                     if !words.isEmpty && (e.note.isEmpty || Search.matches(words, query)) {
                         Text(Search.marked(words, query)).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    let acts = Activity.text(e.activities ?? [])
+                    if !acts.isEmpty && (e.note.isEmpty || Search.matches(acts, query)) {
+                        Text(Search.marked(acts, query)).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
             case .event(let ev):

@@ -196,6 +196,13 @@ class Report(
             ensure(measure(line, 9f, W - 2 * M) + 12f)
             y += text(line, M, y, 9f, ink2, width = W - 2 * M) + 12f
         }
+        val acts = Activity.counts(store, start, end)
+        if (acts.isNotEmpty()) {
+            val line = tr("Activities logged most often: %@.",
+                acts.take(8).joinToString(", ") { "${Activity.label(it.first)} (${it.second})" })
+            ensure(measure(line, 9f, W - 2 * M) + 12f)
+            y += text(line, M, y, 9f, ink2, width = W - 2 * M) + 12f
+        }
         if (moodDays.isNotEmpty()) moodChart()
         if (en.isNotEmpty() || an.isNotEmpty()) scaleChart()
         if (sleep.isNotEmpty()) sleepChart()

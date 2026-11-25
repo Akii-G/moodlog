@@ -161,6 +161,13 @@ final class Report {
             ensure(measure(line, 9, W - 2 * M) + 12)
             y += text(line, M, y, 9, ink2, width: W - 2 * M) + 12
         }
+        let acts = Activity.counts(store, from: start, to: end)
+        if !acts.isEmpty {
+            let line = tr("Activities logged most often: %@.",
+                          acts.prefix(8).map { "\(Activity.label($0.0)) (\($0.1))" }.joined(separator: ", "))
+            ensure(measure(line, 9, W - 2 * M) + 12)
+            y += text(line, M, y, 9, ink2, width: W - 2 * M) + 12
+        }
         if !moodDays.isEmpty { moodChart() }
         if !en.isEmpty || !an.isEmpty { scaleChart() }
         if !sleep.isEmpty { sleepChart() }

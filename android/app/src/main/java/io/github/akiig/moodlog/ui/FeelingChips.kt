@@ -18,17 +18,27 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.github.akiig.moodlog.Activity
 import io.github.akiig.moodlog.Feeling
 
 /** The feeling words as pills that wrap onto several lines; tap to pick or unpick. */
+@Composable
+fun FeelingChips(selected: Set<String>, onToggle: (String) -> Unit) =
+    WordChips(Feeling.keys, Feeling::label, selected, onToggle)
+
+/** The activity tags, the same pills. */
+@Composable
+fun ActivityChips(selected: Set<String>, onToggle: (String) -> Unit) =
+    WordChips(Activity.keys, Activity::label, selected, onToggle)
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FeelingChips(selected: Set<String>, onToggle: (String) -> Unit) {
+fun WordChips(keys: List<String>, label: (String) -> String, selected: Set<String>, onToggle: (String) -> Unit) {
     FlowRow(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        for (key in Feeling.keys) {
+        for (key in keys) {
             val on = key in selected
-            Text(Feeling.label(key),
+            Text(label(key),
                 Modifier.clip(CircleShape)
                     .background(if (on) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
                                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))

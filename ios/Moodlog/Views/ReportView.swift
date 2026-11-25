@@ -118,3 +118,66 @@ struct ShareSheet: UIViewControllerRepresentable {
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
+
+/// "Your diary as a book": choose a period, then share the PDF to keep or print.
+struct BookView: View {
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var period = BookPeriod.all
+    @State private var includePrivate = false
+    @State private var file: URL?
+    @State private var message = ""
+
+    private var count: Int {
+        Book(store: store, start: Book.start(period), end: Day.today, includePrivate: includePrivate).pages.count
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Your notes month by month, with the mood faces, feeling words, activities and events, as a PDF to keep or print. Moments with only a face and no words are left out.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Section("Period") {
+                    Picker("Period", selection: $period) {
+                        ForEach(BookPeriod.allCases) { p in Text(p.label).tag(p) }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+                if store.entries.contains(where: \.hidden) {
+                    Section {
+                        Toggle("Include private moments", isOn: $includePrivate)
+                    }
+                }
+                Section {
+                    Button("Share PDF…") { build() }
+                        .disabled(count == 0)
+                } footer: {
+                    let n = count
+                    Text(n == 0 ? tr("Nothing written in this period yet.")
+                         : n == 1 ? tr("1 day with words in it.") : tr("%@ days with words in them.", "\(n)"))
+                    if !message.isEmpty { Text(message) }
+                }
+            }
+            .navigationTitle("Your diary as a book")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            .sheet(item: Binding(get: { file.map(SharedFile.init) }, set: { if $0 == nil { file = nil } })) { shared in
+                ShareSheet(url: shared.url)
+            }
+        }
+    }
+
+    private func build() {
+        message = ""
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(tr("My diary") + ".pdf")
+        do {
+            try Book(store: store, start: Book.start(period), end: Day.today, includePrivate: includePrivate).write(to: url)
+            file = url
+        } catch {
+            message = error.localizedDescription
+        }
+    }
+}

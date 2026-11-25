@@ -148,9 +148,9 @@ class AppStore(private val file: File?) {
     // ---------------------------------------------------------------- changing
 
     fun addEntry(date: String, time: String, mood: Int, energy: Int, anxiety: Int, note: String,
-                 private: Boolean = false, feelings: List<String> = emptyList()) {
+                 private: Boolean = false, feelings: List<String> = emptyList(), activities: List<String> = emptyList()) {
         entries = entries + Entry(newId(), date, time, mood, energy, anxiety, note, Stamp.now(), private,
-            Feeling.clean(feelings))
+            Feeling.clean(feelings), Activity.clean(activities))
         changed()
     }
 

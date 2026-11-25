@@ -58,7 +58,7 @@ object Search {
         for (e in entries) {
             if (q.isEmpty()) {
                 if (e.note.isNotBlank()) hits.add(Hit.OfEntry(e))
-            } else if (matches(e.note, q) || matches(Feeling.text(e.feelings), q)) {
+            } else if (matches(e.note, q) || matches(Feeling.text(e.feelings), q) || matches(Activity.text(e.activities), q)) {
                 hits.add(Hit.OfEntry(e))
             }
         }

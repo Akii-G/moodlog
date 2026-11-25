@@ -104,6 +104,10 @@ class Prefs(context: Context) {
     var feelings: Boolean
         get() = p.getBoolean("showFeelings", true)
         set(v) = p.edit().putBoolean("showFeelings", v).apply()
+    /** Activity tags (Work, Walk...) in the editor and on the day. */
+    var activities: Boolean
+        get() = p.getBoolean("showActivities", true)
+        set(v) = p.edit().putBoolean("showActivities", v).apply()
     var prompts: Boolean
         get() = p.getBoolean("showPrompts", true)
         set(v) = p.edit().putBoolean("showPrompts", v).apply()

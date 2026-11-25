@@ -157,10 +157,11 @@ final class AppStore {
     // MARK: - Changing
 
     func addEntry(date: String, time: String, mood: Int, energy: Int, anxiety: Int, note: String,
-                  isPrivate: Bool = false, feelings: [String] = []) {
+                  isPrivate: Bool = false, feelings: [String] = [], activities: [String] = []) {
         entries.append(Entry(id: AppStore.newID(), date: date, time: time, mood: mood, energy: energy,
                              anxiety: anxiety, note: note, updated: Stamp.now(), isPrivate: isPrivate ? true : nil,
-                             feelings: feelings.isEmpty ? nil : Feeling.clean(feelings)))
+                             feelings: feelings.isEmpty ? nil : Feeling.clean(feelings),
+                             activities: activities.isEmpty ? nil : Activity.clean(activities)))
         changed()
     }
 

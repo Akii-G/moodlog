@@ -25,6 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import io.github.akiig.moodlog.Book
+import io.github.akiig.moodlog.BookPeriod
+import io.github.akiig.moodlog.Day
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.Report
 import io.github.akiig.moodlog.ReportPeriod
@@ -134,6 +137,94 @@ fun ReportDialog(onClose: () -> Unit) {
                         val f = build()
                         built = f
                         saver.launch(f.name)
+                    } catch (e: Exception) {
+                        message = e.localizedMessage ?: e.javaClass.simpleName
+                    }
+                    busy = false
+                }
+            }
+        }
+    }
+}
+
+/** "Your diary as a book": choose a period, then share or save the PDF to keep or print. */
+@Composable
+fun BookDialog(onClose: () -> Unit) {
+    val app = LocalApp.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var period by remember { mutableStateOf(BookPeriod.ALL) }
+    var includePrivate by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf("") }
+    val count = remember(period, includePrivate, app.store.entries, app.store.events) {
+        Book(app.store, period.start(), Day.today, includePrivate).pages.size
+    }
+
+    suspend fun build(): File {
+        val file = File(context.cacheDir, "reports/" + tr("My diary") + ".pdf")
+        return withContext(Dispatchers.Default) { Book(app.store, period.start(), Day.today, includePrivate).write(file) }
+    }
+
+    var built by remember { mutableStateOf<File?>(null) }
+    val saver = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        val f = built ?: return@rememberLauncherForActivityResult
+        if (uri != null) {
+            message = try {
+                context.contentResolver.openOutputStream(uri, "wt")?.use { out -> f.inputStream().use { it.copyTo(out) } }
+                tr("Saved.")
+            } catch (e: Exception) {
+                tr("Couldn't save the PDF there.")
+            }
+        }
+    }
+
+    EditorDialog(tr("Your diary as a book"), canSave = false, onCancel = onClose, onSave = {}) {
+        Text(tr("Your notes month by month, with the mood faces, feeling words, activities and events, as a PDF to keep or print. Moments with only a face and no words are left out."),
+            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 4.dp))
+        Section(tr("Period")) {
+            BookPeriod.entries.forEachIndexed { i, p ->
+                if (i > 0) Line()
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { period = p },
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(p.label, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    if (p == period) Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+        if (app.store.entries.any { it.private }) Section {
+            SwitchRow(tr("Include private moments"), includePrivate) { includePrivate = it }
+        }
+        val info = when (count) {
+            0 -> tr("Nothing written in this period yet.")
+            1 -> tr("1 day with words in it.")
+            else -> tr("%@ days with words in them.", count)
+        }
+        Section(footer = message.ifEmpty { info }) {
+            ActionRow(tr("Share PDF…"), enabled = count > 0, busy = busy) {
+                busy = true; message = ""
+                scope.launch {
+                    try {
+                        val f = build()
+                        val uri = FileProvider.getUriForFile(context, context.packageName + ".files", f)
+                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("application/pdf")
+                            .putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                            tr("Your diary as a book")))
+                    } catch (e: Exception) {
+                        message = e.localizedMessage ?: e.javaClass.simpleName
+                    }
+                    busy = false
+                }
+            }
+            Line()
+            ActionRow(tr("Save PDF…"), enabled = count > 0, busy = busy) {
+                busy = true; message = ""
+                scope.launch {
+                    try {
+                        val f = build()
+                        built = f
+                        saver.launch("sottovoce-diary.pdf")
                     } catch (e: Exception) {
                         message = e.localizedMessage ?: e.javaClass.simpleName
                     }

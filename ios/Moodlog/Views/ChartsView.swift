@@ -5,6 +5,7 @@ struct ChartsView: View {
     @Environment(AppStore.self) private var store
     @State private var month = Day.monthStart(Date())
     @State private var showReport = false
+    @State private var showBook = false
     @State private var sleep: [String: Double]?
     @State private var sleepLoaded = false
 
@@ -134,10 +135,16 @@ struct ChartsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button { showReport = true } label: { Label("Report for your doctor", systemImage: "doc.text") }
+                    Menu {
+                        Button { showReport = true } label: { Label("Report for your doctor", systemImage: "doc.text") }
+                        Button { showBook = true } label: { Label("Your diary as a book", systemImage: "book.closed") }
+                    } label: {
+                        Label("Export", systemImage: "square.and.arrow.up")
+                    }
                 }
             }
             .sheet(isPresented: $showReport) { ReportView() }
+            .sheet(isPresented: $showBook) { BookView() }
             .task(id: month) {
                 sleepLoaded = false
                 sleep = await HealthSender.nightlySleep(from: days.first ?? Day.today, to: days.last ?? Day.today)

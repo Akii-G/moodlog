@@ -93,6 +93,26 @@ class FeaturesTest {
         assertEquals(true, Dream.from(org.json.JSONObject(d.json().toString())).private)
     }
 
+    @Test fun activitiesAndBook() {
+        assertEquals(16, Activity.keys.size)
+        assertEquals(listOf("work", "walk"), Activity.clean(listOf("Walk", "work", "nope")))
+        val e = Entry("a1", "2026-03-02", "09:00", 2, 0, 0, "", "2026-03-02T08:00:00.000Z", activities = listOf("friends"))
+        assertEquals(listOf("friends"), Entry.from(org.json.JSONObject(e.json().toString())).activities)
+        assertFalse(e.copy(activities = emptyList()).json().has("activities"))
+        val s = AppStore(null)
+        s.absorb(SyncState(listOf(
+            e,
+            e.copy(id = "a2", date = "2026-01-05", activities = emptyList()),          // only a face: not in the book
+            e.copy(id = "a3", date = "2026-03-09", note = "Just for me", private = true, activities = listOf("work"))),
+            listOf(MoodEvent("ev", "2026-01-05", "medication", "New dose", "", "2026-01-01T00:00:00.000Z")), emptyList(), null))
+        assertEquals(listOf("friends" to 1), Activity.counts(s, "2026-01-01", "2026-12-31"))
+        assertEquals(listOf("2026-01-05", "2026-03-02"), Book(s, null, "2026-11-25", false).pages.map { it.day })
+        assertEquals(3, Book(s, null, "2026-11-25", true).pages.size)
+        assertEquals(listOf("2026-03-02"), Book(s, "2026-02-01", "2026-11-25", false).pages.map { it.day })
+        assertEquals("2026-01-01", BookPeriod.YEAR.start("2026-11-25"))
+        assertEquals(1, Search.results(s.entries, s.events, "friends").size)
+    }
+
     @Test fun feelingsAndPrompts() {
         assertEquals(18, Feeling.keys.size)
         assertEquals(listOf("joy", "tiredness"), Feeling.clean(listOf("Tiredness", "joy", "nope")))

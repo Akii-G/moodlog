@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.akiig.moodlog.Day
 import io.github.akiig.moodlog.EventKind
+import io.github.akiig.moodlog.Activity
 import io.github.akiig.moodlog.Feeling
 import io.github.akiig.moodlog.LocalApp
 import io.github.akiig.moodlog.Mood
@@ -61,7 +62,7 @@ fun SearchScreen(onDay: (String) -> Unit, onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Search, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.size(6.dp))
-                Box(Modifier.weight(1f)) { FieldRow("", query, { query = it }, tr("Search notes, feelings and events")) }
+                Box(Modifier.weight(1f)) { FieldRow("", query, { query = it }, tr("Search notes, feelings, activities and events")) }
             }
         }
         if (hits.isEmpty()) item {
@@ -102,6 +103,9 @@ fun SearchRow(hit: Search.Hit, query: String, onClick: () -> Unit) {
                     val words = Feeling.text(e.feelings)
                     if (words.isNotEmpty() && (e.note.isEmpty() || Search.matches(words, query)))
                         Text(marked(words, query), style = MaterialTheme.typography.bodyMedium, color = muted)
+                    val acts = Activity.text(e.activities)
+                    if (acts.isNotEmpty() && (e.note.isEmpty() || Search.matches(acts, query)))
+                        Text(marked(acts, query), style = MaterialTheme.typography.bodyMedium, color = muted)
                 }
             }
             is Search.Hit.OfEvent -> {
