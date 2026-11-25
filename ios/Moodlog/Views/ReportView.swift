@@ -7,6 +7,8 @@ struct ReportView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var period = ReportPeriod.threeMonths
+    @State private var from = Day.date(Day.adding(-29, to: Day.today)) ?? Date()
+    @State private var to = Date()
     @State private var notes = false
     @State private var sleep = true
     @State private var medication = true
@@ -34,6 +36,10 @@ struct ReportView: View {
                     }
                     .pickerStyle(.inline)
                     .labelsHidden()
+                    if period == .custom {
+                        DatePicker("From", selection: $from, in: ...Date(), displayedComponents: .date)
+                        DatePicker("To", selection: $to, in: from...Date(), displayedComponents: .date)
+                    }
                 }
                 Section {
                     Toggle("Include my notes", isOn: $notes)
@@ -81,7 +87,7 @@ struct ReportView: View {
     private func build() async {
         busy = true
         message = ""
-        let (start, end) = period.range(store)
+        let (start, end) = period == .custom ? (Day.string(from), Day.string(max(from, to))) : period.range(store)
         let nights = sleep && HealthSender.isAvailable ? (await HealthSender.nightlySleep(from: start, to: end) ?? [:]) : [:]
         var doses: [DoseRecord] = []
         var meds: [MedicationInfo] = []

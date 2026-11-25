@@ -77,6 +77,8 @@ class FeaturesTest {
     @Test fun reportPeriods() {
         val s = store(40 to 3, 0 to 4)
         assertEquals("2026-10-22" to "2026-11-20", ReportPeriod.MONTH.range(s, "2026-11-20"))
+        assertEquals("2026-11-14" to "2026-11-20", ReportPeriod.WEEK.range(s, "2026-11-20"))
+        assertEquals("2026-11-07" to "2026-11-20", ReportPeriod.TWO_WEEKS.range(s, "2026-11-20"))
         assertEquals("2026-01-01" to "2026-11-20", ReportPeriod.YEAR.range(s, "2026-11-20"))
         assertEquals("2026-10-11" to "2026-11-20", ReportPeriod.ALL.range(s, "2026-11-20"))
     }

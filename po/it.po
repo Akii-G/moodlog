@@ -2710,3 +2710,15 @@ msgstr "Il tuo diario come un libro: in Grafici, il pulsante del libro crea un P
 
 msgid "Your diary as a book: in Charts, Export → Your diary as a book makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them."
 msgstr "Il tuo diario come un libro: in Grafici, Esporta → Il tuo diario come un libro crea un PDF delle tue note mese per mese, con le faccine dell'umore, le emozioni, le attività e gli eventi, da tenere o stampare. I momenti privati restano fuori, a meno che tu non scelga di includerli."
+
+msgid "Last 7 days"
+msgstr "Ultimi 7 giorni"
+
+msgid "Last 2 weeks"
+msgstr "Ultime 2 settimane"
+
+msgid "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, handy before a check-up."
+msgstr "Report per il medico: due nuovi periodi, gli ultimi 7 giorni e le ultime 2 settimane, comodi prima di una visita."
+
+msgid "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording."
+msgstr "Report per il medico: due nuovi periodi, gli ultimi 7 giorni e le ultime 2 settimane, e Scegli le date per qualsiasi periodo. Il report ora è identico a quello del PC: stesse sezioni, grafici, tabelle e parole."

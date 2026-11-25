@@ -23,7 +23,7 @@ msgstr ""
 msgid "Great"
 msgstr ""
 
-#: src/moodlog:174 src/moodlog:497 src/moodlog:1278
+#: src/moodlog:174 src/moodlog:497 src/moodlog:1277
 msgid "Energy"
 msgstr ""
 
@@ -31,7 +31,7 @@ msgstr ""
 msgid "1 = very low, 5 = very high"
 msgstr ""
 
-#: src/moodlog:175 src/moodlog:497 src/moodlog:1278
+#: src/moodlog:175 src/moodlog:497 src/moodlog:1277
 msgid "Anxiety"
 msgstr ""
 
@@ -457,213 +457,213 @@ msgstr ""
 msgid "Didn't remember"
 msgstr ""
 
-#: src/moodlog:1094 src/moodlog:1221 src/moodlog:1278
+#: src/moodlog:1093 src/moodlog:1220 src/moodlog:1277
 msgid "Date"
 msgstr ""
 
-#: src/moodlog:1094 src/moodlog:1221
+#: src/moodlog:1093 src/moodlog:1220
 msgid "Weekday"
 msgstr ""
 
-#: src/moodlog:1094 src/moodlog:1221 src/moodlog:1278
+#: src/moodlog:1093 src/moodlog:1220 src/moodlog:1277
 msgid "Mood"
 msgstr ""
 
-#: src/moodlog:1094
+#: src/moodlog:1093
 msgid "Mood score (1–5)"
 msgstr ""
 
-#: src/moodlog:1094 src/moodlog:1221
+#: src/moodlog:1093 src/moodlog:1220
 msgid "Moods during the day"
 msgstr ""
 
-#: src/moodlog:1095 src/moodlog:1221 src/moodlog:2142
+#: src/moodlog:1094 src/moodlog:1220 src/moodlog:2142
 msgid "Notes"
 msgstr ""
 
-#: src/moodlog:1095 src/moodlog:1222 src/moodlog:1298
+#: src/moodlog:1094 src/moodlog:1221 src/moodlog:1297
 msgid "Events"
 msgstr ""
 
-#: src/moodlog:1095 src/moodlog:1224
+#: src/moodlog:1094 src/moodlog:1223
 msgid "Energy (1–5)"
 msgstr ""
 
-#: src/moodlog:1095 src/moodlog:1224
+#: src/moodlog:1094 src/moodlog:1223
 msgid "Anxiety (1–5)"
 msgstr ""
 
-#: src/moodlog:1097 src/moodlog:1323 src/moodlog:2118
+#: src/moodlog:1096 src/moodlog:1322 src/moodlog:2118
 msgid "Dreams"
 msgstr ""
 
-#: src/moodlog:1164
+#: src/moodlog:1163
 msgid "The spreadsheet export needs the python3-openpyxl package (sudo apt install python3-openpyxl)."
 msgstr ""
 
-#: src/moodlog:1220
+#: src/moodlog:1219
 msgid "Days"
 msgstr ""
 
-#: src/moodlog:1221
+#: src/moodlog:1220
 msgid "Score (1–5)"
 msgstr ""
 
-#: src/moodlog:1277
+#: src/moodlog:1276
 msgid "Entries"
 msgstr ""
 
-#: src/moodlog:1278 src/moodlog:6189
+#: src/moodlog:1277 src/moodlog:6189
 msgid "Time"
 msgstr ""
 
-#: src/moodlog:1278 src/moodlog:2082
+#: src/moodlog:1277 src/moodlog:2082
 msgid "Score"
 msgstr ""
 
-#: src/moodlog:1278 src/moodlog:8546
+#: src/moodlog:1277 src/moodlog:8555
 msgid "Note"
 msgstr ""
 
-#: src/moodlog:1300 src/moodlog:1983 src/moodlog:6088
+#: src/moodlog:1299 src/moodlog:1983 src/moodlog:6088
 msgid "Type"
 msgstr ""
 
-#: src/moodlog:1300 src/moodlog:6089
+#: src/moodlog:1299 src/moodlog:6089
 msgid "Title"
 msgstr ""
 
-#: src/moodlog:1300
+#: src/moodlog:1299
 msgid "Details"
 msgstr ""
 
-#: src/moodlog:1301
+#: src/moodlog:1300
 msgid "Mood %d weeks before"
 msgstr ""
 
-#: src/moodlog:1301
+#: src/moodlog:1300
 msgid "Mood %d weeks after"
 msgstr ""
 
-#: src/moodlog:1324 src/moodlog:5602
+#: src/moodlog:1323 src/moodlog:5602
 msgid "How it felt"
 msgstr ""
 
-#: src/moodlog:1324
+#: src/moodlog:1323
 msgid "Tags"
 msgstr ""
 
-#: src/moodlog:1324 src/moodlog:2138
+#: src/moodlog:1323 src/moodlog:2138
 msgid "Dream"
 msgstr ""
 
-#: src/moodlog:1324
+#: src/moodlog:1323
 msgid "Mood that day"
 msgstr ""
 
-#: src/moodlog:1343
+#: src/moodlog:1342
 msgid "Summary"
 msgstr ""
 
-#: src/moodlog:1348
+#: src/moodlog:1347
 msgid "Sottovoce export"
 msgstr ""
 
-#: src/moodlog:1354
+#: src/moodlog:1353
 msgid " · data from %s to %s"
 msgstr ""
 
-#: src/moodlog:1356
+#: src/moodlog:1355
 msgid "Exported %s%s"
 msgstr ""
 
-#: src/moodlog:1373 src/moodlog:1737
+#: src/moodlog:1372 src/moodlog:1737
 msgid "Days with a mood"
 msgstr ""
 
-#: src/moodlog:1374 src/moodlog:1740
+#: src/moodlog:1373 src/moodlog:1740
 msgid "Moods logged"
 msgstr ""
 
-#: src/moodlog:1375 src/moodlog:1738
+#: src/moodlog:1374 src/moodlog:1738
 msgid "Average mood (1–5)"
 msgstr ""
 
-#: src/moodlog:1379 src/moodlog:1381
+#: src/moodlog:1378 src/moodlog:1380
 msgid "Most common mood"
 msgstr ""
 
-#: src/moodlog:1382
+#: src/moodlog:1381
 msgid "Events logged"
 msgstr ""
 
-#: src/moodlog:1389 src/moodlog:1406 src/moodlog:8655
+#: src/moodlog:1388 src/moodlog:1405 src/moodlog:8664
 msgid "How often you logged each mood"
 msgstr ""
 
-#: src/moodlog:1390
+#: src/moodlog:1389
 msgid "Times"
 msgstr ""
 
-#: src/moodlog:1390
+#: src/moodlog:1389
 msgid "Share"
 msgstr ""
 
-#: src/moodlog:1425 src/moodlog:1445 src/moodlog:9798
+#: src/moodlog:1424 src/moodlog:1444 src/moodlog:9807
 msgid "Average mood by month"
 msgstr ""
 
-#: src/moodlog:1426 src/moodlog:8614
+#: src/moodlog:1425 src/moodlog:8623
 msgid "Month"
 msgstr ""
 
-#: src/moodlog:1426 src/moodlog:8630
+#: src/moodlog:1425 src/moodlog:8639
 msgid "Days logged"
 msgstr ""
 
-#: src/moodlog:1426
+#: src/moodlog:1425
 msgid "Average (1–5)"
 msgstr ""
 
-#: src/moodlog:1501 src/moodlog:1715
+#: src/moodlog:1500 src/moodlog:1715
 msgid "Mood report"
 msgstr ""
 
-#: src/moodlog:1539
+#: src/moodlog:1538
 msgid "Made with Sottovoce · self-reported data, not a medical record"
 msgstr ""
 
-#: src/moodlog:1541
+#: src/moodlog:1540
 msgid "Page %d"
 msgstr ""
 
-#: src/moodlog:1568
+#: src/moodlog:1567
 msgid "All of it"
 msgstr ""
 
-#: src/moodlog:1568 src/moodlog:6325
+#: src/moodlog:1567 src/moodlog:6325
 msgid "This year"
 msgstr ""
 
-#: src/moodlog:1568
+#: src/moodlog:1567
 msgid "The last 12 months"
 msgstr ""
 
-#: src/moodlog:1569
+#: src/moodlog:1568
 msgid "The last 3 months"
 msgstr ""
 
-#: src/moodlog:1610 src/moodlog:1618
+#: src/moodlog:1609 src/moodlog:1617
 msgid "My diary"
 msgstr ""
 
-#: src/moodlog:1624 src/moodlog:9834
+#: src/moodlog:1623 src/moodlog:9843
 msgid "%d day"
 msgid_plural "%d days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:1625
+#: src/moodlog:1624
 msgid "Written sottovoce, made with Sottovoce"
 msgstr ""
 
@@ -735,7 +735,7 @@ msgstr ""
 msgid "Numbered marks are the events listed below."
 msgstr ""
 
-#: src/moodlog:1925 src/moodlog:8686
+#: src/moodlog:1925 src/moodlog:8695
 msgid "Energy and anxiety (1–5)"
 msgstr ""
 
@@ -835,7 +835,7 @@ msgstr ""
 msgid "Notes and dreams"
 msgstr ""
 
-#: src/moodlog:2168 src/moodlog:8798
+#: src/moodlog:2168 src/moodlog:8807
 msgid "Dream: %s"
 msgstr ""
 
@@ -1215,7 +1215,7 @@ msgstr[1] ""
 msgid "From Apple Health, sent by Sottovoce for iPhone"
 msgstr ""
 
-#: src/moodlog:5584 src/moodlog:8834
+#: src/moodlog:5584 src/moodlog:8843
 msgid "Add a dream"
 msgstr ""
 
@@ -1239,7 +1239,7 @@ msgstr ""
 msgid "What did you dream?"
 msgstr ""
 
-#: src/moodlog:5633 src/moodlog:8803
+#: src/moodlog:5633 src/moodlog:8812
 msgid "Private: only counted in the doctor report, never its text"
 msgstr ""
 
@@ -1331,7 +1331,7 @@ msgstr ""
 msgid "Sottovoce doesn't tell anyone: this stays on your devices."
 msgstr ""
 
-#: src/moodlog:5936 src/moodlog:6241 src/moodlog:7076
+#: src/moodlog:5936 src/moodlog:6241 src/moodlog:7085
 msgid "Close"
 msgstr ""
 
@@ -1359,7 +1359,7 @@ msgstr ""
 msgid "No questionnaires yet."
 msgstr ""
 
-#: src/moodlog:6046 src/moodlog:8548
+#: src/moodlog:6046 src/moodlog:8557
 msgid "Private"
 msgstr ""
 
@@ -1371,7 +1371,7 @@ msgstr ""
 msgid "%s from %s. It's deleted on your other devices too at the next sync."
 msgstr ""
 
-#: src/moodlog:6070 src/moodlog:8414 src/moodlog:8916
+#: src/moodlog:6070 src/moodlog:8423 src/moodlog:8925
 msgid "Add event"
 msgstr ""
 
@@ -1451,7 +1451,15 @@ msgstr ""
 msgid "Appointment saved"
 msgstr ""
 
-#: src/moodlog:6324 src/moodlog:8843
+#: src/moodlog:6324
+msgid "Last 7 days"
+msgstr ""
+
+#: src/moodlog:6324
+msgid "Last 2 weeks"
+msgstr ""
+
+#: src/moodlog:6324 src/moodlog:8852
 msgid "Last 30 days"
 msgstr ""
 
@@ -1582,1219 +1590,1223 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: src/moodlog:6557
+msgid "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, handy before a check-up."
+msgstr ""
+
+#: src/moodlog:6560
 msgid "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the phones, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Customize."
 msgstr ""
 
-#: src/moodlog:6558
+#: src/moodlog:6561
 msgid "Your diary as a book: Export → Your diary as a book (.pdf). Your notes month by month, with the mood faces, feeling words, activities and events, laid out as a PDF to keep or print. Private moments stay out unless you choose to include them."
 msgstr ""
 
-#: src/moodlog:6561
+#: src/moodlog:6564
 msgid "Before the appointment: in Events, set the date of your next appointment with your doctor or therapist. In the week before, the Log shows a calm recap of how things have gone since the last one, and you can keep a list of things you want to talk about. Tick them once said; the rest can go in the doctor report if you choose. Synced with your phones."
 msgstr ""
 
-#: src/moodlog:6562
+#: src/moodlog:6565
 msgid "Your week, gently: on Sunday evening and on Monday, a few calm words about your week on the Log — days logged, the usual mood, your best day. No scores; turn it off in Customize."
 msgstr ""
 
-#: src/moodlog:6565
+#: src/moodlog:6568
 msgid "Search in Notes now also finds feeling words and events, ignores capitals and accents (“perche” finds “Perché”), and shows what it found in bold. Clicking an event opens it."
 msgstr ""
 
-#: src/moodlog:6568
+#: src/moodlog:6571
 msgid "Moodlog is now Sottovoce — a quiet mood diary: a new name and a softer icon. Your data, settings and phone sync stay exactly as they were."
 msgstr ""
 
-#: src/moodlog:6569
+#: src/moodlog:6572
 msgid "Default names for backups, exports and reports now start with sottovoce-. On Linux the package is now called sottovoce and replaces moodlog; the moodlog command still works."
 msgstr ""
 
-#: src/moodlog:6572
+#: src/moodlog:6575
 msgid "Windows: the round window buttons of the Tahoe style no longer stretch into tall bars."
 msgstr ""
 
-#: src/moodlog:6575
+#: src/moodlog:6578
 msgid "Feeling words: the ones you pick now light up in the Tahoe style too."
 msgstr ""
 
-#: src/moodlog:6576
+#: src/moodlog:6579
 msgid "Reminder, kind word and the Gridgets link are now in ☰ → Customize your experience, and they apply at once."
 msgstr ""
 
-#: src/moodlog:6579
+#: src/moodlog:6582
 msgid "Sottovoce for Windows 11 and 10: the same app, with phone sync, the daily reminder as a Windows notification, and an installer. Your data is in %LOCALAPPDATA%\\Sottovoce."
 msgstr ""
 
-#: src/moodlog:6582
+#: src/moodlog:6585
 msgid "Feeling words: next to a mood you can pick words like Joy, Tiredness or Worry, more precise than five faces. They show on the day, sync with the phones, and the report lists the ones you picked most often."
 msgstr ""
 
-#: src/moodlog:6583
+#: src/moodlog:6586
 msgid "Writing prompts: an empty note shows a gentle question, a different one each day, with a button for another. Never required. Both can be turned off in Customize."
 msgstr ""
 
-#: src/moodlog:6586
+#: src/moodlog:6589
 msgid "Questionnaires for your doctor (☰ menu): PHQ-9 about low mood and GAD-7 about anxiety, with the official words in English and Italian. Sottovoce shows only your score, a chart of scores over time, and the report can include them. Two weeks after the last one, a small card on the Log page asks if you'd like to answer again."
 msgstr ""
 
-#: src/moodlog:6587
+#: src/moodlog:6590
 msgid "Charts: \"Most common\" now counts every entry, like the chart of how often you logged each mood and like the phones. Before, it counted each day's average, so a tie between days could show a different mood from the chart."
 msgstr ""
 
-#: src/moodlog:6590
+#: src/moodlog:6593
 msgid "Private notes and dreams: tick Private on a note and it never goes in the doctor report; a private dream is only counted there, never shown. In Customize you can hide the tick, or make new ones start private."
 msgstr ""
 
-#: src/moodlog:6591
+#: src/moodlog:6594
 msgid "Customize your experience (☰ menu, the tour, and once after updating): turn off Dreams or Medication, and choose whether days with several moods show all of them in a grid or only the latest."
 msgstr ""
 
-#: src/moodlog:6594
+#: src/moodlog:6597
 msgid "Medication: a Medication button on each day opens the list of that day's doses, each with a pill in the colour of its status, the time, the amount and Taken or Skipped."
 msgstr ""
 
-#: src/moodlog:6597
+#: src/moodlog:6600
 msgid "Medication from Apple Health: with Sottovoce for iPhone 1.6, the medications you log in the Health app and the doses you took or skipped arrive with the health data. They show on each day, and the report for your doctor has a Medication section."
 msgstr ""
 
-#: src/moodlog:6600
+#: src/moodlog:6603
 msgid "A daily reminder (☰ → Reminder and kind word): one quiet desktop notification at the time you choose, only on days you haven't logged a mood yet."
 msgstr ""
 
-#: src/moodlog:6601
+#: src/moodlog:6604
 msgid "A kind word on hard days: after a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone, and you can hide it or turn it off."
 msgstr ""
 
-#: src/moodlog:6604
+#: src/moodlog:6607
 msgid "Sottovoce for Android 1.1.0 is out: a new look like the iPhone app, a taller calendar, and it finds this PC more reliably when pop-os.local doesn't work on the phone. Nothing changes on the PC."
 msgstr ""
 
-#: src/moodlog:6607
+#: src/moodlog:6610
 msgid "Sottovoce for Android: a new app for Android phones that syncs moods, energy, anxiety, notes, events and dreams with this PC, encrypted, and sends sleep, steps and resting heart rate from Health Connect. Phone sync has the steps to set it up."
 msgstr ""
 
-#: src/moodlog:6612
+#: src/moodlog:6615
 msgid "A privacy policy: ☰ menu → Privacy shows in short what Sottovoce does with your data (nothing leaves your devices except the encrypted phone sync), with a link to the full policy."
 msgstr ""
 
-#: src/moodlog:6615
+#: src/moodlog:6618
 msgid "The phone sync receiver no longer writes the address of a request to the system log in full, so a token sent in the address can't end up there."
 msgstr ""
 
-#: src/moodlog:6619
+#: src/moodlog:6622
 msgid "Encrypted phone sync: Sottovoce for iPhone 1.4 encrypts everything it sends with your token, and the token itself never crosses the network. Phone sync shows whether the last connection was encrypted, and has a new Change token button."
 msgstr ""
 
-#: src/moodlog:6624
+#: src/moodlog:6627
 msgid "A welcome tour for new users: a few friendly, animated steps that point at each part of the window and explain it. It opens by itself on a new install; see it any time from the ☰ menu → Show the tour."
 msgstr ""
 
-#: src/moodlog:6629
+#: src/moodlog:6632
 msgid "Doctor report: “Also what the dreams were about” can always be ticked, and ticking it includes dreams too. Before, it stayed greyed out until “Include dreams” was ticked, so it was easy to miss."
 msgstr ""
 
-#: src/moodlog:6634
+#: src/moodlog:6637
 msgid "After an update, the phone sync receiver switches to the new version by itself. Before, it kept running the old one until it was restarted, so new things such as dreams did not sync."
 msgstr ""
 
-#: src/moodlog:6639
+#: src/moodlog:6642
 msgid "Dream journal: a new Dreams tab. Write down a dream with how it felt and tags such as nightmare or vivid, or note that you didn't remember one. Dreams show as a moon in the calendar, with a summary in the tab and in Charts, and sync with the iPhone."
 msgstr ""
 
-#: src/moodlog:6642
+#: src/moodlog:6645
 msgid "The doctor report can include dreams: off by default, then just how many and the nightmare nights, or also what they were about."
 msgstr ""
 
-#: src/moodlog:6644
+#: src/moodlog:6647
 msgid "Tabs take less room, so the window fits in half a screen again."
 msgstr ""
 
-#: src/moodlog:6647
+#: src/moodlog:6650
 msgid "Sottovoce speaks Italian. It follows your system language, or choose one in the ☰ menu → Language. Dates, charts, the doctor report and exports are translated too."
 msgstr ""
 
-#: src/moodlog:6651
+#: src/moodlog:6654
 msgid "A “What's new” window opens once after each update, with the full changelog. Open it again any time from the ☰ menu."
 msgstr ""
 
-#: src/moodlog:6655
+#: src/moodlog:6658
 msgid "Tahoe style: the selected Energy and Anxiety numbers were invisible (white on white). They are blue again, in light and dark."
 msgstr ""
 
-#: src/moodlog:6657
+#: src/moodlog:6660
 msgid "Screenshots of the app are now in the README."
 msgstr ""
 
-#: src/moodlog:6660
+#: src/moodlog:6663
 msgid "Sottovoce for iPhone: a new app that syncs moods, energy, anxiety, notes and events with Sottovoce on your PC over your home Wi-Fi."
 msgstr ""
 
-#: src/moodlog:6662
+#: src/moodlog:6665
 msgid "Every entry and event now has an ID and a change time: the newest change wins, deletions sync too, and nothing is overwritten when two devices save at once."
 msgstr ""
 
-#: src/moodlog:6664
+#: src/moodlog:6667
 msgid "Saving merges changes written meanwhile by the phone or another computer."
 msgstr ""
 
-#: src/moodlog:6665
+#: src/moodlog:6668
 msgid "Your existing data is upgraded automatically."
 msgstr ""
 
-#: src/moodlog:6668
+#: src/moodlog:6671
 msgid "Tahoe style: the top bar, tabs and buttons now change too when a system theme is installed in ~/.config/gtk-4.0."
 msgstr ""
 
-#: src/moodlog:6672
+#: src/moodlog:6675
 msgid "Two styles in the new ☰ menu: Default (GNOME) and Tahoe (macOS-like, with frosted cards, pill buttons and red/yellow/green window buttons)."
 msgstr ""
 
-#: src/moodlog:6676
+#: src/moodlog:6679
 msgid "Energy and anxiety: two optional 1–5 scales on every entry, with their own chart."
 msgstr ""
 
-#: src/moodlog:6677
+#: src/moodlog:6680
 msgid "Report for your doctor: a printable PDF for a chosen period, with charts, events and a day-by-day table. Notes are only included if you ask."
 msgstr ""
 
-#: src/moodlog:6679
+#: src/moodlog:6682
 msgid "Backup and restore as one .zip file; restoring saves your current data first."
 msgstr ""
 
-#: src/moodlog:6680
+#: src/moodlog:6683
 msgid "Data folder and sync: keep your data in a Syncthing or Nextcloud folder to use Sottovoce on two computers, with merging of conflict copies."
 msgstr ""
 
-#: src/moodlog:6684
+#: src/moodlog:6687
 msgid "Fixed sleep showing 24 hours every night when the shortcut sent dates without a time."
 msgstr ""
 
-#: src/moodlog:6687
+#: src/moodlog:6690
 msgid "Export to a spreadsheet (.xlsx) with coloured moods, a summary sheet and charts."
 msgstr ""
 
-#: src/moodlog:6690
+#: src/moodlog:6693
 msgid "Export everything to a CSV file, one row per day."
 msgstr ""
 
-#: src/moodlog:6693
+#: src/moodlog:6696
 msgid "Events: mark things like a medication change. They show as a flag in the calendar and a line on the charts, with your mood in the two weeks before and after."
 msgstr ""
 
-#: src/moodlog:6697
+#: src/moodlog:6700
 msgid "Days with several moods show a small grid of tiles in the calendar, one per entry."
 msgstr ""
 
-#: src/moodlog:6700
+#: src/moodlog:6703
 msgid "Several moods a day, each with its own time."
 msgstr ""
 
-#: src/moodlog:6701
+#: src/moodlog:6704
 msgid "New chart: average mood by time of day."
 msgstr ""
 
-#: src/moodlog:6704
+#: src/moodlog:6707
 msgid "Link with the mood widget of the Gridgets GNOME extension."
 msgstr ""
 
-#: src/moodlog:6707
+#: src/moodlog:6710
 msgid "Phone sync: an iPhone Shortcut sends sleep, steps and heart rate to Sottovoce."
 msgstr ""
 
-#: src/moodlog:6708
+#: src/moodlog:6711
 msgid "New chart comparing your mood with your health data."
 msgstr ""
 
-#: src/moodlog:6711
+#: src/moodlog:6714
 msgid "First version: a mood and a note each day, a month calendar, charts and a notes list, all saved in a plain CSV file."
 msgstr ""
 
-#: src/moodlog:6921
+#: src/moodlog:6930
 msgid "Nobody collects your data"
 msgstr ""
 
-#: src/moodlog:6922
+#: src/moodlog:6931
 msgid "Sottovoce has no account, no server, no analytics and no ads. The developer never sees anything you write."
 msgstr ""
 
-#: src/moodlog:6924
+#: src/moodlog:6933
 msgid "It stays on your devices"
 msgstr ""
 
-#: src/moodlog:6925
+#: src/moodlog:6934
 msgid "Everything is saved in your data folder on this PC and, if you use it, inside the Sottovoce app on your phone."
 msgstr ""
 
-#: src/moodlog:6927
+#: src/moodlog:6936
 msgid "Phone sync is encrypted"
 msgstr ""
 
-#: src/moodlog:6928
+#: src/moodlog:6937
 msgid "Your phone sends your entries straight to this PC over your own network, encrypted with your token. The token itself is never sent."
 msgstr ""
 
-#: src/moodlog:6930
+#: src/moodlog:6939
 msgid "Health data only if you choose"
 msgstr ""
 
-#: src/moodlog:6931
+#: src/moodlog:6940
 msgid "Steps, resting heart rate, sleep and, from the iPhone, medication are read only if you turn it on in the phone app, and only to show them next to your mood."
 msgstr ""
 
-#: src/moodlog:6933
+#: src/moodlog:6942
 msgid "No internet"
 msgstr ""
 
-#: src/moodlog:6934
+#: src/moodlog:6943
 msgid "Sottovoce never connects to the internet. Only a link you click, like the one below, opens a page in your browser."
 msgstr ""
 
-#: src/moodlog:6990
+#: src/moodlog:6999
 msgid "Could not set up the reminder (%s)."
 msgstr ""
 
-#: src/moodlog:6990 src/moodlog:7446
+#: src/moodlog:6999 src/moodlog:7455
 msgid "systemctl failed"
 msgstr ""
 
-#: src/moodlog:7000
+#: src/moodlog:7009
 msgid "Remind me once a day"
 msgstr ""
 
-#: src/moodlog:7001
+#: src/moodlog:7010
 msgid "A quiet notification, only on days you haven't logged a mood yet. No streaks, no guilt: just a gentle nudge."
 msgstr ""
 
-#: src/moodlog:7004
+#: src/moodlog:7013
 msgid "At"
 msgstr ""
 
-#: src/moodlog:7021
+#: src/moodlog:7030
 msgid "A kind word on hard days"
 msgstr ""
 
-#: src/moodlog:7022
+#: src/moodlog:7031
 msgid "After a few very hard days close together, the Log shows a short, kind note with a helpline. It never tells anyone; you can hide it any time."
 msgstr ""
 
-#: src/moodlog:7033
+#: src/moodlog:7042
 msgid "Your week, gently"
 msgstr ""
 
-#: src/moodlog:7034
+#: src/moodlog:7043
 msgid "On Sunday evening and on Monday, a few calm words about your week: days logged, the usual mood, your best day. No scores."
 msgstr ""
 
-#: src/moodlog:7040
+#: src/moodlog:7049
 msgid "Gridgets"
 msgstr ""
 
-#: src/moodlog:7041
+#: src/moodlog:7050
 msgid "Linked with the Gridgets mood widget on your desktop: moods go both ways."
 msgstr ""
 
-#: src/moodlog:7050 src/moodlog:8086
+#: src/moodlog:7059 src/moodlog:8095
 msgid "Privacy"
 msgstr ""
 
-#: src/moodlog:7056
+#: src/moodlog:7065
 msgid "Your data is yours"
 msgstr ""
 
-#: src/moodlog:7072 src/moodlog:8044
+#: src/moodlog:7081 src/moodlog:8053
 msgid "Open data folder"
 msgstr ""
 
-#: src/moodlog:7074
+#: src/moodlog:7083
 msgid "Read the full policy"
 msgstr ""
 
-#: src/moodlog:7104
+#: src/moodlog:7113
 msgid "What's new in Sottovoce"
 msgstr ""
 
-#: src/moodlog:7109
+#: src/moodlog:7118
 msgid "What's new in Sottovoce %s"
 msgstr ""
 
-#: src/moodlog:7113
+#: src/moodlog:7122
 msgid "You updated from version %s. The changes since then are marked as new."
 msgstr ""
 
-#: src/moodlog:7115
+#: src/moodlog:7124
 msgid "The full history of Sottovoce, newest first."
 msgstr ""
 
-#: src/moodlog:7125
+#: src/moodlog:7134
 msgid "Version %s"
 msgstr ""
 
-#: src/moodlog:7129
+#: src/moodlog:7138
 msgid "New"
 msgstr ""
 
-#: src/moodlog:7153
+#: src/moodlog:7162
 msgid "Got it"
 msgstr ""
 
-#: src/moodlog:7202
+#: src/moodlog:7211
 msgid "Data folder and sync"
 msgstr ""
 
-#: src/moodlog:7209
+#: src/moodlog:7218
 msgid "Your data is stored in"
 msgstr ""
 
-#: src/moodlog:7214 src/moodlog:8304 src/moodlog:8935
+#: src/moodlog:7223 src/moodlog:8313 src/moodlog:8944
 msgid "Open"
 msgstr ""
 
-#: src/moodlog:7221
+#: src/moodlog:7230
 msgid "Use Sottovoce on two computers"
 msgstr ""
 
-#: src/moodlog:7225
+#: src/moodlog:7234
 msgid "Choose a folder that Syncthing, Nextcloud or a similar app keeps in sync, and do the same on the other computer. Sottovoce saves its files there and picks up changes from the other computer within a few seconds. If both computers change something at the very same time, the sync app may make a conflict copy; Sottovoce then offers to merge it, so nothing is lost."
 msgstr ""
 
-#: src/moodlog:7233
+#: src/moodlog:7242
 msgid "Choose another folder…"
 msgstr ""
 
-#: src/moodlog:7235
+#: src/moodlog:7244
 msgid "Choose the folder for your data"
 msgstr ""
 
-#: src/moodlog:7237
+#: src/moodlog:7246
 msgid "Go back to the default folder"
 msgstr ""
 
-#: src/moodlog:7245 src/moodlog:8137
+#: src/moodlog:7254 src/moodlog:8146
 msgid "Merge them"
 msgstr ""
 
-#: src/moodlog:7252
+#: src/moodlog:7261
 msgid "Settings such as the Gridgets link stay on each computer. Back up from the folder button menu whenever you like: a backup is a single .zip file."
 msgstr ""
 
-#: src/moodlog:7268
+#: src/moodlog:7277
 msgid "%d conflict copy found from your sync app."
 msgid_plural "%d conflict copies found from your sync app."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:7281
+#: src/moodlog:7290
 msgid "Move your data to %s?"
 msgstr ""
 
-#: src/moodlog:7282
+#: src/moodlog:7291
 msgid "Your moods, events and health data are copied there, and Sottovoce uses that folder from now on. The old folder keeps its copy."
 msgstr ""
 
-#: src/moodlog:7284
+#: src/moodlog:7293
 msgid "Move here"
 msgstr ""
 
-#: src/moodlog:7287
+#: src/moodlog:7296
 msgid "%s already has Sottovoce data"
 msgstr ""
 
-#: src/moodlog:7288
+#: src/moodlog:7297
 msgid "Merge puts what is on this computer together with what is already there, which is what you want when setting up a second computer. Use that data switches to the folder as it is; the data here stays in the old folder."
 msgstr ""
 
-#: src/moodlog:7291
+#: src/moodlog:7300
 msgid "Use that data"
 msgstr ""
 
-#: src/moodlog:7292
+#: src/moodlog:7301
 msgid "Merge"
 msgstr ""
 
-#: src/moodlog:7327
+#: src/moodlog:7336
 msgid "Could not use that folder: %s"
 msgstr ""
 
-#: src/moodlog:7332
+#: src/moodlog:7341
 msgid "Sottovoce now uses %s"
 msgstr ""
 
-#: src/moodlog:7337 src/moodlog:8118
+#: src/moodlog:7346 src/moodlog:8127
 msgid "Phone sync"
 msgstr ""
 
-#: src/moodlog:7347
+#: src/moodlog:7356
 msgid "Sync with my phone (iPhone or Android)"
 msgstr ""
 
-#: src/moodlog:7363
+#: src/moodlog:7372
 msgid "Address"
 msgstr ""
 
-#: src/moodlog:7363 src/moodlog:7372
+#: src/moodlog:7372 src/moodlog:7381
 msgid "Token"
 msgstr ""
 
-#: src/moodlog:7365
+#: src/moodlog:7374
 msgid "If that fails"
 msgstr ""
 
-#: src/moodlog:7375
+#: src/moodlog:7384
 msgid "Copy"
 msgstr ""
 
-#: src/moodlog:7382
+#: src/moodlog:7391
 msgid "Change token…"
 msgstr ""
 
-#: src/moodlog:7383
+#: src/moodlog:7392
 msgid "Make a new token: the old one stops working at once"
 msgstr ""
 
-#: src/moodlog:7388
+#: src/moodlog:7397
 msgid "The token is a password, and the receiver works only on your local network. Sottovoce for iPhone (1.4 and newer) and Sottovoce for Android encrypt everything they send with it, so the token itself never crosses the network. The Shortcut can't encrypt: it sends Health values and the token unencrypted, so use it only on a network you trust. Use the same address and token in the phone app's Settings."
 msgstr ""
 
-#: src/moodlog:7398
+#: src/moodlog:7407
 msgid "On Windows the phone can connect only when your Wi-Fi is a private network. If it can't, open Settings → Network & internet → Wi-Fi → your network, and set Network profile type to Private."
 msgstr ""
 
-#: src/moodlog:7403
+#: src/moodlog:7412
 msgid "Windows"
 msgstr ""
 
-#: src/moodlog:7407
+#: src/moodlog:7416
 msgid "Android setup"
 msgstr ""
 
-#: src/moodlog:7408
+#: src/moodlog:7417
 msgid "iPhone Shortcut (only if you don't use the app)"
 msgstr ""
 
-#: src/moodlog:7427
+#: src/moodlog:7436
 msgid "Could not change the token: %s"
 msgstr ""
 
-#: src/moodlog:7429
+#: src/moodlog:7438
 msgid "Change the token?"
 msgstr ""
 
-#: src/moodlog:7430
+#: src/moodlog:7439
 msgid "The old token stops working at once. Enter the new one in the Sottovoce app on your phone (Settings) and in the Shortcut, if you use it. Worth doing once after updating to encrypted sync, since older versions sent the token unencrypted."
 msgstr ""
 
-#: src/moodlog:7434
+#: src/moodlog:7443
 msgid "Change token"
 msgstr ""
 
-#: src/moodlog:7444
+#: src/moodlog:7453
 msgid "Could not start the receiver (%s). You can also start it by hand in a terminal: moodlog --sync-server"
 msgstr ""
 
-#: src/moodlog:7446
+#: src/moodlog:7455
 msgid "Could not stop the receiver (%s)."
 msgstr ""
 
-#: src/moodlog:7460
+#: src/moodlog:7469
 msgid "The receiver is running."
 msgstr ""
 
-#: src/moodlog:7460
+#: src/moodlog:7469
 msgid "The receiver is off."
 msgstr ""
 
-#: src/moodlog:7464
+#: src/moodlog:7473
 msgid "Last sync attempt %s. %s"
 msgstr ""
 
-#: src/moodlog:7466
+#: src/moodlog:7475
 msgid "Nothing received from the phone yet."
 msgstr ""
 
-#: src/moodlog:7565
+#: src/moodlog:7574
 msgid "The Dreams tab and the moons on the calendar. Your dreams are kept even when it's off."
 msgstr ""
 
-#: src/moodlog:7568
+#: src/moodlog:7577
 msgid "Doses from Apple Health, sent by Sottovoce for iPhone."
 msgstr ""
 
-#: src/moodlog:7569
+#: src/moodlog:7578
 msgid "Feeling words"
 msgstr ""
 
-#: src/moodlog:7570
+#: src/moodlog:7579
 msgid "Optional words next to a mood, like Joy or Tiredness. Kept even when it's off."
 msgstr ""
 
-#: src/moodlog:7571 src/moodlog:8539
+#: src/moodlog:7580 src/moodlog:8548
 msgid "Activities"
 msgstr ""
 
-#: src/moodlog:7572
+#: src/moodlog:7581
 msgid "Optional tags for what you did, like Work or Walk. Kept even when it's off."
 msgstr ""
 
-#: src/moodlog:7573
+#: src/moodlog:7582
 msgid "Writing prompts"
 msgstr ""
 
-#: src/moodlog:7574
+#: src/moodlog:7583
 msgid "A gentle question in an empty note, for days you don't know what to write."
 msgstr ""
 
-#: src/moodlog:7576
+#: src/moodlog:7585
 msgid "PHQ-9 and GAD-7 for your doctor, with a gentle reminder every two weeks."
 msgstr ""
 
-#: src/moodlog:7577
+#: src/moodlog:7586
 msgid "Private notes and dreams"
 msgstr ""
 
-#: src/moodlog:7578
+#: src/moodlog:7587
 msgid "A Private tick on each note and dream: private notes never go in the doctor report, and private dreams are only counted."
 msgstr ""
 
-#: src/moodlog:7580
+#: src/moodlog:7589
 msgid "New ones start private"
 msgstr ""
 
-#: src/moodlog:7581
+#: src/moodlog:7590
 msgid "Every new note and dream is ticked private. You can still untick it."
 msgstr ""
 
-#: src/moodlog:7585
+#: src/moodlog:7594
 msgid "Days with several moods"
 msgstr ""
 
-#: src/moodlog:7590
+#: src/moodlog:7599
 msgid "All of them, in a grid"
 msgstr ""
 
-#: src/moodlog:7590
+#: src/moodlog:7599
 msgid "Only the latest"
 msgstr ""
 
-#: src/moodlog:7613 src/moodlog:7618 src/moodlog:7670
+#: src/moodlog:7622 src/moodlog:7627 src/moodlog:7679
 msgid "Customize your experience"
 msgstr ""
 
-#: src/moodlog:7621
+#: src/moodlog:7630
 msgid "Turn off what you don't need. Nothing is deleted, and you can change this any time from the ☰ menu."
 msgstr ""
 
-#: src/moodlog:7629
+#: src/moodlog:7638
 msgid "Done"
 msgstr ""
 
-#: src/moodlog:7640
+#: src/moodlog:7649
 msgid "Welcome to Sottovoce"
 msgstr ""
 
-#: src/moodlog:7641
+#: src/moodlog:7650
 msgid "Hey! No pressure, I'll help you learn how the interface works. Don't get overwhelmed, it's quite simple, I'll take care of you."
 msgstr ""
 
-#: src/moodlog:7643
+#: src/moodlog:7652
 msgid "Five tabs, one at a time"
 msgstr ""
 
-#: src/moodlog:7644
+#: src/moodlog:7653
 msgid "Up here are the tabs. You'll spend most of your time in Log; the others are there whenever you want them. No need to explore them all today."
 msgstr ""
 
-#: src/moodlog:7646
+#: src/moodlog:7655
 msgid "Your month at a glance"
 msgstr ""
 
-#: src/moodlog:7647
+#: src/moodlog:7656
 msgid "Each day takes the colour of your mood. Over a few weeks you'll start to see how things go, without doing anything special. Click a day to look at it or fill it in."
 msgstr ""
 
-#: src/moodlog:7649
+#: src/moodlog:7658
 msgid "Logging is one click"
 msgstr ""
 
-#: src/moodlog:7650
+#: src/moodlog:7659
 msgid "To log how you feel, pick a face. That's it, that's the whole job. You can log more than once a day, or skip days: both are fine."
 msgstr ""
 
-#: src/moodlog:7652
+#: src/moodlog:7661
 msgid "Extras, only if you feel like it"
 msgstr ""
 
-#: src/moodlog:7653
+#: src/moodlog:7662
 msgid "Energy, anxiety and a note are all optional. Leave them empty whenever you want: a face on its own is already useful."
 msgstr ""
 
-#: src/moodlog:7655
+#: src/moodlog:7664
 msgid "Mark what matters"
 msgstr ""
 
-#: src/moodlog:7656
+#: src/moodlog:7665
 msgid "Started a new medication, or something big happened? Add it as an event, and Sottovoce will show how you felt in the weeks before and after."
 msgstr ""
 
-#: src/moodlog:7658
+#: src/moodlog:7667
 msgid "Charts fill in on their own"
 msgstr ""
 
-#: src/moodlog:7659
+#: src/moodlog:7668
 msgid "Charts turns your days into graphs. Nothing to set up: the more you log, the more they show."
 msgstr ""
 
-#: src/moodlog:7661
+#: src/moodlog:7670
 msgid "Dreams, if you remember them"
 msgstr ""
 
-#: src/moodlog:7662
+#: src/moodlog:7671
 msgid "Dreams is a small dream journal, for the mornings you remember something. Totally optional."
 msgstr ""
 
-#: src/moodlog:7664
+#: src/moodlog:7673
 msgid "For your appointments"
 msgstr ""
 
-#: src/moodlog:7665
+#: src/moodlog:7674
 msgid "Export makes a tidy PDF report for your doctor. You choose the period and what goes in; your notes and dreams stay out unless you say so."
 msgstr ""
 
-#: src/moodlog:7667
+#: src/moodlog:7676
 msgid "Your phone can help"
 msgstr ""
 
-#: src/moodlog:7668
+#: src/moodlog:7677
 msgid "Phone sync brings in your sleep and steps, and syncs with Sottovoce on your iPhone or Android phone. Optional too: Sottovoce works fine without it."
 msgstr ""
 
-#: src/moodlog:7671
+#: src/moodlog:7680
 msgid "Turn off what you don't need. Nothing is deleted, and you can change it later from the ☰ menu."
 msgstr ""
 
-#: src/moodlog:7673
+#: src/moodlog:7682
 msgid "If you ever need me again"
 msgstr ""
 
-#: src/moodlog:7674
+#: src/moodlog:7683
 msgid "Style, language and this tour live in this menu. You can watch the tour again whenever you like."
 msgstr ""
 
-#: src/moodlog:7676
+#: src/moodlog:7685
 msgid "That's all, really"
 msgstr ""
 
-#: src/moodlog:7677
+#: src/moodlog:7686
 msgid "Everything stays on your computer, private. Log a mood whenever you feel like it; even once a day is plenty. You've got this."
 msgstr ""
 
-#: src/moodlog:7749
+#: src/moodlog:7758
 msgid "Skip tour"
 msgstr ""
 
-#: src/moodlog:7752
+#: src/moodlog:7761
 msgid "Back"
 msgstr ""
 
-#: src/moodlog:7754 src/moodlog:7843
+#: src/moodlog:7763 src/moodlog:7852
 msgid "Next"
 msgstr ""
 
-#: src/moodlog:7843
+#: src/moodlog:7852
 msgid "Let's start"
 msgstr ""
 
-#: src/moodlog:8045
+#: src/moodlog:8054
 msgid "Back up…"
 msgstr ""
 
-#: src/moodlog:8046
+#: src/moodlog:8055
 msgid "Restore from a backup…"
 msgstr ""
 
-#: src/moodlog:8047
+#: src/moodlog:8056
 msgid "Data folder and sync…"
 msgstr ""
 
-#: src/moodlog:8049
+#: src/moodlog:8058
 msgid "Your data: open the folder, back up, restore, sync"
 msgstr ""
 
-#: src/moodlog:8063
+#: src/moodlog:8072
 msgid "Style"
 msgstr ""
 
-#: src/moodlog:8070
+#: src/moodlog:8079
 msgid "Automatic (system)"
 msgstr ""
 
-#: src/moodlog:8073
+#: src/moodlog:8082
 msgid "Language"
 msgstr ""
 
-#: src/moodlog:8084
+#: src/moodlog:8093
 msgid "Show the tour"
 msgstr ""
 
-#: src/moodlog:8085
+#: src/moodlog:8094
 msgid "What's new"
 msgstr ""
 
-#: src/moodlog:8090
+#: src/moodlog:8099
 msgid "Customize your experience…"
 msgstr ""
 
-#: src/moodlog:8098
+#: src/moodlog:8107
 msgid "Style, language and what's new"
 msgstr ""
 
-#: src/moodlog:8111
+#: src/moodlog:8120
 msgid "Report for your doctor (.pdf)…"
 msgstr ""
 
-#: src/moodlog:8112
+#: src/moodlog:8121
 msgid "Your diary as a book (.pdf)…"
 msgstr ""
 
-#: src/moodlog:8113
+#: src/moodlog:8122
 msgid "Spreadsheet with colours and charts (.xlsx)"
 msgstr ""
 
-#: src/moodlog:8114
+#: src/moodlog:8123
 msgid "Plain CSV file (.csv)"
 msgstr ""
 
-#: src/moodlog:8115 src/moodlog:9529
+#: src/moodlog:8124 src/moodlog:9538
 msgid "Export"
 msgstr ""
 
-#: src/moodlog:8116
+#: src/moodlog:8125
 msgid "Save everything (moods, notes, events, health data) to a file"
 msgstr ""
 
-#: src/moodlog:8119
+#: src/moodlog:8128
 msgid "Sync with Sottovoce on your phone, and receive steps, sleep and heart rate"
 msgstr ""
 
-#: src/moodlog:8123
+#: src/moodlog:8132
 msgid "Log"
 msgstr ""
 
-#: src/moodlog:8124
+#: src/moodlog:8133
 msgid "Charts"
 msgstr ""
 
-#: src/moodlog:8236
+#: src/moodlog:8245
 msgid "Questionnaires for your doctor…"
 msgstr ""
 
-#: src/moodlog:8261
+#: src/moodlog:8270
 msgid "Some hard days lately"
 msgstr ""
 
-#: src/moodlog:8264
+#: src/moodlog:8273
 msgid "That sounds heavy. You don't have to carry it alone: talking to someone can help, even just once."
 msgstr ""
 
-#: src/moodlog:8276
+#: src/moodlog:8285
 msgid "Thanks, hide this for now"
 msgstr ""
 
-#: src/moodlog:8317
+#: src/moodlog:8326
 msgid "No appointment set"
 msgstr ""
 
-#: src/moodlog:8325
+#: src/moodlog:8334
 msgid "Your appointment"
 msgstr ""
 
-#: src/moodlog:8329
+#: src/moodlog:8338
 msgid "%d thing to talk about"
 msgid_plural "%d things to talk about"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:8330
+#: src/moodlog:8339
 msgid "Anything you want to remember to say? Add it here."
 msgstr ""
 
-#: src/moodlog:8348
+#: src/moodlog:8357
 msgid "Your week"
 msgstr ""
 
-#: src/moodlog:8380
+#: src/moodlog:8389
 msgid "Previous month"
 msgstr ""
 
-#: src/moodlog:8383
+#: src/moodlog:8392
 msgid "Next month"
 msgstr ""
 
-#: src/moodlog:8389 src/moodlog:9076
+#: src/moodlog:8398 src/moodlog:9085
 msgid "Today"
 msgstr ""
 
-#: src/moodlog:8415
+#: src/moodlog:8424
 msgid "Log an important event on this day, e.g. a medication change"
 msgstr ""
 
-#: src/moodlog:8438
+#: src/moodlog:8447
 msgid "Time of this entry, 24-hour (optional). Press Enter to apply a change."
 msgstr ""
 
-#: src/moodlog:8459
+#: src/moodlog:8468
 msgid "%s (%d of 5)"
 msgstr ""
 
-#: src/moodlog:8475
+#: src/moodlog:8484
 msgid "%s %d: %s (optional)"
 msgstr ""
 
-#: src/moodlog:8482
+#: src/moodlog:8491
 msgid "Optional. Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious."
 msgstr ""
 
-#: src/moodlog:8499
+#: src/moodlog:8508
 msgid "Pick any that fit. Optional."
 msgstr ""
 
-#: src/moodlog:8507 src/moodlog:8537
+#: src/moodlog:8516 src/moodlog:8546
 msgid "Add…"
 msgstr ""
 
-#: src/moodlog:8508
+#: src/moodlog:8517
 msgid "Words for how you feel, more precise than a face"
 msgstr ""
 
-#: src/moodlog:8509
+#: src/moodlog:8518
 msgid "Feelings"
 msgstr ""
 
-#: src/moodlog:8529
+#: src/moodlog:8538
 msgid "What did you do? Optional."
 msgstr ""
 
-#: src/moodlog:8538
+#: src/moodlog:8547
 msgid "What you did, to see later what helps"
 msgstr ""
 
-#: src/moodlog:8549
+#: src/moodlog:8558
 msgid "Never in the doctor report"
 msgstr ""
 
-#: src/moodlog:8573
+#: src/moodlog:8582
 msgid "Another question"
 msgstr ""
 
-#: src/moodlog:8588
+#: src/moodlog:8597
 msgid "Delete entry"
 msgstr ""
 
-#: src/moodlog:8590
+#: src/moodlog:8599
 msgid "New entry"
 msgstr ""
 
-#: src/moodlog:8592
+#: src/moodlog:8601
 msgid "Log another mood for this day"
 msgstr ""
 
-#: src/moodlog:8614
+#: src/moodlog:8623
 msgid "Year"
 msgstr ""
 
-#: src/moodlog:8614 src/moodlog:9800
+#: src/moodlog:8623 src/moodlog:9809
 msgid "All time"
 msgstr ""
 
-#: src/moodlog:8630
+#: src/moodlog:8639
 msgid "Average mood"
 msgstr ""
 
-#: src/moodlog:8631
+#: src/moodlog:8640
 msgid "Most common"
 msgstr ""
 
-#: src/moodlog:8631
+#: src/moodlog:8640
 msgid "Current streak"
 msgstr ""
 
-#: src/moodlog:8656
+#: src/moodlog:8665
 msgid "Average mood by weekday (1–5)"
 msgstr ""
 
-#: src/moodlog:8661
+#: src/moodlog:8670
 msgid "Mood and your health data"
 msgstr ""
 
-#: src/moodlog:8676
+#: src/moodlog:8685
 msgid "Energy: 1 very low, 5 very high. Anxiety: 1 calm, 5 very anxious. Days without these show as gaps."
 msgstr ""
 
-#: src/moodlog:8687
+#: src/moodlog:8696
 msgid "Average mood by time of day (1–5)"
 msgstr ""
 
-#: src/moodlog:8734
+#: src/moodlog:8743
 msgid "Two weeks since your last questionnaires"
 msgstr ""
 
-#: src/moodlog:8737
+#: src/moodlog:8746
 msgid "Answering PHQ-9 and GAD-7 again takes about two minutes, and helps your doctor see how things are going."
 msgstr ""
 
-#: src/moodlog:8741
+#: src/moodlog:8750
 msgid "Answer now"
 msgstr ""
 
-#: src/moodlog:8744
+#: src/moodlog:8753
 msgid "Not now"
 msgstr ""
 
-#: src/moodlog:8781
+#: src/moodlog:8790
 msgid "Edit this event"
 msgstr ""
 
-#: src/moodlog:8795
+#: src/moodlog:8804
 msgid "Edit this dream"
 msgstr ""
 
-#: src/moodlog:8830
+#: src/moodlog:8839
 msgid "A dream journal. Each dream belongs to the morning you woke up, shows as a moon in the calendar, and is private: it is only in the doctor report if you choose so."
 msgstr ""
 
-#: src/moodlog:8840
+#: src/moodlog:8849
 msgid "Search your dreams"
 msgstr ""
 
-#: src/moodlog:8882 src/moodlog:8969
+#: src/moodlog:8891 src/moodlog:8978
 msgid "Click to edit"
 msgstr ""
 
-#: src/moodlog:8890 src/moodlog:8977 src/moodlog:9857
+#: src/moodlog:8899 src/moodlog:8986 src/moodlog:9866
 msgid "%A, %-d %B %Y"
 msgstr ""
 
-#: src/moodlog:8905
+#: src/moodlog:8914
 msgid "No dreams match “%s”."
 msgstr ""
 
-#: src/moodlog:8907
+#: src/moodlog:8916
 msgid "No dreams yet.\nAdd one in the morning, while you still remember it."
 msgstr ""
 
-#: src/moodlog:8912
+#: src/moodlog:8921
 msgid "Log things that can affect how you feel, such as a medication change. They show as a flag in the calendar and as a dashed line on the charts, and each one compares your mood in the two weeks before and after it."
 msgstr ""
 
-#: src/moodlog:8929
+#: src/moodlog:8938
 msgid "Next appointment"
 msgstr ""
 
-#: src/moodlog:8945
+#: src/moodlog:8954
 msgid "No events yet."
 msgstr ""
 
-#: src/moodlog:9002
+#: src/moodlog:9011
 msgid "Search notes, feelings, activities and events"
 msgstr ""
 
-#: src/moodlog:9078
+#: src/moodlog:9087
 msgid "Yesterday"
 msgstr ""
 
-#: src/moodlog:9123
+#: src/moodlog:9132
 msgid "Editing this entry"
 msgstr ""
 
-#: src/moodlog:9125
+#: src/moodlog:9134
 msgid "New entry: how do you feel now?"
 msgstr ""
 
-#: src/moodlog:9127
+#: src/moodlog:9136
 msgid "New entry: how was this day?"
 msgstr ""
 
-#: src/moodlog:9212 src/moodlog:9218
+#: src/moodlog:9221 src/moodlog:9227
 msgid "none"
 msgstr ""
 
-#: src/moodlog:9329
+#: src/moodlog:9338
 msgid "Click to edit this entry"
 msgstr ""
 
-#: src/moodlog:9360
+#: src/moodlog:9369
 msgid "Private: never in the doctor report"
 msgstr ""
 
-#: src/moodlog:9380
+#: src/moodlog:9389
 msgid "Saved"
 msgstr ""
 
-#: src/moodlog:9382
+#: src/moodlog:9391
 msgid "Could not save: %s"
 msgstr ""
 
-#: src/moodlog:9436
+#: src/moodlog:9445
 msgid "Your sync app made %d conflict copy of your Sottovoce data (both computers changed it at the same time). Merge it to keep everything."
 msgid_plural "Your sync app made %d conflict copies of your Sottovoce data (both computers changed it at the same time). Merge them to keep everything."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9469
+#: src/moodlog:9478
 msgid "%d day in this period has both a mood and %s data. With 8 or more, Sottovoce compares your mood on higher and lower days."
 msgid_plural "%d days in this period have both a mood and %s data. With 8 or more, Sottovoce compares your mood on higher and lower days."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9479
+#: src/moodlog:9488
 msgid "Your %s barely changed in this period, so there is nothing to compare yet."
 msgstr ""
 
-#: src/moodlog:9483
+#: src/moodlog:9492
 msgid "Your mood was about the same on days with more and less %s: %.1f at %s or more, %.1f below (%d days compared)."
 msgstr ""
 
-#: src/moodlog:9485
+#: src/moodlog:9494
 msgid "On days with %s at %s or more, your average mood was %.1f. On days below that it was %.1f (%d days compared). This shows a pattern in your data, not a cause."
 msgstr ""
 
-#: src/moodlog:9506
+#: src/moodlog:9515
 msgid "No health data yet. Use Phone sync in the title bar to bring in sleep, steps and heart rate from your phone, and compare them with your mood here."
 msgstr ""
 
-#: src/moodlog:9523
+#: src/moodlog:9532
 msgid "Export to a spreadsheet"
 msgstr ""
 
-#: src/moodlog:9523
+#: src/moodlog:9532
 msgid "Export to CSV"
 msgstr ""
 
-#: src/moodlog:9556
+#: src/moodlog:9565
 msgid "Exported %d day to %s"
 msgid_plural "Exported %d days to %s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9561
+#: src/moodlog:9570
 msgid "Could not export: %s"
 msgstr ""
 
-#: src/moodlog:9595
+#: src/moodlog:9604
 msgid "Restart Sottovoce?"
 msgstr ""
 
-#: src/moodlog:9596
+#: src/moodlog:9605
 msgid "Sottovoce needs to restart to change language. Everything you logged is saved."
 msgstr ""
 
-#: src/moodlog:9598
+#: src/moodlog:9607
 msgid "Restart now"
 msgstr ""
 
-#: src/moodlog:9660
+#: src/moodlog:9669
 msgid "Backed up %d file to %s"
 msgid_plural "Backed up %d files to %s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9663
+#: src/moodlog:9672
 msgid "Could not back up: %s"
 msgstr ""
 
-#: src/moodlog:9664
+#: src/moodlog:9673
 msgid "Back up Sottovoce"
 msgstr ""
 
-#: src/moodlog:9676
+#: src/moodlog:9685
 msgid "an unknown date"
 msgstr ""
 
-#: src/moodlog:9677
+#: src/moodlog:9686
 msgid "Restore this backup?"
 msgstr ""
 
-#: src/moodlog:9678
+#: src/moodlog:9687
 msgid "Your current moods, events and health data will be replaced by the ones in the backup from %s. A copy of your current data is saved first, in the backups folder inside your data folder."
 msgstr ""
 
-#: src/moodlog:9681
+#: src/moodlog:9690
 msgid "Restore"
 msgstr ""
 
-#: src/moodlog:9682
+#: src/moodlog:9691
 msgid "Restore from a backup"
 msgstr ""
 
-#: src/moodlog:9688
+#: src/moodlog:9697
 msgid "Could not restore: %s"
 msgstr ""
 
-#: src/moodlog:9691
+#: src/moodlog:9700
 msgid "Backup restored. Your previous data was saved as %s"
 msgstr ""
 
-#: src/moodlog:9698
+#: src/moodlog:9707
 msgid "Could not merge: %s"
 msgstr ""
 
-#: src/moodlog:9703
+#: src/moodlog:9712
 msgid "Merged %d conflict copy"
 msgid_plural "Merged %d conflict copies"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9704
+#: src/moodlog:9713
 msgid "%d item added."
 msgid_plural "%d items added."
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9705
+#: src/moodlog:9714
 msgid "The copies were moved to backups/merged-conflicts."
 msgstr ""
 
-#: src/moodlog:9764
+#: src/moodlog:9773
 msgid "%d day logged this month · average %.1f (%s)"
 msgid_plural "%d days logged this month · average %.1f (%s)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9769
+#: src/moodlog:9778
 msgid "Nothing logged this month yet"
 msgstr ""
 
-#: src/moodlog:9792
+#: src/moodlog:9801
 msgid "Mood day by day"
 msgstr ""
 
-#: src/moodlog:9814
+#: src/moodlog:9823
 msgid "%s, on a 1–5 scale"
 msgstr ""
 
-#: src/moodlog:9817
+#: src/moodlog:9826
 msgid "nothing logged"
 msgstr ""
 
-#: src/moodlog:9820
+#: src/moodlog:9829
 msgid "of %d day so far"
 msgid_plural "of %d days so far"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9828
+#: src/moodlog:9837
 msgid "%d of %d entry"
 msgid_plural "%d of %d entries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/moodlog:9835
+#: src/moodlog:9844
 msgid "logged in a row, up to today"
 msgstr ""
 
-#: src/moodlog:9903
+#: src/moodlog:9912
 msgid "Nothing matches “%s”."
 msgstr ""
 
-#: src/moodlog:9906
+#: src/moodlog:9915
 msgid "No notes yet.\nAdd a few words when you log a mood and they will show up here."
 msgstr ""

@@ -44,6 +44,10 @@ fun ReportDialog(onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var period by remember { mutableStateOf(ReportPeriod.THREE_MONTHS) }
+    var from by remember { mutableStateOf(Day.adding(-29, Day.today)) }
+    var to by remember { mutableStateOf(Day.today) }
+    var pickFrom by remember { mutableStateOf(false) }
+    var pickTo by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf(false) }
     var sleep by remember { mutableStateOf(true) }
     var dreams by remember { mutableStateOf(false) }
@@ -56,7 +60,7 @@ fun ReportDialog(onClose: () -> Unit) {
     LaunchedEffect(Unit) { canSleep = app.health.hasPermissions() }
 
     suspend fun build(): File {
-        val (start, end) = period.range(app.store)
+        val (start, end) = if (period == ReportPeriod.CUSTOM) minOf(from, to) to maxOf(from, to) else period.range(app.store)
         val nights = if (sleep && canSleep) (try { app.health.nightlySleep(start, end) } catch (e: Exception) { null }) ?: emptyMap() else emptyMap()
         val file = File(context.cacheDir, "reports/" + tr("Sottovoce report") + " $start – $end.pdf")
         return withContext(Dispatchers.Default) {
@@ -91,7 +95,15 @@ fun ReportDialog(onClose: () -> Unit) {
                     if (p == period) Icon(Icons.Filled.Check, null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
+            if (period == ReportPeriod.CUSTOM) {
+                Line()
+                ValueRow(tr("From"), Day.pretty(from, "d MMM yyyy")) { pickFrom = true }
+                Line()
+                ValueRow(tr("To"), Day.pretty(to, "d MMM yyyy")) { pickTo = true }
+            }
         }
+        if (pickFrom) DayPickerDialog(from, allowFuture = false, onDismiss = { pickFrom = false }) { from = it; if (to < it) to = it }
+        if (pickTo) DayPickerDialog(to, allowFuture = false, onDismiss = { pickTo = false }) { to = it; if (from > it) from = it }
         Section(tr("Include"), tr("Notes can be private. Leave this off to share only the numbers and events.")) {
             SwitchRow(tr("Include my notes"), notes) { notes = it }
             if (canSleep) {

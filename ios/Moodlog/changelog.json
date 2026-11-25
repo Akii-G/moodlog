@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.2.0",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording."
+   ],
+   "it": [
+    "Report per il medico: due nuovi periodi, gli ultimi 7 giorni e le ultime 2 settimane, e Scegli le date per qualsiasi periodo. Il report ora è identico a quello del PC: stesse sezioni, grafici, tabelle e parole."
+   ]
+  }
+ },
+ {
   "version": "2.1.0",
   "date": "2026-11-25",
   "items": {

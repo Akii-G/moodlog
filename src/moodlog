@@ -34,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.1.0"
+VERSION = "3.2.0"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -6321,7 +6321,7 @@ class AppointmentWindow(Gtk.Window):
 class ReportWindow(Gtk.Window):
     """Choose a period and what to include, then save the doctor report."""
 
-    PRESETS = [(tr("Last 30 days"), 30), (tr("Last 3 months"), 91), (tr("Last 6 months"), 182),
+    PRESETS = [(tr("Last 7 days"), 7), (tr("Last 2 weeks"), 14), (tr("Last 30 days"), 30), (tr("Last 3 months"), 91), (tr("Last 6 months"), 182),
                (tr("This year"), "year"), (tr("Everything"), "all")]
 
     def __init__(self, win):
@@ -6336,7 +6336,7 @@ class ReportWindow(Gtk.Window):
             "events (such as medication changes) and a day-by-day table.")))
         intro.add_css_class("dim-label")
         col.append(intro)
-        presets = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=5)
+        presets = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=4)
         for label, span in self.PRESETS:
             btn = Gtk.Button(label=label)
             btn.connect("clicked", lambda _b, s=span: self.preset(s))
@@ -6553,6 +6553,9 @@ class BookWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.2.0", "2026-11-25", [
+        "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, handy before a check-up.",
+    ]),
     ("3.1.0", "2026-11-25", [
         "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the phones, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Customize.",
         "Your diary as a book: Export → Your diary as a book (.pdf). Your notes month by month, with the mood faces, feeling words, activities and events, laid out as a PDF to keep or print. Private moments stay out unless you choose to include them.",
@@ -6717,6 +6720,9 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.2.0", "2026-11-25", [
+        "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording.",
+    ]),
     ("2.1.0", "2026-11-25", [
         "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.",
         "Your diary as a book: in Charts, the book button makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them.",
@@ -6778,6 +6784,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.2.0", "2026-11-25", [
+        "Report for your doctor: two new periods, the last 7 days and the last 2 weeks, and Choose the dates for any period you like. The report itself is now exactly the same as the PC's: the same sections, charts, tables and wording.",
+    ]),
     ("2.1.0", "2026-11-25", [
         "Activities: next to the feeling words, optional tags for what you did — Work, Walk, Friends, Rest and more. They show on the day, sync with the PC, can be searched, and the doctor report lists the ones you logged most often. Turn them off in Settings → Customize.",
         "Your diary as a book: in Charts, Export → Your diary as a book makes a PDF of your notes month by month, with the mood faces, feeling words, activities and events, to keep or print. Private moments stay out unless you choose to include them.",

@@ -95,14 +95,15 @@ report leaves them out unless you ask.
 ### Bring a report to your doctor
 
 **Export → Report for your doctor (.pdf)** makes a printable A4 report for the
-period you choose: key numbers, your mood over time with your events marked, energy
+period you choose (the last 7 days, 2 weeks, 30 days, 3 or 6 months, this year,
+everything, or your own dates): key numbers, your mood over time with your events marked, energy
 and anxiety, sleep, your mood around each event, and a day-by-day table. Notes and
 dreams are left out unless you tick them.
 
 <img src="docs/screenshots/report.png" alt="First page of the doctor report" width="600">
 
-The phone apps make the same report (the document button in **Charts**), to share,
-print or save straight from the phone.
+The phone apps make exactly the same report (the document button in **Charts**), to
+share, print or save straight from the phone.
 
 ### Your diary as a book
 
@@ -230,7 +231,7 @@ each tab as it goes.
 Download `sottovoce_<version>_all.deb` from the
 [latest release](https://github.com/Akii-G/sottovoce/releases/latest), then:
 
-    sudo apt install ./sottovoce_3.1.0_all.deb
+    sudo apt install ./sottovoce_3.2.0_all.deb
 
 Remove it with `sudo apt remove sottovoce`; your data is kept.
 

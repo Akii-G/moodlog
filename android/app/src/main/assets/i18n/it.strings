@@ -244,11 +244,6 @@
 "Once a day, only if you haven't logged a mood yet." = "Una volta al giorno, solo se non hai ancora registrato un umore.";
 "How are you today?" = "Come stai oggi?";
 "One tap on a face is enough." = "Basta toccare una faccina.";
-"%@ h (%@ nights)" = "%@ h (%@ notti)";
-"weeks" = "settimane";
-"Mood 2w before" = "Umore 2 sett. prima";
-"Mood 2w after" = "Umore 2 sett. dopo";
-"bad" = "brutto";
 "Sleep and mood" = "Sonno e umore";
 "Allow Health Connect in Settings to see your sleep here, next to your mood." = "Consenti Connessione Salute nelle Impostazioni per vedere qui il tuo sonno, accanto all'umore.";
 "No sleep in Health Connect this month" = "Nessun dato sul sonno in Connessione Salute questo mese";
@@ -477,3 +472,15 @@
 "1 day with words in it." = "1 giorno con delle parole.";
 "%@ days with words in them." = "%@ giorni con delle parole.";
 "Search notes, feelings, activities and events" = "Cerca tra note, emozioni, attività ed eventi";
+"%@ h  (%@ nights)" = "%@ h  (%@ notti)";
+"Mood %@w before" = "Umore %@ sett. prima";
+"Mood %@w after" = "Umore %@ sett. dopo";
+"Notes and dreams" = "Note e sogni";
+"Dream: %@" = "Sogno: %@";
+"Forgotten" = "Dimenticato";
+"Yes" = "Sì";
+"Last 7 days" = "Ultimi 7 giorni";
+"Last 2 weeks" = "Ultime 2 settimane";
+"Choose the dates" = "Scegli le date";
+"From" = "Dal";
+"To" = "Al";
