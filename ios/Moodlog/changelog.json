@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.0.7",
+  "date": "2026-11-25",
+  "items": {
+   "en": [
+    "Backup: when you choose the backup file, Sottovoce now asks for one more tap on the file you just saved. iOS only lets an app keep updating a file it has opened that way, so the backup no longer stops working after the app restarts."
+   ],
+   "it": [
+    "Backup: quando scegli il file di backup, Sottovoce ora chiede un altro tocco sul file appena salvato. iOS lascia aggiornare un file solo se l'app lo ha aperto così, quindi il backup non smette più di funzionare dopo un riavvio dell'app."
+   ]
+  }
+ },
+ {
   "version": "2.0.6",
   "date": "2026-11-25",
   "items": {

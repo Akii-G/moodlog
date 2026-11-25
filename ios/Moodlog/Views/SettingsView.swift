@@ -22,6 +22,7 @@ struct SettingsView: View {
     @AppStorage("lastBackup") private var lastBackup = ""
     @State private var backupPlace = Backup.placeName
     @State private var backupMessage = ""
+    @State private var reopen: URL?   // the file just saved, to be opened once more (see useFile)
 
     private func chooseMedications() async {
         if let error = await Medications.choose() {
@@ -54,7 +55,24 @@ struct SettingsView: View {
                 backupMessage = tr("The backup was saved, but Sottovoce can't update it there (%@). Try another place, for example iCloud Drive.", error)
             } else {
                 backupMessage = tr("Backup saved in %@.", Backup.placeName ?? url.lastPathComponent)
+                // A file saved with the Save picker can be written only until the app restarts.
+                // Opening it once with the Open picker gives the lasting permission.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { reopen = url }
             }
+            lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? ""
+        } catch {
+            backupMessage = tr("Couldn't use that place (%@). Try another one, for example iCloud Drive.", error.localizedDescription)
+        }
+    }
+
+    /// The second step: the same file, picked with the Open picker, which iOS lets an app keep.
+    private func keepFile(_ url: URL) {
+        do {
+            try Backup.remember(file: url)
+            backupPlace = Backup.placeName
+            backupMessage = Backup.writeError(store).map {
+                tr("The backup was saved, but Sottovoce can't update it there (%@). Try another place, for example iCloud Drive.", $0)
+            } ?? tr("Done: Sottovoce will keep %@ up to date, also after restarting.", Backup.placeName ?? url.lastPathComponent)
             lastBackup = UserDefaults.standard.string(forKey: "lastBackup") ?? ""
         } catch {
             backupMessage = tr("Couldn't use that place (%@). Try another one, for example iCloud Drive.", error.localizedDescription)
@@ -280,6 +298,16 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .alert(Text("One more step"), isPresented: Binding(get: { reopen != nil }, set: { if !$0 { reopen = nil } })) {
+                Button("Choose the file") {
+                    let folder = reopen?.deletingLastPathComponent()
+                    reopen = nil
+                    FilePicker.present(saving: nil, startIn: folder, onPick: { keepFile($0) })
+                }
+                Button("Not now", role: .cancel) { reopen = nil }
+            } message: {
+                Text("So that iOS lets Sottovoce keep updating the backup after the app restarts, tap the file you just saved: sottovoce-backup.json.")
+            }
         }
     }
 }

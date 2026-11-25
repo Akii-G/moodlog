@@ -468,3 +468,8 @@
 "%@ things to talk about." = "%@ cose di cui parlare.";
 "A notification on this iPhone: the days before at 18:00, on the day in the morning. It says only that you have an appointment, not with whom." = "Una notifica su questo iPhone: i giorni prima alle 18:00, il giorno stesso al mattino. Dice solo che hai un appuntamento, non con chi.";
 "The last backup didn't work (%@). This often happens after installing an update with a sideloading app: tap Choose another file… and save it again in the same place, replacing the old one." = "L'ultimo backup non è riuscito (%@). Succede spesso dopo aver installato un aggiornamento con un'app di sideloading: tocca Scegli un altro file… e salvalo di nuovo nello stesso posto, sostituendo quello vecchio.";
+"One more step" = "Ancora un passo";
+"Choose the file" = "Scegli il file";
+"Not now" = "Non ora";
+"So that iOS lets Sottovoce keep updating the backup after the app restarts, tap the file you just saved: sottovoce-backup.json." = "Perché iOS lasci a Sottovoce aggiornare il backup anche dopo che l'app si riavvia, tocca il file che hai appena salvato: sottovoce-backup.json.";
+"Done: Sottovoce will keep %@ up to date, also after restarting." = "Fatto: Sottovoce terrà aggiornato %@, anche dopo un riavvio.";

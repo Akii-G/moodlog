@@ -2577,3 +2577,6 @@ msgstr "Backup: l'avviso che il file di backup non si raggiunge non compare più
 
 msgid "Backup: no more warning when you close the app. iOS often won't let an app that's leaving write to iCloud Drive, so Sottovoce now writes the backup while it's open (a few seconds after each change) and, if something was left over, as soon as you open it again."
 msgstr "Backup: niente più avvisi quando chiudi l'app. iOS spesso non lascia scrivere su iCloud Drive a un'app che si sta chiudendo, quindi ora Sottovoce fa il backup mentre è aperta (pochi secondi dopo ogni modifica) e, se è rimasto qualcosa, appena la riapri."
+
+msgid "Backup: when you choose the backup file, Sottovoce now asks for one more tap on the file you just saved. iOS only lets an app keep updating a file it has opened that way, so the backup no longer stops working after the app restarts."
+msgstr "Backup: quando scegli il file di backup, Sottovoce ora chiede un altro tocco sul file appena salvato. iOS lascia aggiornare un file solo se l'app lo ha aperto così, quindi il backup non smette più di funzionare dopo un riavvio dell'app."

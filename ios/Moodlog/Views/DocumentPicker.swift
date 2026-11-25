@@ -41,11 +41,12 @@ struct DocumentPicker: UIViewControllerRepresentable {
 enum FilePicker {
     private static var current: Delegate?
 
-    static func present(saving file: URL?, types: [UTType] = [.json, .data],
+    static func present(saving file: URL?, types: [UTType] = [.json, .data], startIn folder: URL? = nil,
                         onPick: @escaping (URL) -> Void, onCancel: @escaping () -> Void = {}) {
         let picker = file.map { UIDocumentPickerViewController(forExporting: [$0], asCopy: false) }
             ?? UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: false)
         picker.allowsMultipleSelection = false
+        if let folder { picker.directoryURL = folder }
         let delegate = Delegate(onPick: { url in current = nil; onPick(url) },
                                 onCancel: { current = nil; onCancel() })
         current = delegate
