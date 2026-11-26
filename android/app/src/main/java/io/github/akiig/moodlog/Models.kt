@@ -150,6 +150,7 @@ data class SyncState(
     val appointment: Appointment? = null,
     val points: List<TalkPoint>? = null,   // null when the PC runs Sottovoce older than 3.0.2
     val dose: DoseFeed? = null,   // Dose's medication, from a PC with Dose installed
+    val corrections: Corrections? = null,   // deleted nights, renamed medicines (PC 3.4 and newer)
 ) {
     companion object {
         fun from(o: JSONObject): SyncState {
@@ -163,7 +164,7 @@ data class SyncState(
                 if (o.has("surveys")) list("surveys", Survey::from) else null,
                 Appointment.from(o.optJSONObject("appointment")),
                 if (o.has("points")) list("points", TalkPoint::from) else null,
-                DoseFeed.from(o.optJSONObject("dose")))
+                DoseFeed.from(o.optJSONObject("dose")), Corrections.from(o.optJSONObject("corrections")))
         }
     }
 }
@@ -259,7 +260,7 @@ fun one(value: Double): String = String.format(Locale.US, "%.1f", value)
  * otherwise yet to take.
  */
 data class DoseFeed(val medicines: List<Med>, val doses: List<Item>) {
-    data class Med(val name: String, val archived: Boolean, val asNeeded: Boolean)
+    data class Med(val name: String, val archived: Boolean, val asNeeded: Boolean, val ingredient: String = "")
     data class Item(val date: String, val time: String, val status: String, val amount: String, val name: String) {
         fun missed(now: java.time.LocalDateTime = java.time.LocalDateTime.now()): Boolean {
             if (status != "pending") return false
@@ -278,7 +279,8 @@ data class DoseFeed(val medicines: List<Med>, val doses: List<Item>) {
     fun between(start: String, end: String) = doses.filter { it.date in start..end }
 
     fun json(): JSONObject = JSONObject()
-        .put("medicines", JSONArray(medicines.map { JSONObject().put("name", it.name).put("archived", it.archived).put("asNeeded", it.asNeeded) }))
+        .put("medicines", JSONArray(medicines.map { JSONObject().put("name", it.name).put("archived", it.archived).put("asNeeded", it.asNeeded)
+            .put("ingredient", it.ingredient) }))
         .put("doses", JSONArray(doses.map { JSONObject().put("date", it.date).put("time", it.time).put("status", it.status)
             .put("amount", it.amount).put("name", it.name) }))
 
@@ -289,7 +291,7 @@ data class DoseFeed(val medicines: List<Med>, val doses: List<Item>) {
             val doses = o.optJSONArray("doses") ?: JSONArray()
             return DoseFeed(
                 (0 until meds.length()).mapNotNull { meds.optJSONObject(it) }.map {
-                    Med(it.optString("name"), it.optBoolean("archived"), it.optBoolean("asNeeded")) }.filter { it.name.isNotEmpty() },
+                    Med(it.optString("name"), it.optBoolean("archived"), it.optBoolean("asNeeded"), it.optString("ingredient")) }.filter { it.name.isNotEmpty() },
                 (0 until doses.length()).mapNotNull { doses.optJSONObject(it) }.map {
                     Item(it.optString("date"), it.optString("time"), it.optString("status"), it.optString("amount"), it.optString("name"))
                 }.filter { it.name.isNotEmpty() && it.date.length == 10 && it.status in setOf("taken", "skipped", "pending") })

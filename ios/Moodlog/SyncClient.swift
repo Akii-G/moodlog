@@ -105,6 +105,7 @@ enum SyncClient {
         var appointment: Appointment?
         var points: [TalkPoint]
         var device: String
+        var corrections: Corrections
     }
 
     /// Sends everything on the phone, gets the merged state back and merges it here.
@@ -114,7 +115,8 @@ enum SyncClient {
         let body = try JSONEncoder().encode(Outgoing(entries: state.entries, events: state.events,
                                                      deleted: state.deleted, dreams: state.dreams ?? [],
                                                      surveys: state.surveys ?? [], appointment: state.appointment,
-                                                     points: state.points ?? [], device: UIDevice.current.name))
+                                                     points: state.points ?? [], device: UIDevice.current.name,
+                                                     corrections: Corrections.current))
         let data = try await request("/api/e/sync", payload: body)
         let remote: SyncState
         do {
@@ -122,7 +124,13 @@ enum SyncClient {
         } catch {
             throw SyncError.server(tr("Your PC sent something unexpected. Update Sottovoce on your PC to 2.5 or newer."))
         }
-        return store.absorb(remote)
+        var corrections = Corrections.current
+        let fixed = remote.corrections.map { corrections.absorb($0) } ?? 0
+        if fixed > 0 {
+            Corrections.current = corrections
+            store.correctionsChanged()
+        }
+        return store.absorb(remote) + fixed
     }
 
     /// Sends Health lines (the same format as the shortcut), encrypted.

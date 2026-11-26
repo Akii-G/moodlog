@@ -41,7 +41,7 @@ jobs:
           GSK_RENDERER: cairo
         run: |
           set -e
-          for t in test/test_surveys.py test/test_feelings.py test/test_private.py test/test_medications.py test/test_encrypted_sync.py test/test_merge.py test/test_windows.py; do
+          for t in test/test_surveys.py test/test_feelings.py test/test_private.py test/test_medications.py test/test_fixups.py test/test_encrypted_sync.py test/test_merge.py test/test_windows.py; do
             echo "== $t"; python "$t"
           done
 

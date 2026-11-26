@@ -107,7 +107,7 @@ object DoseLink {
         }
         items.sortWith(compareBy({ it.date }, { it.time }, { it.name }))
         val list = meds.values.map { DoseFeed.Med(title(it), it.optBoolean("archived"),
-            it.optJSONObject("schedule")?.optString("kind") == "needed") }.sortedBy { it.name }
+            it.optJSONObject("schedule")?.optString("kind") == "needed", it.optString("ingredient")) }.sortedBy { it.name }
         return DoseFeed(list, items)
     }
 }

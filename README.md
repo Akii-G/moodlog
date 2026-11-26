@@ -104,6 +104,17 @@ everything, or your own dates): key numbers, your mood over time with your event
 and anxiety, sleep, your mood around each event, and a day-by-day table. Notes and
 dreams are left out unless you tick them.
 
+Two fixes in the report window, on the PC and on both phones, synced between them:
+
+- **Short nights**: nights under 4 hours are listed so you can delete the ones when your watch
+  was charging. They go away from Sottovoce everywhere, and Apple Health or Health Connect
+  won't bring them back with the next sync. Real short nights are worth keeping: they matter
+  to your doctor.
+- **Medicine names**: if you logged a medicine in Apple Health and then in Dose under another
+  name (*Aripiprazolo 10mg* and *Aripiprazolo Teva 15 mg*), give it one name and all its doses
+  show under it. Sottovoce suggests the names that look alike (also by Dose's active
+  ingredient), and a dose marked in both apps on the same day counts once.
+
 <img src="docs/screenshots/report.png" alt="First page of the doctor report" width="600">
 
 The phone apps make exactly the same report (the document button in **Charts**), to

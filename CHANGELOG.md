@@ -4,6 +4,11 @@ Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their 
 
 ## Sottovoce for the PC
 
+### 3.4.0 (2026-11-26)
+
+- Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.
+- One medicine, several names: if you logged a medicine in Apple Health and then in Dose under another name, Medicine names in the report window gives it one name, on the PC and on your phones. Sottovoce suggests the names that look the same; a dose marked in both apps on the same day counts once.
+
 ### 3.3.1 (2026-11-25)
 
 - Medication from Dose: a medicine taken in different amounts at different times (for example 1 in the morning and ½ in the evening) shows the right amount for each dose.

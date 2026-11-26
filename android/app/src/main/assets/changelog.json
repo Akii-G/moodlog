@@ -1,5 +1,19 @@
 [
  {
+  "version": "2.5.0",
+  "date": "2026-11-26",
+  "items": {
+   "en": [
+    "Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.",
+    "One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same."
+   ],
+   "it": [
+    "Notti senza orologio: in Resoconto per il medico, Notti brevi elenca le notti sotto le 4 ore. Elimina quelle in cui l'orologio era in carica: spariscono da Sottovoce sul PC e sui telefoni, e Salute non le riporta con la sincronizzazione successiva.",
+    "Un farmaco, più nomi: in Resoconto per il medico, Nomi dei farmaci dà un solo nome a un farmaco registrato con nomi diversi, qui e sul PC. Sottovoce propone i nomi che sembrano uguali."
+   ]
+  }
+ },
+ {
   "version": "2.4.0",
   "date": "2026-11-25",
   "items": {

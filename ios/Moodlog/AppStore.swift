@@ -60,6 +60,15 @@ final class AppStore {
         }
     }
 
+    /// Bumped when nights are deleted or medicines renamed, so open screens read again.
+    var correctionsVersion = 0
+
+    /// `here`: made on this phone, so it goes to the PC with the next sync.
+    func correctionsChanged(here: Bool = false) {
+        correctionsVersion += 1
+        if here { onChange?() }
+    }
+
     private func changed() {
         save()
         onChange?()

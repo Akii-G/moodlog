@@ -126,7 +126,8 @@ enum HealthSender {
         }
         let asleep = samples.filter { ["Core", "Deep", "REM", "Asleep"].contains(stage($0.value)) }
             .map { ($0.startDate, $0.endDate) }
-        return sleepHours(asleep).filter { $0.key >= start && $0.key <= end }
+        let deleted = Corrections.current.deletedNights   // nights without the watch, deleted in Sottovoce
+        return sleepHours(asleep).filter { $0.key >= start && $0.key <= end && !deleted.contains($0.key) }
     }
 
     static func lines(days: Int) async throws -> [String] {

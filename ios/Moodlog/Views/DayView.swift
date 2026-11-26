@@ -67,9 +67,10 @@ struct DayView: View {
                     Label("Add an event, e.g. a medication change", systemImage: "flag")
                 }
             }
+            let _ = store.correctionsVersion
             let fromDose = store.doseFeed?.records(from: day, to: day) ?? []
             if (Medications.isOn || store.doseFeed != nil) && showMedication {
-                let all = doses + fromDose
+                let all = Corrections.apply(doses + fromDose)
                 Section {
                     if all.isEmpty {
                         Text(Medications.isOn ? tr("No doses logged in Apple Health on this day.") : tr("No doses on this day."))

@@ -44,8 +44,18 @@ struct ReportView: View {
                 Section {
                     Toggle("Include my notes", isOn: $notes)
                     if HealthSender.isAvailable { Toggle("Include sleep from Apple Health", isOn: $sleep) }
+                    if HealthSender.isAvailable && sleep {
+                        NavigationLink { ShortNightsView() } label: {
+                            Label("Short nights: were you wearing your watch?", systemImage: "moon.zzz")
+                        }
+                    }
                     if (Medications.isOn || store.doseFeed != nil) && showMedication {
                         Toggle("Include medication (from Dose and Apple Health)", isOn: $medication)
+                        if medication {
+                            NavigationLink { RenameMedicinesView() } label: {
+                                Label("Medicine names", systemImage: "pills")
+                            }
+                        }
                     }
                     if showQuestionnaires && !store.surveys.isEmpty {
                         Toggle("Include questionnaires (PHQ-9, GAD-7)", isOn: $surveys)
@@ -102,6 +112,8 @@ struct ReportView: View {
             doses += feed.records(from: start, to: end)
             meds += feed.infos
         }
+        doses = Corrections.apply(doses)
+        meds = Corrections.apply(meds)
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(tr("Sottovoce report") + " \(start) – \(end).pdf")
         do {

@@ -145,7 +145,7 @@ struct ChartsView: View {
             }
             .sheet(isPresented: $showReport) { ReportView() }
             .sheet(isPresented: $showBook) { BookView() }
-            .task(id: month) {
+            .task(id: "\(month)|\(store.correctionsVersion)") {
                 sleepLoaded = false
                 sleep = await HealthSender.nightlySleep(from: days.first ?? Day.today, to: days.last ?? Day.today)
                 sleepLoaded = true

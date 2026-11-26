@@ -120,7 +120,8 @@ private fun SleepAndMood(month: LocalDate, days: List<String>) {
     }
     if (!asked) return
     ChartCard(tr("Sleep and mood")) {
-        val nights = sleep
+        val gone = store.corrections.deletedNights   // nights without the watch, deleted
+        val nights = sleep?.filterKeys { it !in gone }
         when {
             nights == null -> Text(tr("Allow Health Connect in Settings to see your sleep here, next to your mood."),
                 style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

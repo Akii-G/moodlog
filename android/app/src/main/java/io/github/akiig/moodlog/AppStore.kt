@@ -35,7 +35,10 @@ class AppStore(private val file: File?) {
     /** Medication from Dose on this phone, read directly when you allowed it (see DoseLink). */
     var localDose by mutableStateOf<DoseFeed?>(null)
     /** Where medication comes from: Dose on this phone if it's there, else Dose on the PC. */
-    val dose: DoseFeed? get() = localDose ?: doseFeed
+    val dose: DoseFeed? get() = (localDose ?: doseFeed)?.renamed(corrections.renames())
+
+    /** Nights deleted (watch not worn) and medicines renamed: synced with the PC. */
+    var corrections by mutableStateOf(Corrections())
 
     var onChange: (() -> Unit)? = null
 
@@ -56,6 +59,7 @@ class AppStore(private val file: File?) {
             points = (s.points ?: emptyList()).filter { it.isValid }
             deleted = s.deleted
             doseFeed = s.dose
+            corrections = s.corrections ?: Corrections()
         } catch (e: Exception) {
             // an unreadable file is kept as it is, not overwritten with nothing
             f.copyTo(File(f.path + ".unreadable"), overwrite = true)
@@ -70,6 +74,7 @@ class AppStore(private val file: File?) {
         .put("surveys", JSONArray(surveys.map { it.json() }))
         .put("points", JSONArray(points.map { it.json() }))
         .also { o -> appointment?.let { o.put("appointment", it.json()) } }
+        .put("corrections", corrections.json())
 
     fun save() {
         val f = file ?: return
@@ -255,12 +260,33 @@ class AppStore(private val file: File?) {
         changed()
     }
 
+    // ---------------------------------------------------------------- corrections
+
+    fun deleteNight(day: String) {
+        corrections = corrections.deleteNight(day)
+        changed()
+    }
+
+    fun renameMedicines(names: Collection<String>, to: String) {
+        corrections = corrections.rename(names, to)
+        changed()
+    }
+
+    fun undoRename(to: String) {
+        corrections = corrections.undoRename(to)
+        changed()
+    }
+
     // ---------------------------------------------------------------- sync
 
     /** Merge what the PC sent. Returns how many things changed here. */
     fun absorb(other: SyncState): Int {
         var changes = 0
         if (other.dose != null && other.dose != doseFeed) { doseFeed = other.dose; save() }
+        other.corrections?.let { theirs ->
+            val (merged, n) = corrections.absorb(theirs)
+            if (n > 0) { corrections = merged; changes += n; save() }
+        }
         val tombs = HashMap<String, Tombstone>()
         for (t in deleted + other.deleted) {
             val old = tombs[t.id]

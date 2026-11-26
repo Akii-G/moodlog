@@ -2858,3 +2858,163 @@ msgstr "Dose su questo telefono: Sottovoce ora può leggere i tuoi farmaci diret
 
 msgid "Medication from Dose: a medicine taken in different amounts at different times (for example 1 in the morning and ½ in the evening) shows the right amount for each dose."
 msgstr "Farmaci da Dose: un farmaco preso in quantità diverse a orari diversi (per esempio 1 la mattina e ½ la sera) mostra la quantità giusta per ogni dose."
+
+msgid "also logged as: %s"
+msgstr "registrato anche come: %s"
+
+msgid "Short nights"
+msgstr "Notti brevi"
+
+msgid "Nights under 4 hours. If you weren't wearing your watch (for example while it was charging), leave that night out: it won't count in the report, the averages or the charts. Real short nights are worth keeping: they matter to your doctor."
+msgstr "Notti sotto le 4 ore. Se non indossavi l'orologio (per esempio mentre era in carica), escludi quella notte: non conterà nel resoconto, nelle medie e nei grafici. Le notti brevi vere conviene tenerle: per il medico contano."
+
+msgid "No nights under 4 hours."
+msgstr "Nessuna notte sotto le 4 ore."
+
+msgid "Leave this night out"
+msgstr "Escludi questa notte"
+
+msgid "Leave out"
+msgstr "Escludi"
+
+msgid "Same medicine, different names"
+msgstr "Stesso farmaco, nomi diversi"
+
+msgid "If you logged one medicine under different names (for example in Apple Health and then in Dose), combine them so the report shows it once. The report still lists the other names under it. Don't combine two strengths if your dose really changed."
+msgstr "Se hai registrato un farmaco con nomi diversi (per esempio in Salute di Apple e poi in Dose), uniscili così il resoconto lo mostra una volta sola. Il resoconto elenca comunque gli altri nomi sotto. Non unire due dosaggi se la tua dose è cambiata davvero."
+
+msgid "Dose"
+msgstr "Dose"
+
+msgid "Apple Health"
+msgstr "Salute di Apple"
+
+msgid "These look like the same medicine"
+msgstr "Sembrano lo stesso farmaco"
+
+msgid "Combined"
+msgstr "Uniti"
+
+msgid "Combine other names"
+msgstr "Unisci altri nomi"
+
+msgid "Tick two or more names, then combine them."
+msgstr "Spunta due o più nomi, poi uniscili."
+
+msgid "Name to show in the report"
+msgstr "Nome da mostrare nel resoconto"
+
+msgid "Combine"
+msgstr "Unisci"
+
+msgid "Tick at least two names to combine."
+msgstr "Spunta almeno due nomi da unire."
+
+msgid "Separate"
+msgstr "Separa"
+
+msgid "Check…"
+msgstr "Controlla…"
+
+msgid "Medicine names…"
+msgstr "Nomi dei farmaci…"
+
+msgid "One medicine logged under different names? Combine them."
+msgstr "Un farmaco registrato con nomi diversi? Uniscili."
+
+msgid "Nights without your watch: in Report for your doctor, Check… lists nights under 4 hours. Leave out the ones when your watch was charging, and they no longer count in the report, the averages or the charts. They stay stored, so you can bring them back."
+msgstr "Notti senza orologio: in Resoconto per il medico, Controlla… elenca le notti sotto le 4 ore. Escludi quelle in cui l'orologio era in carica: non conteranno più nel resoconto, nelle medie e nei grafici. Restano salvate, così puoi rimetterle."
+
+msgid "One medicine, several names: if you logged a medicine in Apple Health and then in Dose under another name, Medicine names… in the report window combines them, so the report shows it once and lists the other names under it. Sottovoce suggests the ones that look the same; a dose marked in both apps on the same day counts once."
+msgstr "Un farmaco, più nomi: se hai registrato un farmaco in Salute di Apple e poi in Dose con un altro nome, Nomi dei farmaci… nella finestra del resoconto li unisce, così il resoconto lo mostra una volta sola ed elenca gli altri nomi sotto. Sottovoce propone quelli che sembrano uguali; una dose segnata in tutte e due le app nello stesso giorno conta una volta."
+
+msgid "%d night under 4 hours: were you wearing your watch?"
+msgid_plural "%d nights under 4 hours: were you wearing your watch?"
+msgstr[0] "%d notte sotto le 4 ore: indossavi l'orologio?"
+msgstr[1] "%d notti sotto le 4 ore: indossavi l'orologio?"
+
+msgid "%d night left out (watch not worn)."
+msgid_plural "%d nights left out (watch not worn)."
+msgstr[0] "%d notte esclusa (orologio non indossato)."
+msgstr[1] "%d notti escluse (orologio non indossato)."
+
+msgid "%d medicine seems to appear under more than one name."
+msgid_plural "%d medicines seem to appear under more than one name."
+msgstr[0] "%d farmaco sembra comparire con più di un nome."
+msgstr[1] "%d farmaci sembrano comparire con più di un nome."
+
+msgid "%d medicine shown under one name."
+msgid_plural "%d medicines shown under one name."
+msgstr[0] "%d farmaco mostrato con un solo nome."
+msgstr[1] "%d farmaci mostrati con un solo nome."
+
+msgid "Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync."
+msgstr "Notti senza orologio: in Resoconto per il medico, Notti brevi elenca le notti sotto le 4 ore. Elimina quelle in cui l'orologio era in carica: spariscono da Sottovoce sul PC e sui telefoni, e Salute non le riporta con la sincronizzazione successiva."
+
+msgid "One medicine, several names: if you logged a medicine in Apple Health and then in Dose under another name, Medicine names in the report window gives it one name, on the PC and on your phones. Sottovoce suggests the names that look the same; a dose marked in both apps on the same day counts once."
+msgstr "Un farmaco, più nomi: se hai registrato un farmaco in Salute di Apple e poi in Dose con un altro nome, Nomi dei farmaci nella finestra del resoconto gli dà un solo nome, sul PC e sui telefoni. Sottovoce propone i nomi che sembrano uguali; una dose segnata in tutte e due le app nello stesso giorno conta una volta."
+
+msgid "One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same."
+msgstr "Un farmaco, più nomi: in Resoconto per il medico, Nomi dei farmaci dà un solo nome a un farmaco registrato con nomi diversi, qui e sul PC. Sottovoce propone i nomi che sembrano uguali."
+
+msgid "Nights under 4 hours. If you weren't wearing your watch (for example while it was charging), delete that night: it goes away from Sottovoce here and on your phones, and won't come back with the next sync. Real short nights are worth keeping: they matter to your doctor."
+msgstr "Notti sotto le 4 ore. Se non indossavi l'orologio (per esempio mentre era in carica), elimina quella notte: sparisce da Sottovoce qui e sui telefoni, e non torna con la sincronizzazione successiva. Le notti brevi vere conviene tenerle: per il medico contano."
+
+msgid "Nights under 4 hours. If you weren't wearing your watch (for example while it was charging), delete that night: it goes away from Sottovoce here and on your PC, and won't come back with the next sync. Real short nights are worth keeping: they matter to your doctor."
+msgstr "Notti sotto le 4 ore. Se non indossavi l'orologio (per esempio mentre era in carica), elimina quella notte: sparisce da Sottovoce qui e sul PC, e non torna con la sincronizzazione successiva. Le notti brevi vere conviene tenerle: per il medico contano."
+
+msgid "Delete this night?"
+msgstr "Eliminare questa notte?"
+
+msgid "%(hours)s of sleep on %(day)s will be deleted from Sottovoce here and on your phones. Apple Health and Health Connect keep their own copy."
+msgstr "%(hours)s di sonno del %(day)s verranno eliminate da Sottovoce qui e sui telefoni. Salute di Apple e Health Connect ne tengono la loro copia."
+
+msgid "This night's sleep will be deleted from Sottovoce here and on your PC. Health Connect keeps its own copy."
+msgstr "Il sonno di questa notte verrà eliminato da Sottovoce qui e sul PC. Health Connect ne tiene la sua copia."
+
+msgid "This night's sleep will be deleted from Sottovoce here and on your PC. Apple Health keeps its own copy."
+msgstr "Il sonno di questa notte verrà eliminato da Sottovoce qui e sul PC. Salute di Apple ne tiene la sua copia."
+
+msgid "Medicine names"
+msgstr "Nomi dei farmaci"
+
+msgid "If you logged one medicine under different names (for example in Apple Health and then in Dose), give them one name: all its doses then show under it, here and on your phones. Don't do it for two strengths if your dose really changed."
+msgstr "Se hai registrato un farmaco con nomi diversi (per esempio in Salute di Apple e poi in Dose), dagli un solo nome: tutte le sue dosi compaiono poi sotto quel nome, qui e sui telefoni. Non farlo per due dosaggi se la tua dose è cambiata davvero."
+
+msgid "If you logged one medicine under different names (for example in Apple Health and then in Dose), give them one name: all its doses then show under it, here and on your PC. Don't do it for two strengths if your dose really changed."
+msgstr "Se hai registrato un farmaco con nomi diversi (per esempio in Salute di Apple e poi in Dose), dagli un solo nome: tutte le sue dosi compaiono poi sotto quel nome, qui e sul PC. Non farlo per due dosaggi se la tua dose è cambiata davvero."
+
+msgid "Renamed"
+msgstr "Rinominati"
+
+msgid "Other names"
+msgstr "Altri nomi"
+
+msgid "Tick two or more names, then give them one name."
+msgstr "Spunta due o più nomi, poi dagli un solo nome."
+
+msgid "Use this name"
+msgstr "Usa questo nome"
+
+msgid "Tick at least two names."
+msgstr "Spunta almeno due nomi."
+
+msgid "Undo"
+msgstr "Annulla"
+
+msgid "One medicine logged under different names? Give it one name."
+msgstr "Un farmaco registrato con nomi diversi? Dagli un solo nome."
+
+msgid "Reading Health Connect…"
+msgstr "Lettura di Health Connect…"
+
+msgid "No doses yet."
+msgstr "Ancora nessuna dose."
+
+msgid "Short nights: were you wearing your watch?"
+msgstr "Notti brevi: indossavi l'orologio?"
+
+msgid "%d medicine renamed."
+msgid_plural "%d medicines renamed."
+msgstr[0] "%d farmaco rinominato."
+msgstr[1] "%d farmaci rinominati."

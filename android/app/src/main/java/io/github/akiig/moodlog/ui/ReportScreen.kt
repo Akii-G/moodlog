@@ -56,13 +56,16 @@ fun ReportDialog(onClose: () -> Unit) {
     var points by remember { mutableStateOf(false) }
     var medication by remember { mutableStateOf(true) }
     var canSleep by remember { mutableStateOf(false) }
+    var shortNights by remember { mutableStateOf(false) }
+    var medicineNames by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { canSleep = app.health.hasPermissions() }
 
     suspend fun build(): File {
         val (start, end) = if (period == ReportPeriod.CUSTOM) minOf(from, to) to maxOf(from, to) else period.range(app.store)
-        val nights = if (sleep && canSleep) (try { app.health.nightlySleep(start, end) } catch (e: Exception) { null }) ?: emptyMap() else emptyMap()
+        val nights = (if (sleep && canSleep) (try { app.health.nightlySleep(start, end) } catch (e: Exception) { null }) ?: emptyMap() else emptyMap())
+            .filterKeys { it !in app.store.corrections.deletedNights }
         val file = File(context.cacheDir, "reports/" + tr("Sottovoce report") + " $start – $end.pdf")
         return withContext(Dispatchers.Default) {
             Report(app.store, start, end, notes, nights, dreams && app.showDreams, dreams && dreamText && app.showDreams,
@@ -111,6 +114,10 @@ fun ReportDialog(onClose: () -> Unit) {
             if (canSleep) {
                 Line()
                 SwitchRow(tr("Include sleep from Health Connect"), sleep) { sleep = it }
+                if (sleep) {
+                    Line()
+                    LinkRow(tr("Short nights: were you wearing your watch?")) { shortNights = true }
+                }
             }
             if (app.showQuestionnaires && app.store.surveys.isNotEmpty()) {
                 Line()
@@ -123,6 +130,10 @@ fun ReportDialog(onClose: () -> Unit) {
             if (app.store.dose != null) {
                 Line()
                 SwitchRow(tr("Include medication (from Dose)"), medication) { medication = it }
+                if (medication) {
+                    Line()
+                    LinkRow(tr("Medicine names")) { medicineNames = true }
+                }
             }
             if (app.showDreams) {
                 Line()
@@ -163,6 +174,8 @@ fun ReportDialog(onClose: () -> Unit) {
             }
         }
     }
+    if (shortNights) ShortNightsDialog { shortNights = false }
+    if (medicineNames) MedicineNamesDialog { medicineNames = false }
 }
 
 /** "Your diary as a book": choose a period, then share or save the PDF to keep or print. */

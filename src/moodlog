@@ -34,7 +34,7 @@ gi.require_version("PangoCairo", "1.0")
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 APP_ID = "app.moodlog.Sottovoce"
-VERSION = "3.3.1"
+VERSION = "3.4.0"
 IS_WINDOWS = sys.platform == "win32"
 
 # ----------------------------------------------------------------- languages
@@ -2232,7 +2232,7 @@ def export_report(path, store, events, health, start, end, include_notes=False,
 # ----------------------------------------------------------------- backup, restore, merging
 
 DATA_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json", "surveys.json",
-              "appointment.json", "sync.json",
+              "appointment.json", "sync.json", "corrections.json",
               "sync-last.txt"]
 CONTENT_FILES = ["moods.csv", "events.csv", "health.csv", "dreams.csv", "medications.json",
                  "surveys.json", "appointment.json"]
@@ -2410,6 +2410,108 @@ def format_value(key, value, with_unit=True):
     return "%s %s" % (s, unit) if (unit and with_unit) else s
 
 
+class Corrections:
+    """Fixes the user makes once and every Sottovoce applies, kept in corrections.json and
+    synced with the phones:
+      nights  {"2026-11-11": stamp}  sleep deleted for good (the watch wasn't worn)
+      names   {"Aripiprazolo 10mg": {"to": "Aripiprazolo Teva 15 mg", "updated": stamp}}
+              a medicine's old name and the one it's shown as; "to": "" undoes it
+    """
+
+    def __init__(self, path=None):
+        self.path = path or os.path.join(data_dir(), "corrections.json")
+        self.nights, self.names = {}, {}
+        try:
+            with open(self.path, encoding="utf-8") as f:
+                self.absorb_json(json.load(f))
+        except (OSError, ValueError):
+            pass
+
+    def save(self):
+        tmp = self.path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(self.to_json(), f, ensure_ascii=False, indent=1, sort_keys=True)
+        os.replace(tmp, self.path)
+
+    def to_json(self):
+        return {"nights": dict(sorted(self.nights.items())),
+                "names": {k: dict(v) for k, v in sorted(self.names.items())}}
+
+    def absorb_json(self, doc):
+        """Take in corrections from a file or a phone; returns how many changed here."""
+        changed = 0
+        if not isinstance(doc, dict):
+            return 0
+        nights = doc.get("nights") if isinstance(doc.get("nights"), dict) else {}
+        for day, stamp in list(nights.items())[:20000]:
+            try:
+                dt.date.fromisoformat(day)
+            except (TypeError, ValueError):
+                continue
+            stamp = clean_stamp(stamp) or now_stamp()
+            if day not in self.nights:
+                self.nights[day] = stamp
+                changed += 1
+        names = doc.get("names") if isinstance(doc.get("names"), dict) else {}
+        for old, item in list(names.items())[:5000]:
+            if not isinstance(item, dict):
+                continue
+            old = " ".join(str(old).split())[:200]
+            to = " ".join(str(item.get("to") or "").split())[:200]
+            stamp = clean_stamp(item.get("updated"))
+            if not old or not stamp or old == to:
+                continue
+            mine = self.names.get(old)
+            if mine is None or stamp > mine["updated"]:
+                if mine is None or mine["to"] != to:
+                    changed += 1
+                self.names[old] = {"to": to, "updated": stamp}
+        return changed
+
+    def deleted_nights(self):
+        out = set()
+        for day in self.nights:
+            try:
+                out.add(dt.date.fromisoformat(day))
+            except ValueError:
+                pass
+        return out
+
+    def delete_night(self, day):
+        self.nights.setdefault(day.isoformat(), now_stamp())
+
+    def renames(self):
+        """{old name: name shown}, following a renamed name that was renamed again."""
+        direct = {k: v["to"] for k, v in self.names.items() if v["to"]}
+        out = {}
+        for old in direct:
+            to, seen = direct[old], {old}
+            while to in direct and to not in seen:
+                seen.add(to)
+                to = direct[to]
+            if to != old:
+                out[old] = to
+        return out
+
+    def rename(self, names, to):
+        """Show these names as `to` from now on (and the names already shown as one of them)."""
+        stamp = now_stamp()
+        for old, item in self.names.items():
+            if item["to"] in names and old != to:
+                self.names[old] = {"to": to, "updated": stamp}
+        for name in names:
+            if name != to:
+                self.names[name] = {"to": to, "updated": stamp}
+        if to in self.names:  # the new name is itself an old one no more
+            self.names[to] = {"to": "", "updated": stamp}
+
+    def undo_rename(self, to):
+        stamp = now_stamp()
+        for old, item in self.names.items():
+            if item["to"] == to:
+                self.names[old] = {"to": "", "updated": stamp}
+
+
 class HealthStore:
     """Daily health numbers received from the phone: health.csv (date,metric,value)."""
 
@@ -2418,6 +2520,30 @@ class HealthStore:
         self.values = {}  # metric -> {date: value}
         self.mtime = 0
         self.load()
+
+    def corrections(self):
+        return Corrections(os.path.join(os.path.dirname(self.path), "corrections.json"))
+
+    def _drop_deleted(self):
+        """Take out the nights deleted on any Sottovoce (watch not worn); True if any were here."""
+        sleep, gone = self.values.get("sleep_hours", {}), self.corrections().deleted_nights()
+        found = [d for d in sleep if d in gone]
+        for d in found:
+            del sleep[d]
+        return bool(found)
+
+    def delete_night(self, day):
+        """Delete a night's sleep for good, here and (with the sync) on the phones."""
+        c = self.corrections()
+        c.delete_night(day)
+        c.save()
+        self.values.get("sleep_hours", {}).pop(day, None)
+        self.save()
+
+    def short_nights(self, under=4.0):
+        """[(night, hours)] for nights under some hours, newest first."""
+        return sorted(((d, v) for d, v in self.values.get("sleep_hours", {}).items() if v < under),
+                      reverse=True)
 
     def load(self):
         self.values = {}
@@ -2437,7 +2563,9 @@ class HealthStore:
                     self.values.setdefault(row.get("metric") or "?", {})[day] = value
         except OSError:
             self.mtime = 0
-        if self.dirty:  # write the file back without the impossible values
+        if self._drop_deleted():
+            self.dirty = True
+        if self.dirty:  # write the file back without the impossible values or deleted nights
             try:
                 self.save()
             except OSError:
@@ -2463,6 +2591,7 @@ class HealthStore:
     def merge(self, incoming):
         """Merge {metric: {date: value}}; returns {metric: days stored}."""
         stored = {}
+        gone = self.corrections().deleted_nights()
         for metric, days in incoming.items():
             if not days:
                 continue
@@ -2475,6 +2604,8 @@ class HealthStore:
                     value = max(old, value)
                 elif old is not None and day == oldest and len(days) > 1:
                     value = old  # oldest day of a window is often cut short
+                if metric == "sleep_hours" and day in gone:
+                    continue  # deleted: the watch wasn't worn that night
                 mine[day] = value
             stored[metric] = len(days)
         return stored
@@ -2939,19 +3070,100 @@ class Medication:
     Doses are (day, time, status, amount, unit, name) from Health; Dose's have a seventh item,
     "dose", with the amount already written out in the unit's place."""
 
-    def __init__(self):
+    def __init__(self, corrections_path=None):
+        self.corrections_path = corrections_path or os.path.join(data_dir(), "corrections.json")
         self.health = MedicationStore()
         self.dose = DoseMedication()
+        self.same = Corrections(self.corrections_path).renames()
         self.merge()
 
+    def combine(self, names, shown):
+        """From now on every dose of these names is shown as `shown`, here and on the phones."""
+        c = Corrections(self.corrections_path)
+        c.rename(list(names), shown)
+        c.save()
+        self.same = c.renames()
+        self.merge()
+
+    def separate(self, shown):
+        c = Corrections(self.corrections_path)
+        c.undo_rename(shown)
+        c.save()
+        self.same = c.renames()
+        self.merge()
+
+    def logged_names(self):
+        """Every name as logged, with (first day, last day, from Dose)."""
+        out = {}
+        for d in self.health.doses + self.dose.doses:
+            first, last, dose = out.get(d[5], (d[0], d[0], False))
+            out[d[5]] = (min(first, d[0]), max(last, d[0]), dose or len(d) > 6)
+        return out
+
     def merge(self):
-        self.meds = dict(self.health.meds)
-        self.meds.update(self.dose.meds)
-        self.doses = sorted(self.health.doses + self.dose.doses)
+        same = self.same
+        self.meds = {}
+        for name, info in list(self.health.meds.items()) + list(self.dose.meds.items()):
+            shown = same.get(name, name)
+            had = self.meds.get(shown)
+            # one name still in use keeps the combined medicine among the current ones
+            self.meds[shown] = dict(info, archived=info.get("archived", False) and
+                                    (had is None or had.get("archived", False)))
+        doses = [d if d[5] not in same else d[:5] + (same[d[5]],) + d[6:]
+                 for d in self.health.doses + self.dose.doses]
+        # the same medicine marked in Dose and logged in Apple Health on one day: Dose's count
+        in_dose = {(d[0], d[5]) for d in doses if len(d) > 6}
+        self.doses = sorted((d for d in doses if len(d) > 6 or (d[0], d[5]) not in in_dose),
+                            key=lambda d: (d[0], d[1] or "", d[5], d[2]))
+
+    def suggestions(self):
+        """Groups of names that look like one medicine (same name before the strength, or the
+        same active ingredient in Dose), not combined yet."""
+        makers = {"teva", "mylan", "sandoz", "eg", "doc", "ratiopharm", "zentiva", "aurobindo", "accord",
+                  "krka", "pensa", "hexal", "almus", "sun", "germed", "dorom", "abc", "aristo", "viatris"}
+
+        def base(name):
+            words = []
+            for w in re.split(r"\s+", name.lower().strip()):
+                if re.search(r"\d", w):
+                    break
+                if w not in makers and w not in ("·", "-"):
+                    words.append(w)
+            return " ".join(words)
+
+        ingredient = {}
+        for m in self.dose.medicines:
+            first = (m.get("ingredient") or "").lower().split()
+            if first:
+                ingredient[DoseMedication.title(m)] = first[0]
+        names = list(self.logged_names())
+        parent = {n: n for n in names}
+
+        def find(n):
+            while parent[n] != n:
+                n = parent[n]
+            return n
+        seen = {}
+        for n in names:
+            for key in {base(n), ingredient.get(n)} - {None, ""}:
+                if key in seen:
+                    parent[find(n)] = find(seen[key])
+                else:
+                    seen[key] = n
+        groups = {}
+        for n in names:
+            groups.setdefault(find(n), []).append(n)
+        out = []
+        for group in groups.values():
+            shown = {self.same.get(n, n) for n in group}
+            if len(group) > 1 and len(shown) > 1:
+                out.append(sorted(group, key=str.lower))
+        return sorted(out, key=lambda g: g[0].lower())
 
     def load(self):
         self.health.load()
         self.dose.load()
+        self.same = Corrections(self.corrections_path).renames()
         self.merge()
 
     def changed_on_disk(self):
@@ -3806,8 +4018,14 @@ def sync_with_phone(body):
         dreams.save()
     if survey_changes:
         surveys.save()
-    changed += dream_changes + survey_changes + appointment_changes
+    corrections = Corrections()
+    correction_changes = corrections.absorb_json(doc.get("corrections")) if isinstance(doc, dict) else 0
+    if correction_changes:
+        corrections.save()
+        HealthStore()  # loading it drops the nights the phone deleted
+    changed += dream_changes + survey_changes + appointment_changes + correction_changes
     state = stores_to_json(store, events, dreams, surveys, appointment)
+    state["corrections"] = corrections.to_json()
     state["changed"] = changed
     if dose.medicines:
         state["dose"] = dose_to_json(dose)
@@ -3818,10 +4036,16 @@ def dose_to_json(dose):
     """Dose's medicines and doses for the phones' Sottovoce (their report and day), as
     {"medicines": [{name, archived, asNeeded}], "doses": [{date, time, status, amount, name}]}.
     "pending" is a scheduled dose nobody marked; the phone tells not taken from yet to take."""
-    return {"medicines": [{"name": n, "archived": i["archived"], "asNeeded": i["as_needed"]}
-                          for n, i in sorted(dose.meds.items())],
-            "doses": [{"date": d[0].isoformat(), "time": d[1], "status": d[2], "amount": d[4], "name": d[5]}
-                      for d in dose.doses]}
+    same = Corrections().renames()
+    ingredient = {DoseMedication.title(m): (m.get("ingredient") or "") for m in dose.medicines}
+    meds = {}
+    for n, i in sorted(dose.meds.items()):
+        shown, had = same.get(n, n), meds.get(same.get(n, n))
+        meds[shown] = {"name": shown, "archived": i["archived"] and (had is None or had["archived"]),
+                       "asNeeded": i["as_needed"], "ingredient": ingredient.get(n, "")}
+    return {"medicines": list(meds.values()),
+            "doses": [{"date": d[0].isoformat(), "time": d[1], "status": d[2], "amount": d[4],
+                       "name": same.get(d[5], d[5])} for d in dose.doses]}
 
 
 def sync_config():
@@ -6608,6 +6832,190 @@ class AppointmentWindow(Gtk.Window):
         GLib.idle_add(lambda: self.win.save_appointment() and False)
 
 
+class ShortNightsWindow(Gtk.Window):
+    """Nights under 4 hours, to delete the ones when the watch was charging, not worn."""
+
+    def __init__(self, win, on_change=None):
+        super().__init__(title=tr("Short nights"), transient_for=win, modal=True)
+        self.set_default_size(460, 520)
+        self.win, self.on_change = win, on_change
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        intro = Gtk.Label(xalign=0, wrap=True, label=tr(
+            "Nights under 4 hours. If you weren't wearing your watch (for example while it was "
+            "charging), delete that night: it goes away from Sottovoce here and on your phones, "
+            "and won't come back with the next sync. Real short nights are worth keeping: they "
+            "matter to your doctor."))
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        self.list = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.list.add_css_class("boxed-list")
+        scroll = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        scroll.set_child(self.list)
+        col.append(scroll)
+        done = Gtk.Button(label=tr("Done"), halign=Gtk.Align.END)
+        done.add_css_class("suggested-action")
+        done.connect("clicked", lambda *_: self.close())
+        col.append(done)
+        self.set_child(col)
+        self.fill()
+
+    def fill(self):
+        while (row := self.list.get_first_child()) is not None:
+            self.list.remove(row)
+        nights = self.win.health.short_nights()
+        if not nights:
+            self.list.append(Gtk.Label(label=tr("No nights under 4 hours."), margin_top=12, margin_bottom=12))
+        for day, hours in nights:
+            row = Adw.ActionRow(title=fmt_date(day, "%a %-d %b %Y"),
+                                subtitle=format_value("sleep_hours", hours))
+            delete = Gtk.Button(label=tr("Delete"), valign=Gtk.Align.CENTER)
+            delete.add_css_class("destructive-action")
+            delete.connect("clicked", lambda _b, d=day, h=hours: self.ask(d, h))
+            row.add_suffix(delete)
+            self.list.append(row)
+
+    def ask(self, day, hours):
+        ConfirmWindow(self, tr("Delete this night?"), tr(
+            "%(hours)s of sleep on %(day)s will be deleted from Sottovoce here and on your phones. "
+            "Apple Health and Health Connect keep their own copy.") % {
+                "hours": format_value("sleep_hours", hours), "day": fmt_date(day, "%-d %B %Y")},
+            [(tr("Delete"), lambda: self.delete(day), "destructive-action")]).present()
+
+    def delete(self, day):
+        try:
+            self.win.health.delete_night(day)
+        except OSError as err:
+            self.win.notify(tr("Could not save: %s") % err)
+            return
+        self.fill()
+        if self.on_change:
+            self.on_change()
+        self.win.refresh()
+
+
+class MedicineNamesWindow(Gtk.Window):
+    """Show a medicine logged under several names (Apple Health, then Dose) as one."""
+
+    def __init__(self, win, on_change=None):
+        super().__init__(title=tr("Medicine names"), transient_for=win, modal=True)
+        self.set_default_size(520, 600)
+        self.win, self.on_change = win, on_change
+        col = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        for side in ("top", "bottom", "start", "end"):
+            getattr(col, "set_margin_" + side)(20)
+        intro = Gtk.Label(xalign=0, wrap=True, label=tr(
+            "If you logged one medicine under different names (for example in Apple Health and "
+            "then in Dose), give them one name: all its doses then show under it, here and on your "
+            "phones. Don't do it for two strengths if your dose really changed."))
+        intro.add_css_class("dim-label")
+        col.append(intro)
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        scroll = Gtk.ScrolledWindow(vexpand=True, hscrollbar_policy=Gtk.PolicyType.NEVER)
+        scroll.set_child(self.box)
+        col.append(scroll)
+        done = Gtk.Button(label=tr("Done"), halign=Gtk.Align.END)
+        done.add_css_class("suggested-action")
+        done.connect("clicked", lambda *_: self.close())
+        col.append(done)
+        self.set_child(col)
+        self.fill()
+
+    def heading(self, text):
+        label = Gtk.Label(label=text, xalign=0, margin_top=6)
+        label.add_css_class("heading")
+        self.box.append(label)
+
+    def describe(self, name, info):
+        first, last, from_dose = info
+        where = tr("Dose") if from_dose else tr("Apple Health")
+        span = fmt_date(first, "%-d %b") if first == last else "%s – %s" % (
+            fmt_date(first, "%-d %b"), fmt_date(last, "%-d %b %Y"))
+        return "%s · %s" % (where, span)
+
+    def fill(self):
+        while (child := self.box.get_first_child()) is not None:
+            self.box.remove(child)
+        meds = self.win.meds
+        logged = meds.logged_names()
+        groups = meds.suggestions()
+        if groups:
+            self.heading(tr("These look like the same medicine"))
+            for group in groups:
+                self.box.append(self.group_row(group, logged, suggested=True))
+        combined = {}
+        for name, shown in meds.same.items():
+            combined.setdefault(shown, []).append(name)
+        if combined:
+            self.heading(tr("Renamed"))
+            for shown in sorted(combined, key=str.lower):
+                self.box.append(self.combined_row(shown, sorted(combined[shown], key=str.lower), logged))
+        self.heading(tr("Other names"))
+        hint = Gtk.Label(xalign=0, wrap=True, label=tr("Tick two or more names, then give them one name."))
+        hint.add_css_class("dim-label")
+        hint.add_css_class("caption")
+        self.box.append(hint)
+        free = sorted((n for n in logged if n not in meds.same), key=str.lower)
+        self.box.append(self.group_row(free, logged, suggested=False))
+
+    def group_row(self, names, logged, suggested):
+        frame = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        frame.add_css_class("boxed-list")
+        checks = []
+        for name in names:
+            row = Adw.ActionRow(title=GLib.markup_escape_text(name),
+                                subtitle=self.describe(name, logged.get(name, (dt.date.today(),) * 2 + (False,))))
+            check = Gtk.CheckButton(active=suggested, valign=Gtk.Align.CENTER)
+            row.add_prefix(check)
+            row.set_activatable_widget(check)
+            checks.append((name, check))
+            frame.append(row)
+        newest = max(names, key=lambda n: logged.get(n, (dt.date.min,) * 2)[1]) if names else ""
+        entry = Gtk.Entry(hexpand=True, text=newest if suggested else "",
+                          placeholder_text=tr("Name to show in the report"))
+        button = Gtk.Button(label=tr("Use this name"))
+        button.add_css_class("suggested-action")
+
+        def combine(*_):
+            chosen = [n for n, c in checks if c.get_active()]
+            shown = entry.get_text().strip() or (max(chosen, key=lambda n: logged.get(n, (dt.date.min,) * 2)[1])
+                                                 if chosen else "")
+            if len(chosen) < 2 or not shown:
+                self.win.notify(tr("Tick at least two names."))
+                return
+            self.save(lambda: self.win.meds.combine(chosen, shown))
+        button.connect("clicked", combine)
+        entry.connect("activate", combine)
+        line = Gtk.Box(spacing=8, margin_top=6, margin_bottom=6, margin_start=12, margin_end=12)
+        line.append(entry)
+        line.append(button)
+        frame.append(line)
+        return frame
+
+    def combined_row(self, shown, names, logged):
+        frame = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        frame.add_css_class("boxed-list")
+        head = Adw.ActionRow(title=GLib.markup_escape_text(shown),
+                             subtitle=GLib.markup_escape_text(", ".join(names)))
+        split = Gtk.Button(label=tr("Undo"), valign=Gtk.Align.CENTER)
+        split.connect("clicked", lambda *_: self.save(lambda: self.win.meds.separate(shown)))
+        head.add_suffix(split)
+        frame.append(head)
+        return frame
+
+    def save(self, change):
+        try:
+            change()
+        except OSError as err:
+            self.win.notify(tr("Could not save: %s") % err)
+            return
+        if self.on_change:
+            self.on_change()
+        self.win.refresh()
+        self.fill()
+
+
 class ReportWindow(Gtk.Window):
     """Choose a period and what to include, then save the doctor report."""
 
@@ -6652,6 +7060,23 @@ class ReportWindow(Gtk.Window):
         self.meds_check = Gtk.CheckButton(label=tr("Include medication (from Dose and Apple Health)"), active=True)
         self.meds_check.set_visible(bool(win.meds.doses) and win.prefs["medication"])
         self.meds_check.set_active(win.prefs["medication"])
+        # fix-ups before the report: nights without the watch, one medicine under several names
+        self.nights_row = Gtk.Box(spacing=8, margin_start=28)
+        self.nights_text = Gtk.Label(xalign=0, wrap=True, hexpand=True)
+        self.nights_text.add_css_class("dim-label")
+        self.nights_text.add_css_class("caption")
+        nights_btn = Gtk.Button(label=tr("Check…"), valign=Gtk.Align.CENTER)
+        nights_btn.connect("clicked", lambda *_: ShortNightsWindow(win, self.update_hints).present())
+        self.nights_row.append(self.nights_text)
+        self.nights_row.append(nights_btn)
+        self.names_row = Gtk.Box(spacing=8, margin_start=28)
+        self.names_text = Gtk.Label(xalign=0, wrap=True, hexpand=True)
+        self.names_text.add_css_class("dim-label")
+        self.names_text.add_css_class("caption")
+        names_btn = Gtk.Button(label=tr("Medicine names…"), valign=Gtk.Align.CENTER)
+        names_btn.connect("clicked", lambda *_: MedicineNamesWindow(win, self.update_hints).present())
+        self.names_row.append(self.names_text)
+        self.names_row.append(names_btn)
         self.surveys_check = Gtk.CheckButton(label=tr("Include questionnaires (PHQ-9, GAD-7)"))
         self.surveys_check.set_visible(bool(win.surveys.items) and win.prefs["questionnaires"])
         self.surveys_check.set_active(bool(win.surveys.items) and win.prefs["questionnaires"])
@@ -6667,8 +7092,8 @@ class ReportWindow(Gtk.Window):
         self.points_check = Gtk.CheckButton(label=tr("Include the things I want to talk about"))
         self.points_check.set_visible(bool(win.appointment.open_points()))
         col.append(self.points_check)
-        for wdg in (self.notes_check, notes_hint, self.health_check, self.meds_check,
-                    self.surveys_check, self.dreams_check, self.dream_text_check):
+        for wdg in (self.notes_check, notes_hint, self.health_check, self.nights_row, self.meds_check,
+                    self.names_row, self.surveys_check, self.dreams_check, self.dream_text_check):
             col.append(wdg)
         self.error = Gtk.Label(xalign=0, wrap=True)
         self.error.add_css_class("error")
@@ -6684,7 +7109,29 @@ class ReportWindow(Gtk.Window):
         buttons.append(save)
         col.append(buttons)
         self.set_child(col)
+        self.health_check.connect("toggled", lambda *_: self.update_hints())
+        self.meds_check.connect("toggled", lambda *_: self.update_hints())
         self.preset(91)
+        self.update_hints()
+
+    def update_hints(self):
+        win = self.win
+        short = win.health.short_nights()
+        self.nights_text.set_text(trn("%d night under 4 hours: were you wearing your watch?",
+                                      "%d nights under 4 hours: were you wearing your watch?", len(short)) % len(short))
+        self.nights_row.set_visible(self.health_check.get_visible() and self.health_check.get_active()
+                                    and bool(short))
+        groups = win.meds.suggestions()
+        combined = len(set(win.meds.same.values()))
+        if groups:
+            text = trn("%d medicine seems to appear under more than one name.",
+                       "%d medicines seem to appear under more than one name.", len(groups)) % len(groups)
+        elif combined:
+            text = trn("%d medicine renamed.", "%d medicines renamed.", combined) % combined
+        else:
+            text = tr("One medicine logged under different names? Give it one name.")
+        self.names_text.set_text(text)
+        self.names_row.set_visible(self.meds_check.get_visible() and self.meds_check.get_active())
 
     def preset(self, span):
         today = dt.date.today()
@@ -6843,6 +7290,10 @@ class BookWindow(Gtk.Window):
 
 # Newest first. Shown in "What's new" after an update and in CHANGELOG.md.
 CHANGELOG = [
+    ("3.4.0", "2026-11-26", [
+        "Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.",
+        "One medicine, several names: if you logged a medicine in Apple Health and then in Dose under another name, Medicine names in the report window gives it one name, on the PC and on your phones. Sottovoce suggests the names that look the same; a dose marked in both apps on the same day counts once.",
+    ]),
     ("3.3.1", "2026-11-25", [
         "Medication from Dose: a medicine taken in different amounts at different times (for example 1 in the morning and ½ in the evening) shows the right amount for each dose.",
     ]),
@@ -7017,6 +7468,10 @@ CHANGELOG = [
 # Moodlog for Android (android/) and Moodlog for iPhone (ios/) have their own version
 # numbers. Only used for CHANGELOG.md, never shown in the PC app's "What's new" window.
 ANDROID_CHANGELOG = [
+    ("2.5.0", "2026-11-26", [
+        "Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.",
+        "One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same.",
+    ]),
     ("2.4.0", "2026-11-25", [
         "Dose on this phone: Sottovoce can now read your medicines straight from Dose on the same phone, without the PC. Allow it once in Settings → Dose on this phone; your doses then show on the day and in the doctor report.",
     ]),
@@ -7088,6 +7543,10 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.4.0", "2026-11-26", [
+        "Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.",
+        "One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same.",
+    ]),
     ("2.3.0", "2026-11-25", [
         "Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.",
         "Doctor report: for each medicine, how many doses were taken, skipped, not taken and still to take today; medicines you no longer take are listed apart, under Previous medication.",

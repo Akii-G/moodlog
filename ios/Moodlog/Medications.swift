@@ -335,6 +335,7 @@ struct DoseFeed: Codable, Hashable {
         var name: String
         var archived: Bool
         var asNeeded: Bool
+        var ingredient: String? = nil   // from PC 3.4: for suggesting names that are one medicine
     }
     struct Item: Codable, Hashable {
         var date: String
