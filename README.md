@@ -140,9 +140,9 @@ adds a Medication change event, so you see your mood before and after. The phone
 the sync.
 
 Without a PC, the phones read Dose on the same phone too. On Android, allow it in Sottovoce's
-Settings. On iPhone, in Dose, **Settings → Share with Sottovoce** saves one file (for example in
-*On My iPhone*) that Dose keeps up to date; in Sottovoce, **Settings → Dose on this iPhone**,
-choose that same file.
+Settings. On iPhone, **Settings → Dose on this iPhone → Update from Dose** switches to Dose for a
+moment and Dose sends its medicines and doses straight back (or switch on *Update when I open
+Sottovoce*).
 
 ### Questionnaires for your doctor
 

@@ -1,72 +1,76 @@
 import Foundation
+import UIKit
 
-/// Dose on this iPhone, without a PC: Dose keeps a file up to date where the user saved it once
-/// (Dose › Settings › Share with Sottovoce, for example in On My iPhone or iCloud Drive), and
-/// Sottovoce reads that file, chosen once here. Both remember it as a security-scoped bookmark.
-/// (A file, not a folder: picking a folder doesn't work with every iPhone and install method.)
-/// feed() is the PC's DoseMedication and Android's DoseLink.feed, the same rules.
+/// Dose on this iPhone, without a PC. iPhone apps can't read each other's files, and on some
+/// phones and install methods the Files picker can't open a file at all; app links work
+/// everywhere. So Sottovoce asks Dose with dose://share, and Dose answers by opening
+///   sottovoce://dose#<base64url of the zlib-compressed JSON, dose.json's format>
+/// Sottovoce keeps the last copy it got (dose-from-dose.json) and reads it like the PC reads
+/// dose.json. feed() is the PC's DoseMedication and Android's DoseLink.feed, the same rules.
 enum DoseLink {
-    private static let key = "doseFile"
     private static let days = 400      // how far back unmarked doses are filled in
-    /// The file picked in this session: used directly, it doesn't depend on the bookmark.
-    nonisolated(unsafe) private static var picked: URL?
 
-    static var isLinked: Bool { UserDefaults.standard.data(forKey: key) != nil }
-
-    /// Where the file is, e.g. "Dose › dose-for-sottovoce.json".
-    static var placeName: String? { UserDefaults.standard.string(forKey: "doseFileName") }
-
-    /// Remember the file the user picked.
-    static func link(_ file: URL) throws {
-        let scoped = file.startAccessingSecurityScopedResource()
-        defer { if scoped { file.stopAccessingSecurityScopedResource() } }
-        let bookmark = try file.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
-        picked = file
-        UserDefaults.standard.set(bookmark, forKey: key)
-        UserDefaults.standard.set(file.deletingLastPathComponent().lastPathComponent + " › " + file.lastPathComponent,
-                                  forKey: "doseFileName")
+    private static var file: URL? {
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        guard let dir else { return nil }
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("dose-from-dose.json")
     }
 
-    static func unlink() {
-        picked = nil
-        UserDefaults.standard.removeObject(forKey: key)
-        UserDefaults.standard.removeObject(forKey: "doseFileName")
+    /// Dose 1.4.1 or newer is on this iPhone (it answers dose://).
+    @MainActor
+    static var doseInstalled: Bool {
+        URL(string: "dose://").map { UIApplication.shared.canOpenURL($0) } ?? false
     }
 
-    private static func file() -> URL? {
-        if let picked { return picked }
-        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
-        var stale = false
-        guard let url = try? URL(resolvingBookmarkData: data, options: [], relativeTo: nil, bookmarkDataIsStale: &stale)
-        else { return nil }
-        if stale { try? link(url) }
-        picked = url
-        return url
+    static var hasCopy: Bool { file.map { FileManager.default.fileExists(atPath: $0.path) } ?? false }
+
+    static var lastUpdate: Date? {
+        guard let file else { return nil }
+        return (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
     }
 
-    enum Result {
-        case notLinked
-        case unreadable
-        case notDose
-        case feed(DoseFeed, Date?)
+    /// Ask Dose for its medicines: iOS switches to Dose, which sends them straight back.
+    @MainActor
+    static func askDose() {
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "doseAsked")
+        if let url = URL(string: "dose://share") { UIApplication.shared.open(url) }
     }
 
-    /// Read Dose's file.
-    static func read() -> Result {
-        guard isLinked else { return .notLinked }
-        guard let file = file() else { return .unreadable }
-        let scoped = file.startAccessingSecurityScopedResource()
-        defer { if scoped { file.stopAccessingSecurityScopedResource() } }
-        var data: Data?
-        var error: NSError?
-        NSFileCoordinator().coordinate(readingItemAt: file, options: [], error: &error) { url in
-            data = try? Data(contentsOf: url)
-        }
-        guard let data else { return .unreadable }
-        guard let doc = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              doc["medicines"] is [Any] else { return .notDose }
-        let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
-        return .feed(feed(doc), modified)
+    /// With "Update when I open Sottovoce" on: ask Dose, at most every 15 minutes (never in a
+    /// loop, even if Dose doesn't answer).
+    @MainActor
+    static func askIfDue() {
+        guard UserDefaults.standard.bool(forKey: "doseAuto"), doseInstalled else { return }
+        let asked = UserDefaults.standard.double(forKey: "doseAsked")
+        let fresh = lastUpdate.map { Date().timeIntervalSince($0) < 15 * 60 } ?? false
+        if fresh || Date().timeIntervalSince1970 - asked < 15 * 60 { return }
+        askDose()
+    }
+
+    /// Take Dose's data from sottovoce://dose#…; false if the link isn't one.
+    static func receive(_ url: URL) -> Bool {
+        guard url.scheme == "sottovoce", url.host == "dose", let fragment = url.fragment, !fragment.isEmpty else { return false }
+        var b64 = fragment.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while b64.count % 4 != 0 { b64 += "=" }
+        guard let packed = Data(base64Encoded: b64),
+              let json = try? (packed as NSData).decompressed(using: .zlib) as Data,
+              let doc = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any], doc["medicines"] is [Any],
+              let file
+        else { return false }
+        return (try? json.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])) != nil
+    }
+
+    /// Forget Dose's data on this iPhone.
+    static func forget() {
+        if let file { try? FileManager.default.removeItem(at: file) }
+    }
+
+    /// Dose's data as last received, as the feed; nil when there is none.
+    static func read() -> DoseFeed? {
+        guard let file, let data = try? Data(contentsOf: file),
+              let doc = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return nil }
+        return feed(doc)
     }
 
     // MARK: - Dose's file as the feed the day view and the report use

@@ -11,7 +11,7 @@ struct SettingsView: View {
     @AppStorage("sendHealth") private var sendHealth = false
     @AppStorage("medicationsOn") private var medicationsOn = false
     @State private var medicationMessage = ""
-    @State private var doseLinked = DoseLink.isLinked   // redraws the Dose section after a change
+    @AppStorage("doseAuto") private var doseAuto = false   // ask Dose when Sottovoce opens (DoseLink)
     @State private var testResult = ""
     @State private var testing = false
     @AppStorage("reminderOn") private var reminderOn = false
@@ -67,18 +67,6 @@ struct SettingsView: View {
     }
 
     /// The second step: the same file, picked with the Open picker, which iOS lets an app keep.
-    private func chooseDoseFile() {
-        FilePicker.present(saving: nil, types: [.json, .data], onPick: { url in
-            do {
-                try DoseLink.link(url)
-                doseLinked = true
-            } catch {
-                store.localDoseStatus = tr("Couldn't use that file (%@).", error.localizedDescription)
-            }
-            store.readLocalDose()
-        })
-    }
-
     private func keepFile(_ url: URL) {
         do {
             try Backup.remember(file: url)
@@ -215,24 +203,27 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    if doseLinked, let place = DoseLink.placeName {
-                        LabeledContent("Dose's file", value: place)
-                        if !store.localDoseStatus.isEmpty {
-                            Text(store.localDoseStatus).font(.footnote).foregroundStyle(.secondary)
-                        }
-                        Button("Choose another file…") { chooseDoseFile() }
-                        Button("Stop reading Dose here", role: .destructive) {
-                            DoseLink.unlink()
+                    Button("Update from Dose") { DoseLink.askDose() }
+                        .disabled(!DoseLink.doseInstalled)
+                    Toggle("Update when I open Sottovoce", isOn: $doseAuto)
+                        .disabled(!DoseLink.doseInstalled)
+                    if !DoseLink.doseInstalled {
+                        Text("Dose isn't on this iPhone, or it's older than 1.4.1.").font(.footnote).foregroundStyle(.secondary)
+                    } else if store.localDose != nil, let when = DoseLink.lastUpdate {
+                        Text(tr("Updated %@.", when.formatted(date: .abbreviated, time: .shortened)))
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if store.localDose != nil {
+                        Button("Stop using Dose here", role: .destructive) {
+                            DoseLink.forget()
+                            doseAuto = false
                             store.readLocalDose()
-                            doseLinked = false
                         }
-                    } else {
-                        Button("Choose Dose's file…") { chooseDoseFile() }
                     }
                 } header: {
                     Text("Dose on this iPhone")
                 } footer: {
-                    Text("Without a PC: in Dose, open Settings › Share with Sottovoce and save the file somewhere, for example On My iPhone. Then choose that same file here (dose-for-sottovoce.json). Dose keeps it up to date and Sottovoce reads it each time you open it, with no internet.")
+                    Text("Without a PC: Update from Dose switches to Dose for a moment, and Dose sends your medicines and doses straight back. They show on each day and in the report. Nothing goes on the internet. With the switch on, Sottovoce asks Dose when you open it (at most every 15 minutes).")
                 }
 
                 #if DEVTOOLS

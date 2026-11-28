@@ -532,15 +532,8 @@
 "Name to show in the report" = "Nome da mostrare nel resoconto";
 "These look like the same medicine" = "Sembrano lo stesso farmaco";
 "Short nights: were you wearing your watch?" = "Notti brevi: indossavi l'orologio?";
-"Couldn't open Dose's file. Choose it again." = "Impossibile aprire il file di Dose. Sceglilo di nuovo.";
-"That file isn't Dose's. Choose dose-for-sottovoce.json." = "Quel file non è di Dose. Scegli dose-for-sottovoce.json.";
 "Updated %@." = "Aggiornato: %@.";
-"Couldn't use that file (%@)." = "Impossibile usare quel file (%@).";
-"Dose's file" = "File di Dose";
-"Stop reading Dose here" = "Smetti di leggere Dose qui";
-"Choose Dose's file…" = "Scegli il file di Dose…";
 "Dose on this iPhone" = "Dose su questo iPhone";
-"Without a PC: in Dose, open Settings › Share with Sottovoce and save the file somewhere, for example On My iPhone. Then choose that same file here (dose-for-sottovoce.json). Dose keeps it up to date and Sottovoce reads it each time you open it, with no internet." = "Senza PC: in Dose apri Impostazioni › Condividi con Sottovoce e salva il file da qualche parte, per esempio Sul mio iPhone. Poi scegli qui lo stesso file (dose-for-sottovoce.json). Dose lo tiene aggiornato e Sottovoce lo legge ogni volta che lo apri, senza internet.";
 "pill" = "compressa";
 "pills" = "compresse";
 "capsule" = "capsula";
@@ -557,3 +550,8 @@
 "injections" = "iniezioni";
 "application" = "applicazione";
 "applications" = "applicazioni";
+"Update from Dose" = "Aggiorna da Dose";
+"Update when I open Sottovoce" = "Aggiorna quando apro Sottovoce";
+"Dose isn't on this iPhone, or it's older than 1.4.1." = "Dose non è su questo iPhone, oppure è più vecchia della 1.4.1.";
+"Stop using Dose here" = "Smetti di usare Dose qui";
+"Without a PC: Update from Dose switches to Dose for a moment, and Dose sends your medicines and doses straight back. They show on each day and in the report. Nothing goes on the internet. With the switch on, Sottovoce asks Dose when you open it (at most every 15 minutes)." = "Senza PC: Aggiorna da Dose passa a Dose per un attimo, e Dose rimanda subito i tuoi farmaci e le dosi. Compaiono in ogni giorno e nel resoconto. Niente va su internet. Con l'interruttore attivo, Sottovoce li chiede a Dose quando la apri (al massimo ogni 15 minuti).";

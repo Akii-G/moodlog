@@ -63,14 +63,16 @@ struct MoodlogApp: App {
                         backupSoon(store)
                     }
                     store.readLocalDose()
+                    DoseLink.askIfDue()
                     coordinator.syncSoon(store, delay: 0)
                     Reminder.plan(store)
                     SurveyReminder.plan(store)
                     AppointmentReminder.plan(store)
                 }
+                .onOpenURL { url in store.receiveDose(url) }   // Dose sending its doses (DoseLink)
                 .onChange(of: phase) { _, newPhase in
                     if newPhase == .active {
-                        store.readLocalDose()
+                        DoseLink.askIfDue()
                         sync.syncSoon(store, delay: 0)
                         Reminder.plan(store)
                         SurveyReminder.plan(store)

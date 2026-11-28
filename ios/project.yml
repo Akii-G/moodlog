@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "2.5.0"
-    CURRENT_PROJECT_VERSION: "35"
+    MARKETING_VERSION: "2.5.1"
+    CURRENT_PROJECT_VERSION: "36"
 targets:
   Moodlog:
     type: application
@@ -38,6 +38,10 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         NSHealthShareUsageDescription: Sottovoce shows your sleep and the medications you log in Health next to your mood, and can send them, with your steps and resting heart rate, to Sottovoce on your PC.
         NSLocalNetworkUsageDescription: Sottovoce syncs your moods with Sottovoce on your PC over your home Wi-Fi.
+        CFBundleURLTypes:
+          - CFBundleURLName: io.github.akiig.moodlog
+            CFBundleURLSchemes: [sottovoce]
+        LSApplicationQueriesSchemes: [dose]
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     entitlements:

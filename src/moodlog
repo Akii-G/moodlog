@@ -7543,6 +7543,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.5.1", "2026-11-28", [
+        "Dose on this iPhone works with any install method now: no file to choose any more. In Settings › Dose on this iPhone, Update from Dose switches to Dose for a moment and it sends your medicines and doses straight back; with Update when I open Sottovoce, it happens by itself. Needs Dose for iPhone 1.4.1.",
+    ]),
     ("2.5.0", "2026-11-28", [
         "Dose on this iPhone, without a PC: in Dose, open Settings › Share with Sottovoce and save the file once; then in Sottovoce, Settings › Dose on this iPhone, choose that same file. Your medicines and doses then show in each day and in the report, with no PC and no internet.",
     ]),

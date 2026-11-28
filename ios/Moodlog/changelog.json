@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.5.1",
+  "date": "2026-11-28",
+  "items": {
+   "en": [
+    "Dose on this iPhone works with any install method now: no file to choose any more. In Settings › Dose on this iPhone, Update from Dose switches to Dose for a moment and it sends your medicines and doses straight back; with Update when I open Sottovoce, it happens by itself. Needs Dose for iPhone 1.4.1."
+   ],
+   "it": [
+    "Dose su questo iPhone ora funziona con qualsiasi metodo di installazione: nessun file da scegliere. In Impostazioni › Dose su questo iPhone, Aggiorna da Dose passa a Dose per un attimo e questa rimanda subito i tuoi farmaci e le dosi; con Aggiorna quando apro Sottovoce succede da solo. Serve Dose per iPhone 1.4.1."
+   ]
+  }
+ },
+ {
   "version": "2.5.0",
   "date": "2026-11-28",
   "items": {
