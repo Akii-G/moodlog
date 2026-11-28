@@ -12,6 +12,18 @@ sys.argv = [script]
 loader = importlib.machinery.SourceFileLoader("moodlog", script)
 spec = importlib.util.spec_from_loader("moodlog", loader); m = importlib.util.module_from_spec(spec); loader.exec_module(m)
 
+def where_stuck(label):
+    """What a stuck launchd agent is doing: macOS's `sample` of its process."""
+    import re as _re
+    out = subprocess.run(["launchctl", "print", "gui/%d/%s" % (os.getuid(), label)], capture_output=True, text=True).stdout
+    pid = _re.search(r"\bpid = (\d+)", out)
+    if not pid:
+        return "not running:\n" + out[-1500:]
+    s = subprocess.run(["sample", pid.group(1), "2"], capture_output=True, text=True).stdout
+    lines = [l for l in s.splitlines() if "Thread_" in l or "+" in l][:120]
+    return "\n".join(lines)
+
+
 assert m.IS_MAC and m.default_style() == "tahoe"
 print("dirs:", m.default_data_dir(), m.default_config_dir())
 assert "Library/Application Support/Sottovoce" in m.default_data_dir()
@@ -30,6 +42,7 @@ for _ in range(40):
 if not m.receiver_running():
     log = os.path.join(cfgdir, "sync.log")
     print(open(log).read()[-4000:] if os.path.exists(log) else "no log")
+    print(where_stuck(m.MAC_SYNC_LABEL))
     raise SystemExit("the receiver isn't listening")
 
 # a whole phone's history over the network, as Sottovoce for Android sends it: all of it arrives
