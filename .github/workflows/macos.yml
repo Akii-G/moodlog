@@ -65,12 +65,15 @@ jobs:
           "$APP" --report "$RUNNER_TEMP/report.pdf"
           test -s "$RUNNER_TEMP/report.pdf" && pdftotext "$RUNNER_TEMP/report.pdf" - | head -5
           failed=0
-          for look in tahoe default; do
+          for run in tahoe:gl default:gl tahoe:cairo; do
+            look=${run%%:*}; renderer=${run##*:}
+            if [ "$renderer" = cairo ]; then export GSK_RENDERER=cairo; else unset GSK_RENDERER; fi
             echo "{\"style\": \"$look\", \"tour_done\": true, \"customize_seen\": true}" > "$MOODLOG_CONFIG_DIR/config.json"
             MOODLOG_LANG=it "$APP" > "$RUNNER_TEMP/out-$look.txt" 2>&1 &
             pid=$!
             sleep 15
-            screencapture -x "screenshots/mac-$look.png" || true
+            screencapture -x "screenshots/mac-$look-$renderer.png" || true
+            echo "== log $run"; cat "$RUNNER_TEMP/out-$look.txt"
             if kill -0 $pid 2>/dev/null; then echo "$look: running"; kill $pid; else echo "$look: closed by itself"; cat "$RUNNER_TEMP/out-$look.txt"; failed=1; fi
             sleep 2
           done
