@@ -4361,7 +4361,15 @@ def run_sync_server():
             args = tuple(a.split("?", 1)[0] if isinstance(a, str) else a for a in args)
             sys.stderr.write("moodlog-sync: %s\n" % (fmt % args))
 
-    server = http.server.ThreadingHTTPServer(("0.0.0.0", int(cfg["port"])), Handler)
+    class Server(http.server.ThreadingHTTPServer):
+        def server_bind(self):
+            # HTTPServer looks this computer's name up (socket.getfqdn), which can hang for
+            # minutes when the network's DNS doesn't answer (it did on a Mac): not needed here
+            import socketserver
+            socketserver.TCPServer.server_bind(self)
+            self.server_name, self.server_port = self.server_address[:2]
+
+    server = Server(("0.0.0.0", int(cfg["port"])), Handler)
     if sys.stdout is not None:    # a windowed .exe on Windows has no console
         print("Sottovoce sync listening on port %d" % cfg["port"], flush=True)
     script = os.path.realpath(os.path.abspath(sys.argv[0]))
