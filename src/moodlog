@@ -36,6 +36,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango, PangoCairo  # noqa: E
 APP_ID = "app.moodlog.Sottovoce"
 VERSION = "3.4.0"
 IS_WINDOWS = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
 
 # ----------------------------------------------------------------- languages
 # Text in the app goes through tr() (and trn() for plurals). Translations are plain
@@ -52,6 +53,15 @@ def system_language():
         if value:
             code = value.split(".")[0].split("_")[0].split("@")[0].lower()
             return "en" if code in ("c", "posix") else code
+    if IS_MAC:   # an app opened from the Dock has no LANG: ask macOS for the preferred language
+        try:
+            out = subprocess.run(["defaults", "read", "-g", "AppleLanguages"], capture_output=True,
+                                 text=True, timeout=3).stdout
+            first = re.search(r'"?([A-Za-z]{2,3})[-_A-Za-z]*"?', out.split("(", 1)[-1])
+            if first:
+                return first.group(1).lower()
+        except (OSError, subprocess.SubprocessError):
+            pass
     if IS_WINDOWS:   # Windows has no LANG: GLib reads the Windows display language
         for name in GLib.get_language_names():
             code = name.split(".")[0].split("_")[0].split("@")[0].lower()
@@ -65,7 +75,13 @@ def default_config_dir():
     (GLib gives the same folder for both there)."""
     if IS_WINDOWS:
         return os.path.join(GLib.get_user_data_dir(), "Moodlog", "settings")
+    if IS_MAC:   # ~/Library/Application Support/Sottovoce/settings
+        return os.path.join(mac_support_dir(), "Sottovoce", "settings")
     return os.path.join(GLib.get_user_config_dir(), "moodlog")
+
+
+def mac_support_dir():
+    return os.path.expanduser("~/Library/Application Support")
 
 
 def configured_language():
@@ -196,6 +212,8 @@ FACE_INK = {1: "#ffffff", 2: "#1b1b1b", 3: "#1b1b1b", 4: "#1b1b1b", 5: "#ffffff"
 def default_data_dir():
     if IS_WINDOWS:   # %LOCALAPPDATA%\Moodlog
         return os.path.join(GLib.get_user_data_dir(), "Moodlog")
+    if IS_MAC:       # ~/Library/Application Support/Sottovoce
+        return os.path.join(mac_support_dir(), "Sottovoce")
     return os.path.join(GLib.get_user_data_dir(), "moodlog")
 
 
@@ -2926,6 +2944,7 @@ DOSE_UNITS = {"pill": (tr("pill"), tr("pills")), "capsule": (tr("capsule"), tr("
 def dose_path():
     base = os.environ.get("DOSE_DATA_DIR") or (
         os.path.join(GLib.get_user_data_dir(), "Dose") if IS_WINDOWS else
+        os.path.join(mac_support_dir(), "Dose") if IS_MAC else
         os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "dose"))
     return os.path.join(base, "dose.json")
 
@@ -5731,6 +5750,8 @@ def apply_reminder(on, time):
     save_config(cfg)
     if IS_WINDOWS:
         return win_apply_reminder(on, time)
+    if IS_MAC:
+        return mac_apply_reminder(on, time)
     unit_dir = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "systemd", "user")
     path = os.path.join(unit_dir, REMINDER_TIMER)
     if not on:
@@ -5757,8 +5778,8 @@ def remind():
     on, _time = reminder_settings()
     if not on or Store().day_avg(dt.date.today()):
         return 0
-    if IS_WINDOWS:
-        ok, err = win_toast(tr("How are you today?"), tr("One click on a face is enough."))
+    if IS_WINDOWS or IS_MAC:
+        ok, err = (win_toast if IS_WINDOWS else mac_notify)(tr("How are you today?"), tr("One click on a face is enough."))
         if not ok:
             print("moodlog: could not show the reminder (%s)" % err, file=sys.stderr)
         return 0 if ok else 1
@@ -5794,6 +5815,101 @@ def remind():
     return 0
 
 
+
+
+# ----------------------------------------------------------------- Mac
+# On a Mac there is no systemd either: the phone receiver and the daily reminder are launchd
+# agents in ~/Library/LaunchAgents (the receiver starts at login and is kept running), and the
+# reminder is a notification from macOS. Everything else is the same app.
+MAC_SYNC_LABEL = "app.moodlog.Sottovoce.sync"
+MAC_REMIND_LABEL = "app.moodlog.Sottovoce.reminder"
+
+
+def mac_agent_path(label):
+    return os.path.expanduser("~/Library/LaunchAgents/%s.plist" % label)
+
+
+def mac_launchctl(*args):
+    try:
+        done = subprocess.run(["launchctl"] + list(args), capture_output=True, text=True, timeout=20)
+        return done.returncode == 0, (done.stderr or done.stdout).strip()
+    except (OSError, subprocess.SubprocessError) as err:
+        return False, str(err)
+
+
+def mac_domain():
+    return "gui/%d" % os.getuid()
+
+
+def mac_agent_on(label, args, extra):
+    """Writes the launchd agent that runs Sottovoce with `args`, and (re)loads it."""
+    import plistlib
+    path = mac_agent_path(label)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    agent = {"Label": label, "ProgramArguments": self_command(*args), "ProcessType": "Background"}
+    # a data or settings folder set for this run (tests, a second diary) goes with it
+    env = {k: os.environ[k] for k in ("MOODLOG_DATA_DIR", "MOODLOG_CONFIG_DIR", "MOODLOG_LANG", "DOSE_DATA_DIR")
+           if os.environ.get(k)}
+    if env:
+        agent["EnvironmentVariables"] = env
+    agent.update(extra)
+    with open(path, "wb") as f:
+        plistlib.dump(agent, f)
+    mac_launchctl("bootout", "%s/%s" % (mac_domain(), label))
+    return mac_launchctl("bootstrap", mac_domain(), path)
+
+
+def mac_agent_off(label):
+    mac_launchctl("bootout", "%s/%s" % (mac_domain(), label))
+    try:
+        os.remove(mac_agent_path(label))
+    except OSError:
+        pass
+    return True, ""
+
+
+def mac_refresh_agents():
+    """Sottovoce may have moved (a new version dragged to Applications): point the agents
+    that are on at this copy."""
+    if os.path.exists(mac_agent_path(MAC_SYNC_LABEL)):
+        mac_agent_on(MAC_SYNC_LABEL, ["--sync-server"], {"RunAtLoad": True, "KeepAlive": True})
+    on, time = reminder_settings()
+    if on and os.path.exists(mac_agent_path(MAC_REMIND_LABEL)):
+        mac_apply_reminder(True, time)
+
+
+def mac_apply_reminder(on, time):
+    if not on:
+        return mac_agent_off(MAC_REMIND_LABEL)
+    hour, minute = (int(x) for x in time.split(":"))
+    return mac_agent_on(MAC_REMIND_LABEL, ["--remind"],
+                        {"StartCalendarInterval": {"Hour": hour, "Minute": minute}})
+
+
+def mac_notify(title, body):
+    """A macOS notification, through AppleScript: the simplest way that works for an app that
+    isn't signed by Apple (macOS shows it as coming from Script Editor)."""
+    def q(text):
+        return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    try:
+        done = subprocess.run(["osascript", "-e", "display notification %s with title %s" % (q(body), q(title))],
+                              capture_output=True, text=True, timeout=20)
+        return done.returncode == 0, done.stderr.strip()
+    except (OSError, subprocess.SubprocessError) as err:
+        return False, str(err)
+
+
+def open_uri(uri):
+    """Opens a file, folder or web address with the system's app for it."""
+    if IS_MAC:
+        subprocess.Popen(["open", uri], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        Gio.AppInfo.launch_default_for_uri(uri, None)
+
+
+def default_style():
+    """The look a new install starts with: Tahoe on a Mac, the GNOME one elsewhere."""
+    return "tahoe" if IS_MAC else "default"
 
 # ----------------------------------------------------------------- Windows
 # On Windows there is no systemd: the daily reminder is a Task Scheduler task, the phone
@@ -5918,6 +6034,9 @@ def win_start_receiver():
 
 def receiver_set(on):
     """Turns the phone receiver on (now and at every login) or off. Returns (ok, error)."""
+    if IS_MAC:
+        return (mac_agent_on(MAC_SYNC_LABEL, ["--sync-server"], {"RunAtLoad": True, "KeepAlive": True})
+                if on else mac_agent_off(MAC_SYNC_LABEL))
     if not IS_WINDOWS:
         systemctl("daemon-reload")
         return systemctl("enable" if on else "disable", "--now", SERVICE)
@@ -5933,6 +6052,8 @@ def receiver_set(on):
 
 
 def receiver_running():
+    if IS_MAC:
+        return receiver_listening()
     if not IS_WINDOWS:
         return systemctl("is-active", "--quiet", SERVICE)[0]
     return receiver_listening()
@@ -5940,7 +6061,9 @@ def receiver_running():
 
 def receiver_restart():
     """After the data folder changed: the receiver reads it when it starts."""
-    if not IS_WINDOWS:
+    if IS_MAC:
+        mac_launchctl("kickstart", "-k", "%s/%s" % (mac_domain(), MAC_SYNC_LABEL))
+    elif not IS_WINDOWS:
         systemctl("try-restart", SERVICE)
     elif receiver_running():
         win_stop_receiver()
@@ -7196,7 +7319,7 @@ class ReportWindow(Gtk.Window):
             return
         self.close()
         try:
-            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+            open_uri(GLib.filename_to_uri(path, None))
         except GLib.Error:
             pass
         win.notify(trn("Saved the report (%d page) as %s", "Saved the report (%d pages) as %s", pages) % (
@@ -7279,7 +7402,7 @@ class BookWindow(Gtk.Window):
             return
         self.close()
         try:
-            Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
+            open_uri(GLib.filename_to_uri(path, None))
         except GLib.Error:
             pass
         win.notify(trn("Saved your diary (%d day) as %s", "Saved your diary (%d days) as %s", days) % (
@@ -7874,7 +7997,7 @@ class PrivacyWindow(Gtk.Window):
 
     def on_full(self, *_):
         try:
-            Gio.AppInfo.launch_default_for_uri(privacy_url(), None)
+            open_uri(privacy_url())
         except GLib.Error:
             pass
 
@@ -8183,6 +8306,13 @@ class SyncWindow(Gtk.Window):
                 "Network profile type to Private."))
             fire.add_css_class("caption")
             col.append(card(fire, tr("Windows")))
+        if IS_MAC:
+            fire = Gtk.Label(xalign=0, wrap=True, label=tr(
+                "On a Mac, if macOS asks whether Sottovoce may accept incoming network connections, "
+                "choose Allow: that's the phone connecting. If the firewall is on and the phone "
+                "can't connect, open System Settings → Network → Firewall → Options and allow Sottovoce."))
+            fire.add_css_class("caption")
+            col.append(card(fire, tr("Mac")))
 
         steps = Gtk.Label(label=SHORTCUT_STEPS, xalign=0, wrap=True, selectable=True)
         android = Gtk.Label(label=ANDROID_STEPS, xalign=0, wrap=True, selectable=True)
@@ -8838,7 +8968,7 @@ class Window(Adw.ApplicationWindow):
         folder = Gtk.MenuButton(icon_name="folder-open-symbolic", menu_model=data_menu)
         folder.set_tooltip_text(tr("Your data: open the folder, back up, restore, sync"))
         header.pack_end(folder)
-        current = load_config().get("style", "default")
+        current = load_config().get("style", default_style())
         style_action = Gio.SimpleAction.new_stateful(
             "style", GLib.VariantType.new("s"),
             GLib.Variant.new_string(current if current in dict(STYLES) else "default"))
@@ -10520,7 +10650,7 @@ class Window(Adw.ApplicationWindow):
 
     def open_data_folder(self, _btn):
         self.flush()
-        Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(data_dir(), None), None)
+        open_uri(GLib.filename_to_uri(data_dir(), None))
 
     # -- refresh
 
@@ -10770,8 +10900,10 @@ class App(Adw.Application):
 
     def do_activate(self):
         if not self.get_active_window():
-            apply_style(load_config().get("style", "default"))
+            apply_style(load_config().get("style", default_style()))
             watch_window_dots()
+            if IS_MAC:
+                mac_refresh_agents()
         win = self.get_active_window() or Window(self, self.page)
         win.present()
 
