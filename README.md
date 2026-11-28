@@ -139,6 +139,11 @@ no longer take go under **Previous medication**), and starting, changing or stop
 adds a Medication change event, so you see your mood before and after. The phones get it with
 the sync.
 
+Without a PC, the phones read Dose on the same phone too. On Android, allow it in Sottovoce's
+Settings. On iPhone, in Dose, **Settings → Share with Sottovoce** saves one file (for example in
+*On My iPhone*) that Dose keeps up to date; in Sottovoce, **Settings → Dose on this iPhone**,
+choose that same file.
+
 ### Questionnaires for your doctor
 
 Two short questionnaires doctors use, with their official words in English and

@@ -192,6 +192,15 @@ Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their 
 
 ## Sottovoce for iPhone
 
+### 2.5.0 (2026-11-28)
+
+- Dose on this iPhone, without a PC: in Dose, open Settings › Share with Sottovoce and save the file once; then in Sottovoce, Settings › Dose on this iPhone, choose that same file. Your medicines and doses then show in each day and in the report, with no PC and no internet.
+
+### 2.4.0 (2026-11-26)
+
+- Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.
+- One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same.
+
 ### 2.3.0 (2026-11-25)
 
 - Dose, the sister app for your medicines: when Dose is on your PC, its doses come with the sync and show on the day and in the doctor report.
@@ -332,6 +341,11 @@ Sottovoce for the PC, Sottovoce for iPhone and Sottovoce for Android have their 
 - First version: log moods with energy, anxiety and a note, add events, browse the calendar, and sync everything with Sottovoce on your PC over your home Wi-Fi.
 
 ## Sottovoce for Android
+
+### 2.5.0 (2026-11-26)
+
+- Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.
+- One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same.
 
 ### 2.4.0 (2026-11-25)
 

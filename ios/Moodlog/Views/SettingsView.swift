@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("sendHealth") private var sendHealth = false
     @AppStorage("medicationsOn") private var medicationsOn = false
     @State private var medicationMessage = ""
+    @State private var doseLinked = DoseLink.isLinked   // redraws the Dose section after a change
     @State private var testResult = ""
     @State private var testing = false
     @AppStorage("reminderOn") private var reminderOn = false
@@ -66,6 +67,18 @@ struct SettingsView: View {
     }
 
     /// The second step: the same file, picked with the Open picker, which iOS lets an app keep.
+    private func chooseDoseFile() {
+        FilePicker.present(saving: nil, types: [.json, .data], onPick: { url in
+            do {
+                try DoseLink.link(url)
+                doseLinked = true
+            } catch {
+                store.localDoseStatus = tr("Couldn't use that file (%@).", error.localizedDescription)
+            }
+            store.readLocalDose()
+        })
+    }
+
     private func keepFile(_ url: URL) {
         do {
             try Backup.remember(file: url)
@@ -199,6 +212,27 @@ struct SettingsView: View {
                     Text("Medication")
                 } footer: {
                     Text("Sottovoce reads the medications you log in the Health app, and whether you took or skipped each dose. It shows them on each day and in the report, and sends them to your PC with the Health data above. It can't change anything in Health. Health asks only about medications you haven't decided on yet; to change your choice, go to Settings → Health → Data Access & Devices → Sottovoce.")
+                }
+
+                Section {
+                    if doseLinked, let place = DoseLink.placeName {
+                        LabeledContent("Dose's file", value: place)
+                        if !store.localDoseStatus.isEmpty {
+                            Text(store.localDoseStatus).font(.footnote).foregroundStyle(.secondary)
+                        }
+                        Button("Choose another file…") { chooseDoseFile() }
+                        Button("Stop reading Dose here", role: .destructive) {
+                            DoseLink.unlink()
+                            store.readLocalDose()
+                            doseLinked = false
+                        }
+                    } else {
+                        Button("Choose Dose's file…") { chooseDoseFile() }
+                    }
+                } header: {
+                    Text("Dose on this iPhone")
+                } footer: {
+                    Text("Without a PC: in Dose, open Settings › Share with Sottovoce and save the file somewhere, for example On My iPhone. Then choose that same file here (dose-for-sottovoce.json). Dose keeps it up to date and Sottovoce reads it each time you open it, with no internet.")
                 }
 
                 #if DEVTOOLS

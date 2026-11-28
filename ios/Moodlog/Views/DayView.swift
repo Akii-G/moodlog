@@ -68,8 +68,8 @@ struct DayView: View {
                 }
             }
             let _ = store.correctionsVersion
-            let fromDose = store.doseFeed?.records(from: day, to: day) ?? []
-            if (Medications.isOn || store.doseFeed != nil) && showMedication {
+            let fromDose = store.dose?.records(from: day, to: day) ?? []
+            if (Medications.isOn || store.dose != nil) && showMedication {
                 let all = Corrections.apply(doses + fromDose)
                 Section {
                     if all.isEmpty {
@@ -98,7 +98,7 @@ struct DayView: View {
                 } header: {
                     Text("Medication")
                 } footer: {
-                    Text(store.doseFeed == nil ? tr("From the Health app.")
+                    Text(store.dose == nil ? tr("From the Health app.")
                          : Medications.isOn ? tr("From Dose on your PC, and from the Health app.") : tr("From Dose on your PC."))
                 }
             }

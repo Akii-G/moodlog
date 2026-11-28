@@ -90,7 +90,7 @@ struct RenameMedicinesView: View {
         let _ = store.correctionsVersion
         let corrections = Corrections.current
         let renames = corrections.renames
-        let ingredients = Dictionary((store.doseFeed?.medicines ?? []).map { ($0.name, $0.ingredient ?? "") },
+        let ingredients = Dictionary((store.dose?.medicines ?? []).map { ($0.name, $0.ingredient ?? "") },
                                      uniquingKeysWith: { a, _ in a })
         let groups = Corrections.suggestions(Array(logged.keys), ingredients: ingredients)
         let renamed = Dictionary(grouping: renames.keys, by: { renames[$0]! })
@@ -218,7 +218,7 @@ struct RenameMedicinesView: View {
             }
         }
         for dose in await Medications.doses(from: nil, to: Date()) { add(dose.name, Day.string(dose.time), false) }
-        for dose in store.doseFeed?.doses ?? [] where dose.status != "pending" { add(dose.name, dose.date, true) }
+        for dose in store.dose?.doses ?? [] where dose.status != "pending" { add(dose.name, dose.date, true) }
         logged = out
         loading = false
     }

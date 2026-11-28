@@ -62,6 +62,7 @@ struct MoodlogApp: App {
                         AppointmentReminder.plan(store)   // a new or moved appointment moves its reminders
                         backupSoon(store)
                     }
+                    store.readLocalDose()
                     coordinator.syncSoon(store, delay: 0)
                     Reminder.plan(store)
                     SurveyReminder.plan(store)
@@ -69,6 +70,7 @@ struct MoodlogApp: App {
                 }
                 .onChange(of: phase) { _, newPhase in
                     if newPhase == .active {
+                        store.readLocalDose()
                         sync.syncSoon(store, delay: 0)
                         Reminder.plan(store)
                         SurveyReminder.plan(store)

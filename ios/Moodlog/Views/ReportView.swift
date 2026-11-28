@@ -49,7 +49,7 @@ struct ReportView: View {
                             Label("Short nights: were you wearing your watch?", systemImage: "moon.zzz")
                         }
                     }
-                    if (Medications.isOn || store.doseFeed != nil) && showMedication {
+                    if (Medications.isOn || store.dose != nil) && showMedication {
                         Toggle("Include medication (from Dose and Apple Health)", isOn: $medication)
                         if medication {
                             NavigationLink { RenameMedicinesView() } label: {
@@ -108,7 +108,7 @@ struct ReportView: View {
             doses = await Medications.doses(from: from, to: to)
             meds = await Medications.list()
         }
-        if medication && showMedication, let feed = store.doseFeed {
+        if medication && showMedication, let feed = store.dose {
             doses += feed.records(from: start, to: end)
             meds += feed.infos
         }

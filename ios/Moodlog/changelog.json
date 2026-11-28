@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.5.0",
+  "date": "2026-11-28",
+  "items": {
+   "en": [
+    "Dose on this iPhone, without a PC: in Dose, open Settings › Share with Sottovoce and save the file once; then in Sottovoce, Settings › Dose on this iPhone, choose that same file. Your medicines and doses then show in each day and in the report, with no PC and no internet."
+   ],
+   "it": [
+    "Dose su questo iPhone, senza PC: in Dose apri Impostazioni › Condividi con Sottovoce e salva il file una volta; poi in Sottovoce, Impostazioni › Dose su questo iPhone, scegli lo stesso file. I tuoi farmaci e le dosi compaiono così in ogni giorno e nel resoconto, senza PC e senza internet."
+   ]
+  }
+ },
+ {
   "version": "2.4.0",
   "date": "2026-11-26",
   "items": {

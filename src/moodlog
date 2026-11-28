@@ -7543,6 +7543,9 @@ ANDROID_CHANGELOG = [
 ]
 
 IPHONE_CHANGELOG = [
+    ("2.5.0", "2026-11-28", [
+        "Dose on this iPhone, without a PC: in Dose, open Settings › Share with Sottovoce and save the file once; then in Sottovoce, Settings › Dose on this iPhone, choose that same file. Your medicines and doses then show in each day and in the report, with no PC and no internet.",
+    ]),
     ("2.4.0", "2026-11-26", [
         "Nights without your watch: in Report for your doctor, Short nights lists the nights under 4 hours. Delete the ones when your watch was charging: they go away from Sottovoce on the PC and on your phones, and Health won't bring them back with the next sync.",
         "One medicine, several names: in Report for your doctor, Medicine names gives one medicine logged under different names a single name, here and on your PC. Sottovoce suggests the names that look the same.",

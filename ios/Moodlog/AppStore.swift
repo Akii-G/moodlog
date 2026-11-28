@@ -17,6 +17,27 @@ final class AppStore {
     var deleted: [Tombstone] = []
     /// Medication from Dose on the PC (nil when it has none): shown on the day and in the report.
     var doseFeed: DoseFeed?
+    /// Dose on this iPhone, read from the file Dose shares (DoseLink); wins over the PC's copy.
+    var localDose: DoseFeed?
+    var localDoseStatus = ""
+    var dose: DoseFeed? { localDose ?? doseFeed }
+
+    /// Read Dose's shared file again (on launch, when the app comes back).
+    func readLocalDose() {
+        switch DoseLink.read() {
+        case .notLinked:
+            localDose = nil; localDoseStatus = ""
+        case .unreadable:
+            localDose = nil
+            localDoseStatus = tr("Couldn't open Dose's file. Choose it again.")
+        case .notDose:
+            localDose = nil
+            localDoseStatus = tr("That file isn't Dose's. Choose dose-for-sottovoce.json.")
+        case .feed(let feed, let modified):
+            if feed != localDose { localDose = feed }
+            localDoseStatus = modified.map { tr("Updated %@.", $0.formatted(date: .abbreviated, time: .shortened)) } ?? ""
+        }
+    }
 
     @ObservationIgnored var onChange: (@MainActor () -> Void)?
     @ObservationIgnored private let fileURL: URL
