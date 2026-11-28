@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.CancellationException
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -23,6 +25,38 @@ import java.net.URI
 import java.net.URL
 
 class SyncException(message: String) : Exception(message)
+
+/** One PC the phone syncs with. The phone holds the whole diary, so it passes entries
+ *  between PCs: something written on one PC reaches the others through the phone. */
+data class PCLink(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String = "",
+    val server: String = "",
+    val token: String = "",
+    val lastHealth: Long = 0,     // Health goes to each PC at most hourly
+) {
+    val isConfigured get() = server.isNotBlank() && token.isNotBlank()
+
+    /** The name, or the computer's name from the address ("pop-os" for http://pop-os.local:8765). */
+    val title: String
+        get() {
+            if (name.isNotBlank()) return name.trim()
+            var raw = server.trim()
+            if (!raw.contains("://")) raw = "http://$raw"
+            val host = try { URI(raw).host } catch (e: Exception) { null }
+            if (host.isNullOrEmpty()) return tr("New PC")
+            if (host.first().isDigit() || host.contains(':')) return host    // an IP address stays whole
+            return host.substringBefore('.')
+        }
+
+    fun toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("server", server)
+        .put("token", token).put("lastHealth", lastHealth)
+
+    companion object {
+        fun from(o: JSONObject) = PCLink(o.optString("id").ifEmpty { java.util.UUID.randomUUID().toString() },
+            o.optString("name"), o.optString("server"), o.optString("token"), o.optLong("lastHealth"))
+    }
+}
 
 /** Address, token and switches, kept in the app's private settings. */
 class Prefs(context: Context) {
@@ -127,7 +161,26 @@ class Prefs(context: Context) {
         get() = p.getString("lastSeenVersion", "") ?: ""
         set(v) = p.edit().putString("lastSeenVersion", v).apply()
 
-    val isConfigured get() = server.isNotBlank() && token.isNotBlank()
+    /** The PCs in Settings. The single PC of older versions ("server", "token") becomes the first. */
+    var pcs: List<PCLink>
+        get() {
+            val raw = p.getString("pcs", null)
+            if (raw != null) return try {
+                val a = JSONArray(raw)
+                (0 until a.length()).map { PCLink.from(a.getJSONObject(it)) }
+            } catch (e: Exception) { emptyList() }
+            val old = if (server.isNotBlank() || token.isNotBlank()) listOf(PCLink(server = server, token = token, lastHealth = lastHealth)) else emptyList()
+            pcs = old
+            return old
+        }
+        set(v) = p.edit().putString("pcs", JSONArray(v.map { it.toJson() }).toString()).apply()
+
+    fun updatePC(id: String, change: (PCLink) -> PCLink) {
+        pcs = pcs.map { if (it.id == id) change(it) else it }
+    }
+
+    val configured get() = pcs.filter { it.isConfigured }
+    val isConfigured get() = configured.isNotEmpty()
 }
 
 class SyncClient(
@@ -139,6 +192,11 @@ class SyncClient(
     constructor(prefs: Prefs, deviceName: String) : this({ prefs.server }, { prefs.token }, deviceName)
 
     private val token get() = tokenSource().trim()
+
+    /** A client for one PC, sharing where .local names were last found. */
+    fun forPC(pc: PCLink): SyncClient = SyncClient({ pc.server }, { pc.token }, deviceName, main).also {
+        it.remember = remember; it.recall = recall; it.multicastLock = multicastLock
+    }
 
     /** The address from Settings. Accepts "pop-os.local:8765", a full URL, or the
      *  shortcut's address ending in /health. */
@@ -286,6 +344,9 @@ class SyncCoordinator(
     private var pending: Job? = null
     private var again = false
 
+    /** The last result for each PC (by id), shown under its name in Settings. */
+    val pcStatus = mutableStateMapOf<String, String>()
+
     fun syncSoon(store: AppStore, delayMs: Long) {
         if (!prefs.autoSync || !prefs.isConfigured) return
         pending?.cancel()
@@ -297,26 +358,58 @@ class SyncCoordinator(
         }
     }
 
+    private fun message(e: Exception) = if (e is SyncException) e.message ?: "" else e.localizedMessage ?: e.javaClass.simpleName
+
+    /** Syncs with every PC in turn. When a later PC brings something new, the earlier
+     *  ones get a second round, so every PC ends up with everything. */
     suspend fun run(store: AppStore) {
         if (busy) {         // one at a time; sync once more when this one ends
             again = true
             return
         }
+        val pcs = prefs.configured
+        if (pcs.isEmpty()) {
+            status = tr("Add your PC's address and token in Settings first.")
+            return
+        }
         busy = true
         try {
-            val changes = client.sync(store)
-            val time = Day.now()
-            status = if (changes > 0) trn("Synced at %2\$@ · %1\$@ change", "Synced at %2\$@ · %1\$@ changes", changes, time)
-                     else tr("Synced at %@", time)
-            if (prefs.sendHealth && System.currentTimeMillis() - prefs.lastHealth > 3_600_000) {
-                sendHealth()
+            var changes = 0
+            val failed = mutableMapOf<String, String>()
+            for (round in 0 until 2) {
+                var newFromLater = false
+                for ((i, pc) in pcs.withIndex()) {
+                    if (round == 1 && pc.id in failed) continue
+                    try {
+                        val n = client.forPC(pc).sync(store)
+                        changes += n
+                        if (n > 0 && i > 0) newFromLater = true
+                        failed.remove(pc.id)
+                        pcStatus[pc.id] = tr("Synced at %@", Day.now())
+                    } catch (e: CancellationException) {
+                        throw e     // stopped on purpose: not an error to show
+                    } catch (e: Exception) {
+                        failed[pc.id] = message(e)
+                        pcStatus[pc.id] = message(e)
+                    }
+                }
+                if (!newFromLater || pcs.size < 2) break
             }
-        } catch (e: SyncException) {
-            status = e.message ?: ""
-        } catch (e: CancellationException) {
-            throw e         // stopped on purpose: not an error to show
-        } catch (e: Exception) {
-            status = e.localizedMessage ?: e.javaClass.simpleName
+            val time = Day.now()
+            if (failed.size == pcs.size) {
+                status = if (pcs.size == 1) failed.getValue(pcs[0].id)
+                         else tr("Couldn't sync with any PC. Tap one in Settings to see why.")
+            } else {
+                var text = if (changes > 0) trn("Synced at %2\$@ · %1\$@ change", "Synced at %2\$@ · %1\$@ changes", changes, time)
+                           else tr("Synced at %@", time)
+                for (pc in pcs) if (pc.id in failed) text += "\n" + tr("%@: not reached", pc.title)
+                status = text
+                if (prefs.sendHealth) {
+                    val now = System.currentTimeMillis()
+                    val due = prefs.configured.filter { it.id !in failed && now - it.lastHealth > 3_600_000 }
+                    if (due.isNotEmpty()) sendHealth(due)
+                }
+            }
         } finally {
             busy = false
         }
@@ -326,7 +419,8 @@ class SyncCoordinator(
         }
     }
 
-    suspend fun sendHealth() {
+    /** Sends the last 7 days of health data to every PC (or to the ones given). */
+    suspend fun sendHealth(only: List<PCLink>? = null) {
         if (!health.isAvailable()) {
             healthStatus = tr("Health Connect isn't available on this phone. Install it from the Play Store, then try again.")
             return
@@ -335,19 +429,31 @@ class SyncCoordinator(
             healthStatus = tr("Allow Sottovoce to read steps, resting heart rate and sleep first (the button above).")
             return
         }
-        try {
-            val lines = health.lines(7)
-            if (lines.isEmpty()) {
-                healthStatus = tr("No health data found for the last 7 days. Check that your watch or fitness app shares it with Health Connect.")
-                return
-            }
-            val answer = withContext(Dispatchers.IO) { client.sendHealth(lines) }
-            prefs.lastHealth = System.currentTimeMillis()
-            healthStatus = answer
-        } catch (e: SyncException) {
-            healthStatus = e.message ?: ""
-        } catch (e: Exception) {
-            healthStatus = e.localizedMessage ?: e.javaClass.simpleName
+        val pcs = only ?: prefs.configured
+        if (pcs.isEmpty()) {
+            healthStatus = tr("Add your PC's address and token in Settings first.")
+            return
         }
+        val lines = try { health.lines(7) } catch (e: Exception) {
+            healthStatus = message(e); return
+        }
+        if (lines.isEmpty()) {
+            healthStatus = tr("No health data found for the last 7 days. Check that your watch or fitness app shares it with Health Connect.")
+            return
+        }
+        val answers = mutableListOf<String>()
+        for (pc in pcs) {
+            val answer = try {
+                val a = withContext(Dispatchers.IO) { client.forPC(pc).sendHealth(lines) }
+                prefs.updatePC(pc.id) { it.copy(lastHealth = System.currentTimeMillis()) }
+                a
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                message(e)
+            }
+            answers += if (pcs.size == 1) answer else "${pc.title}: $answer"
+        }
+        healthStatus = answers.joinToString("\n")
     }
 }

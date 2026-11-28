@@ -99,7 +99,7 @@ fun LogScreen(onSearch: () -> Unit = {}, onAppointment: () -> Unit = {}, onDay: 
                 if (week != null && week.first != weekHidden) WeekCard(week.second) {
                     app.prefs.weekHidden = week.first; weekHidden = week.first
                 }
-                if (app.prefs.server.isBlank()) {
+                if (!app.prefs.isConfigured) {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainer).padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically) {

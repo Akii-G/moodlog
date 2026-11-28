@@ -1,5 +1,17 @@
 package io.github.akiig.moodlog.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Computer
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import io.github.akiig.moodlog.PCLink
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -54,16 +66,20 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
     val prefs = app.prefs
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var server by remember { mutableStateOf(prefs.server) }
-    var token by remember { mutableStateOf(prefs.token) }
+    var pcs by remember { mutableStateOf(prefs.pcs) }
+    var openPC by remember { mutableStateOf<String?>(null) }      // the PC whose fields are shown
     var showToken by remember { mutableStateOf(false) }
+    var confirmRemove by remember { mutableStateOf<String?>(null) }
+    fun changePC(id: String, change: (PCLink) -> PCLink) {
+        prefs.updatePC(id, change); pcs = prefs.pcs
+    }
     var autoSync by remember { mutableStateOf(prefs.autoSync) }
     var sendHealth by remember { mutableStateOf(prefs.sendHealth) }
     var testing by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf("") }
     var allowed by remember { mutableStateOf(false) }
     val healthAvailable = app.health.isAvailable()
-    val ready = server.isNotBlank() && token.isNotBlank()
+    val ready = pcs.any { it.isConfigured }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         PermissionController.createRequestPermissionResultContract()) { granted ->
@@ -110,36 +126,88 @@ fun SettingsScreen(onPrivacy: () -> Unit, onSurveys: () -> Unit = {}, onWhatsNew
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState())) {
         LargeTitle(tr("Settings"))
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
-            Section(tr("Your PC"), tr("In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there. Your phone and PC need to be on the same Wi-Fi.")) {
-                FieldRow(tr("Address"), server, { server = it; prefs.server = it.trim() }, "http://pop-os.local:8765",
-                    keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
-                Line()
-                FieldRow(tr("Token"), token, { token = it; prefs.token = it.trim() }, tr("From Phone sync on your PC"),
-                    secret = !showToken,
-                    keyboard = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false)) {
-                    IconButton(onClick = { showToken = !showToken }) {
-                        Icon(if (showToken) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            tr(if (showToken) "Hide token" else "Show token"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                Line()
-                ActionRow(tr("Test connection"), enabled = ready, busy = testing) {
-                    testing = true
-                    scope.launch {
-                        testResult = try {
-                            withContext(Dispatchers.IO) { app.client.ping() }
-                        } catch (e: SyncException) {
-                            e.message ?: ""
-                        } catch (e: Exception) {
-                            e.localizedMessage ?: e.javaClass.simpleName
+            Section(if (pcs.size > 1) tr("Your PCs") else tr("Your PC"),
+                tr("In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there. Your phone and PC need to be on the same Wi-Fi. With more than one PC, the phone syncs with each, and passes what you write on one PC to the others.")) {
+                for (pc in pcs) {
+                    val open = openPC == pc.id
+                    Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                        .clickable {
+                            openPC = if (open) null else pc.id
+                            testResult = ""; showToken = false
+                            prefs.pcs = prefs.pcs.filter { it.id == pc.id || it.server.isNotBlank() || it.token.isNotBlank() }
+                            pcs = prefs.pcs
                         }
-                        testing = false
+                        .padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Computer, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.size(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(pc.title, style = MaterialTheme.typography.bodyLarge)
+                            Text(app.sync.pcStatus[pc.id] ?: if (pc.isConfigured) pc.server.trim() else tr("Address and token missing"),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                        }
+                        Icon(if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, null,
+                            tint = MaterialTheme.colorScheme.outline)
                     }
+                    if (open) {
+                        Column(Modifier.padding(start = 36.dp)) {
+                            FieldRow(tr("Name"), pc.name, { v -> changePC(pc.id) { it.copy(name = v) } },
+                                tr("e.g. Mac or Living room PC"))
+                            Line()
+                            FieldRow(tr("Address"), pc.server, { v -> changePC(pc.id) { it.copy(server = v.trim()) } }, "http://pop-os.local:8765",
+                                keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
+                            Line()
+                            FieldRow(tr("Token"), pc.token, { v -> changePC(pc.id) { it.copy(token = v.trim()) } }, tr("From Phone sync on your PC"),
+                                secret = !showToken,
+                                keyboard = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false)) {
+                                IconButton(onClick = { showToken = !showToken }) {
+                                    Icon(if (showToken) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                                        tr(if (showToken) "Hide token" else "Show token"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Line()
+                            ActionRow(tr("Test connection"), enabled = pc.isConfigured, busy = testing) {
+                                testing = true
+                                scope.launch {
+                                    testResult = try {
+                                        withContext(Dispatchers.IO) { app.client.forPC(pc).ping() }
+                                    } catch (e: SyncException) {
+                                        e.message ?: ""
+                                    } catch (e: Exception) {
+                                        e.localizedMessage ?: e.javaClass.simpleName
+                                    }
+                                    testing = false
+                                }
+                            }
+                            if (testResult.isNotEmpty()) {
+                                Text(testResult, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
+                            }
+                            Line()
+                            ActionRow(tr("Remove this PC"), destructive = true) { confirmRemove = pc.id }
+                        }
+                    }
+                    Line()
                 }
-                if (testResult.isNotEmpty()) {
-                    Text(testResult, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 10.dp))
+                ActionRow(if (pcs.isEmpty()) tr("Add your PC") else tr("Add another PC")) {
+                    val pc = PCLink()
+                    prefs.pcs = prefs.pcs.filter { it.server.isNotBlank() || it.token.isNotBlank() } + pc
+                    pcs = prefs.pcs
+                    openPC = pc.id; testResult = ""; showToken = false
                 }
+            }
+            confirmRemove?.let { id ->
+                AlertDialog(onDismissRequest = { confirmRemove = null },
+                    title = { Text(tr("Remove this PC?")) },
+                    text = { Text(tr("Only the connection is removed: the diary stays on the phone and on the PC.")) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            prefs.pcs = prefs.pcs.filter { it.id != id }; pcs = prefs.pcs
+                            app.sync.pcStatus.remove(id)
+                            if (openPC == id) openPC = null
+                            confirmRemove = null
+                        }) { Text(tr("Remove"), color = MaterialTheme.colorScheme.error) }
+                    },
+                    dismissButton = { TextButton(onClick = { confirmRemove = null }) { Text(tr("Cancel")) } })
             }
 
             Section(tr("Sync"), tr("When automatic, Sottovoce syncs when you open it and a few seconds after each change. Entries made away from home are kept on the phone and sync when you're back.")) {

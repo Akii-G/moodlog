@@ -30,7 +30,7 @@ jobs:
 
       - name: Check encryption, merging and the rest (unit tests)
         working-directory: android
-        run: ./gradlew --no-daemon testDebugUnitTest --tests 'io.github.akiig.moodlog.SyncCryptoTest' --tests 'io.github.akiig.moodlog.AppStoreTest' --tests 'io.github.akiig.moodlog.SmallTest'
+        run: ./gradlew --no-daemon testDebugUnitTest --tests 'io.github.akiig.moodlog.SyncCryptoTest' --tests 'io.github.akiig.moodlog.AppStoreTest' --tests 'io.github.akiig.moodlog.SmallTest' --tests 'io.github.akiig.moodlog.PCLinkTest'
 
       - name: Build the signed .apk
         working-directory: android
