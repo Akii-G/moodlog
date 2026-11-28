@@ -120,9 +120,8 @@ enum Medications {
     /// The lines added to the health data sent to the PC (see take_medication_lines in
     /// src/moodlog). The first time, the whole history; then the last 30 days. Every dose of
     /// the period is sent, so the PC can drop the ones deleted in Health.
-    static func lines() async -> (lines: [String], all: Bool) {
+    static func lines(all: Bool) async -> (lines: [String], all: Bool) {
         guard isOn else { return ([], false) }
-        let all = !UserDefaults.standard.bool(forKey: "medicationsSentAll")
         let end = Date()
         let start = all ? nil : Day.calendar.date(byAdding: .day, value: -29, to: Day.calendar.startOfDay(for: end))
         let meds = await list()
@@ -226,7 +225,7 @@ enum Medications {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         all[key] = clean.isEmpty ? nil : clean
         UserDefaults.standard.set(all, forKey: namesKey)
-        UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // the PC gets the new names
+        Task { @MainActor in PCList.shared.resendMedications() }   // the PCs get the new names
     }
 
     /// A stable text for a medication (the same on every launch and device).

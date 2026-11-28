@@ -1,5 +1,17 @@
 [
  {
+  "version": "2.6.0",
+  "date": "2026-11-28",
+  "items": {
+   "en": [
+    "More than one PC: in Settings › Your PC, tap Add another PC (for example your Mac). The iPhone syncs with each one and passes what you write on one PC to the others. Health is sent to each PC too."
+   ],
+   "it": [
+    "Più di un PC: in Impostazioni › Il tuo PC tocca Aggiungi un altro PC (per esempio il tuo Mac). L'iPhone si sincronizza con ognuno e passa agli altri ciò che scrivi su uno. Anche i dati di Salute vanno a ogni PC."
+   ]
+  }
+ },
+ {
   "version": "2.5.1",
   "date": "2026-11-28",
   "items": {

@@ -5,15 +5,13 @@ struct SettingsView: View {
     @Environment(AppStore.self) private var store
     @Environment(SyncCoordinator.self) private var sync
     @Environment(TourState.self) private var tour
-    @AppStorage("server") private var server = ""
-    @AppStorage("token") private var token = ""
+    @State private var pcs = PCList.shared
+    @State private var editing: String?      // the id of the PC open in PCEditView
     @AppStorage("autoSync") private var autoSync = true
     @AppStorage("sendHealth") private var sendHealth = false
     @AppStorage("medicationsOn") private var medicationsOn = false
     @State private var medicationMessage = ""
     @AppStorage("doseAuto") private var doseAuto = false   // ask Dose when Sottovoce opens (DoseLink)
-    @State private var testResult = ""
-    @State private var testing = false
     @AppStorage("reminderOn") private var reminderOn = false
     @AppStorage("reminderTime") private var reminderTime = "20:30"
     @AppStorage("kindWord") private var kindWord = true
@@ -35,7 +33,7 @@ struct SettingsView: View {
             medicationMessage = tr("Health has nothing new to ask: every medication already has an answer. To change which ones Sottovoce can read, go to Settings → Health → Data Access & Devices → Sottovoce.")
                 + "\n\n" + medicationMessage
         }
-        UserDefaults.standard.set(false, forKey: "medicationsSentAll")   // send the whole history again
+        pcs.resendMedications()   // send the whole history again
     }
 
     private func chooseFile() {
@@ -110,37 +108,33 @@ struct SettingsView: View {
                     Text("Turn off what you don't need. Nothing is deleted.")
                 }
                 Section {
-                    TextField("Address, e.g. http://pop-os.local:8765", text: $server)
-                        .keyboardType(.URL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    SecureField("Token", text: $token)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    Button {
-                        testing = true
-                        Task {
-                            do {
-                                testResult = try await SyncClient.ping()
-                            } catch {
-                                testResult = error.localizedDescription
+                    ForEach(pcs.items) { pc in
+                        Button {
+                            editing = pc.id
+                        } label: {
+                            HStack {
+                                Image(systemName: "desktopcomputer").foregroundStyle(.tint)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(pc.title).foregroundStyle(.primary)
+                                    Text(pcs.status[pc.id] ?? (pc.isConfigured ? pc.cleanServer : tr("Address and token missing")))
+                                        .font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                             }
-                            testing = false
-                        }
-                    } label: {
-                        HStack {
-                            Text("Test connection")
-                            if testing { Spacer(); ProgressView() }
                         }
                     }
-                    .disabled(server.isEmpty || token.isEmpty || testing)
-                    if !testResult.isEmpty {
-                        Text(testResult).font(.footnote).foregroundStyle(.secondary)
+                    Button {
+                        let pc = PCLink()
+                        pcs.items.append(pc)
+                        editing = pc.id
+                    } label: {
+                        Label(pcs.items.isEmpty ? tr("Add your PC") : tr("Add another PC"), systemImage: "plus")
                     }
                 } header: {
-                    Text("Your PC")
+                    Text(pcs.items.count > 1 ? tr("Your PCs") : tr("Your PC"))
                 } footer: {
-                    Text("In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there (the same ones as the shortcut). Your iPhone and PC need to be on the same Wi-Fi.")
+                    Text("In Sottovoce on your PC, open Phone sync and switch the receiver on. Use the address and token shown there (the same ones as the shortcut). Your iPhone and PC need to be on the same Wi-Fi. With more than one PC, the iPhone syncs with each, and passes what you write on one PC to the others.")
                 }
 
                 Section {
@@ -153,7 +147,7 @@ struct SettingsView: View {
                             if sync.busy { Spacer(); ProgressView() }
                         }
                     }
-                    .disabled(server.isEmpty || token.isEmpty || sync.busy)
+                    .disabled(pcs.configured.isEmpty || sync.busy)
                     Text(sync.status).font(.footnote).foregroundStyle(.secondary)
                 } header: {
                     Text("Sync")
@@ -166,7 +160,7 @@ struct SettingsView: View {
                     Button("Send the last 7 days now") {
                         Task { await sync.sendHealth() }
                     }
-                    .disabled(server.isEmpty || token.isEmpty)
+                    .disabled(pcs.configured.isEmpty)
                     if !sync.healthStatus.isEmpty {
                         Text(sync.healthStatus).font(.footnote).foregroundStyle(.secondary)
                     }
@@ -323,6 +317,9 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .navigationDestination(item: $editing) { id in
+                PCEditView(id: id)
+            }
             .alert(Text("One more step"), isPresented: Binding(get: { reopen != nil }, set: { if !$0 { reopen = nil } })) {
                 Button("Choose the file") {
                     let folder = reopen?.deletingLastPathComponent()

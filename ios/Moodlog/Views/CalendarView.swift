@@ -4,7 +4,7 @@ struct CalendarView: View {
     @Environment(AppStore.self) private var store
     @Environment(SyncCoordinator.self) private var sync
     @Environment(TourState.self) private var tour
-    @AppStorage("server") private var server = ""
+    @State private var pcs = PCList.shared
     @State private var month = Day.monthStart(Date())
     @State private var path = NavigationPath()
     @State private var kindHidden = false
@@ -38,7 +38,7 @@ struct CalendarView: View {
                             withAnimation { weekHidden = week.monday }
                         }
                     }
-                    if server.isEmpty {
+                    if pcs.configured.isEmpty {
                         Label("Connect to Sottovoce on your PC in Settings to sync.", systemImage: "desktopcomputer")
                             .font(.subheadline)
                             .padding(12)
