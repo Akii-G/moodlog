@@ -5846,7 +5846,9 @@ def mac_agent_on(label, args, extra):
     import plistlib
     path = mac_agent_path(label)
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    agent = {"Label": label, "ProgramArguments": self_command(*args), "ProcessType": "Background"}
+    log = os.path.join(config_dir(), label.rsplit(".", 1)[-1] + ".log")
+    agent = {"Label": label, "ProgramArguments": self_command(*args), "ProcessType": "Background",
+             "StandardOutPath": log, "StandardErrorPath": log}
     # a data or settings folder set for this run (tests, a second diary) goes with it
     env = {k: os.environ[k] for k in ("MOODLOG_DATA_DIR", "MOODLOG_CONFIG_DIR", "MOODLOG_LANG", "DOSE_DATA_DIR")
            if os.environ.get(k)}

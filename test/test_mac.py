@@ -27,8 +27,10 @@ for _ in range(40):
     if m.receiver_running():
         break
     time.sleep(0.5)
-assert m.receiver_running(), subprocess.run(["launchctl", "print", "%s/%s" % (m.mac_domain(), m.MAC_SYNC_LABEL)],
-                                            capture_output=True, text=True).stdout[-3000:]
+if not m.receiver_running():
+    log = os.path.join(cfgdir, "sync.log")
+    print(open(log).read()[-4000:] if os.path.exists(log) else "no log")
+    raise SystemExit("the receiver isn't listening")
 
 # a whole phone's history over the network, as Sottovoce for Android sends it: all of it arrives
 import urllib.request, datetime as dt
