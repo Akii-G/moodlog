@@ -65,7 +65,7 @@ jobs:
           "$APP" --report "$RUNNER_TEMP/report.pdf"
           test -s "$RUNNER_TEMP/report.pdf" && pdftotext "$RUNNER_TEMP/report.pdf" - | head -5
           failed=0
-          for run in tahoe:gl default:gl tahoe:cairo; do
+          for run in tahoe:app default:app; do
             look=${run%%:*}; renderer=${run##*:}
             if [ "$renderer" = cairo ]; then export GSK_RENDERER=cairo; else unset GSK_RENDERER; fi
             echo "{\"style\": \"$look\", \"tour_done\": true, \"customize_seen\": true}" > "$MOODLOG_CONFIG_DIR/config.json"

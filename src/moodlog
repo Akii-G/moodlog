@@ -26,6 +26,10 @@ import subprocess
 import sys
 import unicodedata
 
+# a Mac draws GTK windows reliably only with the cairo renderer (the GL one can leave them black)
+if sys.platform == "darwin":
+    os.environ.setdefault("GSK_RENDERER", "cairo")
+
 import gi
 
 gi.require_version("Gtk", "4.0")
